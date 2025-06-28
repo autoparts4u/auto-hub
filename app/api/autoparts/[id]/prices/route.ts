@@ -2,8 +2,8 @@ import db from "@/lib/db/db";
 import { NextRequest, NextResponse } from "next/server";
 
 // Получить все цены по автозапчасти
-export async function GET(_: Request, { params }: { params: { id: string } }) {
-  const { id } = params;
+export async function GET(_: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
 
   const prices = await db.autopartPrices.findMany({
     where: {
@@ -31,10 +31,9 @@ export async function GET(_: Request, { params }: { params: { id: string } }) {
 
 export async function POST(
   req: NextRequest,
-  context: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
-  const { params } = await Promise.resolve(context); // ✅ костыль для обхода предупреждения
-  const id = params.id;
+  const { id } = await params;
 
   const prices: { priceTypeId: number; price: number }[] = await req.json();
 console.log(prices)

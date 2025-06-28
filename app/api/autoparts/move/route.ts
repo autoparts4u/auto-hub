@@ -5,10 +5,7 @@ import { NextResponse } from "next/server";
 
 export async function POST(req: Request) {
   try {
-      // const session = await getServerSession(authOptions);
-      const a = await req.json()
-      const { autopartId, fromWarehouseId, toWarehouseId, quantity } = a;
-      console.log(a)
+      const { autopartId, fromWarehouseId, toWarehouseId, quantity } = await req.json();
 
     if (!autopartId || !fromWarehouseId || !toWarehouseId || !quantity) {
       return NextResponse.json(

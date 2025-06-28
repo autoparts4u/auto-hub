@@ -2,8 +2,8 @@
 import db from "@/lib/db/db";
 import { NextResponse } from "next/server";
 
-export async function PUT(req: Request, context: { params: { id: string } }) {
-  const id = Number(context.params.id);
+export async function PUT(req: Request, { params }: { params: Promise<{ id: number }> }) {
+  const { id } = await params;
   const { name, address } = await req.json();
 
   if (!name?.trim() || !address?.trim()) {

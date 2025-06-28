@@ -1,15 +1,18 @@
-// app/api/autoparts/[id]/logs/route.ts
 import db from "@/lib/db/db";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
-export async function GET(req: Request, { params }: { params: { id: string } }) {
+export async function GET(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
+    const { id } = await params;
     const url = new URL(req.url);
     const action = url.searchParams.get("action");
 
     const logs = await db.autopartLog.findMany({
       where: {
-        autopartId: params.id,
+        autopartId: id,
         ...(action ? { action } : {}),
       },
       orderBy: { createdAt: "desc" },
