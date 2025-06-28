@@ -1,0 +1,255 @@
+generator client {
+    provider        = "prisma-client-js"
+    previewFeatures = ["driverAdapters"]
+}
+
+datasource db {
+    provider  = "postgresql"
+    url       = env("DATABASE_URL")
+    directUrl = env("DIRECT_URL")
+}
+
+model health_check {
+    id         Int       @id @default(autoincrement())
+    updated_at DateTime? @default(now()) @db.Timestamptz(6)
+}
+
+enum Role {
+    user
+    admin
+}
+
+model User {
+    id            String    @id @default(cuid())
+    name          String?
+    email         String    @unique
+    password      String
+    emailVerified DateTime?
+    image         String?
+
+    role          Role    @default(user)
+    phone         String?
+    isConfirmed   Boolean @default(false)
+    address       String?
+    priceAccessId Int?
+
+    priceAccess PriceTypes? @relation("PriceAccess", fields: [priceAccessId], references: [id])
+
+    accounts      Account[]
+    sessions      Session[]
+    Authenticator Authenticator[]
+
+    createdAt    DateTime    @default(now())
+    updatedAt    DateTime    @updatedAt
+    PriceTypes   PriceTypes? @relation(fields: [priceTypesId], references: [id])
+    priceTypesId Int?
+}
+
+model Account {
+    userId            String
+    type              String
+    provider          String
+    providerAccountId String
+    refresh_token     String?
+    access_token      String?
+    expires_at        Int?
+    token_type        String?
+    scope             String?
+    id_token          String?
+    session_state     String?
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @default(now())
+
+    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    @@id([provider, providerAccountId])
+}
+
+model Session {
+    sessionToken String   @id
+    userId       String
+    expires      DateTime
+    user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @default(now())
+}
+
+model VerificationToken {
+    identifier String
+    token      String
+    expires    DateTime
+
+    @@id([identifier, token])
+}
+
+model Authenticator {
+    credentialID         String  @unique
+    userId               String
+    providerAccountId    String
+    credentialPublicKey  String
+    counter              Int
+    credentialDeviceType String
+    credentialBackedUp   Boolean
+    transports           String?
+
+    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    @@id([userId, credentialID])
+}
+
+model Clients {
+    id              String                   @id @default(cuid())
+    name            String
+    fullName        String
+    address         String?
+    orders          Orders[]
+    deliveryMethods ClientsDeliveryMethods[]
+}
+
+model ClientsDeliveryMethods {
+    client_id         String
+    deliveryMethod_id Int
+
+    client         Clients         @relation(fields: [client_id], references: [id])
+    deliveryMethod DeliveryMethods @relation(fields: [deliveryMethod_id], references: [id])
+
+    @@id([client_id, deliveryMethod_id])
+}
+
+model DeliveryMethods {
+    id       Int                      @id @default(autoincrement())
+    name     String
+    hexColor String?
+    clients  ClientsDeliveryMethods[]
+    orders   Orders[]
+}
+
+model Orders {
+    id                String    @id @default(cuid())
+    deliveryMethod_id Int?
+    client_id         String
+    orderStatus_id    Int
+    createdAt         DateTime  @default(now())
+    issuedAt          DateTime?
+    paidAt            DateTime?
+
+    client         Clients          @relation(fields: [client_id], references: [id])
+    deliveryMethod DeliveryMethods? @relation(fields: [deliveryMethod_id], references: [id])
+    orderStatus    OrderStatuses    @relation(fields: [orderStatus_id], references: [id])
+    orderItems     OrderItems[]
+}
+
+model OrderStatuses {
+    id       Int      @id @default(autoincrement())
+    name     String
+    hexColor String
+    isLast   Boolean
+    orders   Orders[]
+}
+
+model OrderItems {
+    id               Int    @id @default(autoincrement())
+    order_id         String
+    authopart_id     String
+    warehouse_id     Int
+    quantity         Int
+    item_final_price Float
+
+    order     Orders     @relation(fields: [order_id], references: [id])
+    authopart Autoparts  @relation(fields: [authopart_id], references: [id])
+    warehouse Warehouses @relation(fields: [warehouse_id], references: [id])
+}
+
+model Warehouses {
+    id         Int                   @id @default(autoincrement())
+    name       String
+    address    String
+    parts      AutopartsWarehouses[]
+    orderItems OrderItems[]
+}
+
+model Autoparts {
+    id          String @id @default(cuid())
+    article     String @unique
+    description String
+    brand_id    Int
+    category_id Int
+
+    brand      Brands                @relation(fields: [brand_id], references: [id])
+    category   Categories            @relation(fields: [category_id], references: [id])
+    prices     AutopartPrices[]
+    warehouses AutopartsWarehouses[]
+    orderItems OrderItems[]
+
+    analoguesA  Analogues[]   @relation("PartA")
+    analoguesB  Analogues[]   @relation("PartB")
+    AutopartLog AutopartLog[]
+}
+
+model AutopartLog {
+    id         String   @id @default(cuid())
+    autopartId String
+    userId     String?
+    action     String // "moved", "updated", etc.
+    field      String // "quantity", "brand", "warehouse", etc.
+    oldValue   String?
+    newValue   String?
+    createdAt  DateTime @default(now())
+
+    autopart Autoparts @relation(fields: [autopartId], references: [id])
+}
+
+model AutopartsWarehouses {
+    authopart_id String
+    warehouse_id Int
+    quantity     Int
+
+    authopart Autoparts  @relation(fields: [authopart_id], references: [id])
+    warehouse Warehouses @relation(fields: [warehouse_id], references: [id])
+
+    @@id([authopart_id, warehouse_id])
+}
+
+model AutopartPrices {
+    authopart_id  String
+    pricesType_id Int
+    price         Float
+
+    authopart Autoparts  @relation(fields: [authopart_id], references: [id])
+    priceType PriceTypes @relation(fields: [pricesType_id], references: [id])
+
+    @@id([authopart_id, pricesType_id])
+}
+
+model PriceTypes {
+    id     Int              @id @default(autoincrement())
+    name   String
+    prices AutopartPrices[]
+    users  User[]           @relation("PriceAccess")
+    User   User[]
+}
+
+model Brands {
+    id    Int         @id @default(autoincrement())
+    name  String      @unique
+    parts Autoparts[]
+}
+
+model Categories {
+    id    Int         @id @default(autoincrement())
+    name  String      @unique
+    parts Autoparts[]
+}
+
+model Analogues {
+    id      Int    @id @default(autoincrement())
+    partAId String
+    partBId String
+
+    partA Autoparts @relation("PartA", fields: [partAId], references: [id])
+    partB Autoparts @relation("PartB", fields: [partBId], references: [id])
+
+    @@unique([partAId, partBId])
+}

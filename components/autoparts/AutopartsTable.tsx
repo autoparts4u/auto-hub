@@ -1,0 +1,295 @@
+// components/parts/AutopartsTable.tsx
+"use client";
+
+import { useState } from "react";
+import { toast } from "sonner";
+import { AutopartWithStock } from "@/app/types/autoparts";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { AutopartModal } from "./AutopartModal";
+import { MovePartModal } from "./MovePartModal";
+import { LogsModal } from "./LogsModal";
+import {
+  Plus,
+  Pencil,
+  Trash,
+  ArrowRightLeft,
+  FileText,
+  Tags,
+} from "lucide-react";
+import { useRouter } from "next/navigation";
+import { PriceEditModal } from "./PriceEditModal";
+
+interface Props {
+  parts: AutopartWithStock[];
+  brands: { id: number; name: string }[];
+  warehouses: { id: number; name: string }[];
+}
+
+export function AutopartsTable({ parts, brands, warehouses }: Props) {
+  const [selected, setSelected] = useState<AutopartWithStock | null>(null);
+  const [movePart, setMovePart] = useState<AutopartWithStock | null>(null);
+  const [creating, setCreating] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [logsPartId, setLogsPartId] = useState<string | null>(null);
+  const [pricePartId, setPricePartId] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [brand, setBrand] = useState("all");
+  const [warehouse, setWarehouse] = useState("all");
+  const router = useRouter();
+
+  const handleConfirmDelete = async (id: string) => {
+    try {
+      const res = await fetch(`/api/autoparts/${id}`, {
+        method: "DELETE",
+      });
+
+      if (!res.ok) {
+        throw new Error("Ошибка удаления");
+      }
+
+      toast.success("Запчасть удалена");
+      setDeletingId(null);
+      router.refresh();
+    } catch (error) {
+      toast.error("Не удалось удалить запчасть");
+      console.error(error);
+    }
+  };
+
+  const filteredParts = parts.filter((p) => {
+    const matchesSearch =
+      p.article.toLowerCase().includes(search.toLowerCase()) ||
+      p.description.toLowerCase().includes(search.toLowerCase());
+    const matchesBrand = brand === "all" || p.brand.name === brand;
+    const matchesWarehouse =
+      warehouse === "all" ||
+      p.warehouses.some((w) => w.warehouseName === warehouse);
+    return matchesSearch && matchesBrand && matchesWarehouse;
+  });
+
+  return (
+    <div className="w-full px-4">
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-2xl font-semibold tracking-tight">Автозапчасти</h2>
+        <Button onClick={() => setCreating(true)}>
+          <Plus className="w-4 h-4 mr-2" /> Добавить
+        </Button>
+      </div>
+
+      <div className="mb-4 flex flex-wrap gap-4 items-end">
+        <Input
+          placeholder="Поиск по описанию или артикулу"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="w-full sm:max-w-xs"
+        />
+
+        <div className="space-y-1">
+          <Label>Бренд</Label>
+          <Select value={brand} onValueChange={setBrand}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Все бренды" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Все</SelectItem>
+              {brands.map((b) => (
+                <SelectItem key={b.id} value={b.name}>
+                  {b.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-1">
+          <Label>Склад</Label>
+          <Select value={warehouse} onValueChange={setWarehouse}>
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Все склады" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Все</SelectItem>
+              {warehouses.map((w) => (
+                <SelectItem key={w.id} value={w.name}>
+                  {w.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      <div className="overflow-auto rounded-md border">
+        <table className="w-full text-sm text-left">
+          <thead className="bg-muted text-muted-foreground">
+            <tr>
+              <th className="p-3 text-center">Артикул</th>
+              <th className="p-3 text-center">Описание</th>
+              <th className="p-3 text-center">Бренд</th>
+              <th className="p-3 text-center">Категория</th>
+              <th className="p-3 text-center">Кол-во</th>
+              <th className="p-3 text-center">Склады</th>
+              <th className="p-3 text-center">Цены</th>
+              <th className="p-3 text-center">Действия</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredParts.map((p) => (
+              <tr
+                key={p.id}
+                className="border-t hover:bg-accent/40 transition-colors"
+              >
+                <td className="p-3 text-center font-mono font-medium">
+                  {p.article}
+                </td>
+                <td className="p-3 text-center">{p.description}</td>
+                <td className="p-3 text-center">{p.brand.name}</td>
+                <td className="p-3 text-center">{p.category.name}</td>
+                <td className="p-3 text-center">{p.totalQuantity}</td>
+                <td className="p-3 text-center">
+                  <ul className="space-y-1">
+                    {p.warehouses.map((w) => (
+                      <li key={w.warehouseId} className="text-xs">
+                        {w.warehouseName}:{" "}
+                        <span className="font-semibold">{w.quantity}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </td>
+                <td className="p-3 text-center">
+                  <ul className="space-y-1 text-xs text-left">
+                    {p.prices.map((price) => (
+                      <li key={price.priceType.id}>
+                        <span className="font-semibold">
+                          {price.priceType.name}:
+                        </span>{" "}
+                        {price.price.toFixed(2)} $
+                      </li>
+                    ))}
+                  </ul>
+                </td>
+                <td className="p-3 text-center flex items-center justify-center gap-2">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setSelected(p)}
+                  >
+                    <Pencil className="w-4 h-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setMovePart(p)}
+                  >
+                    <ArrowRightLeft className="w-4 h-4 text-blue-500" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setPricePartId(p.id)}
+                  >
+                    <Tags className="w-4 h-4 text-green-600" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setLogsPartId(p.id)}
+                  >
+                    <FileText className="w-4 h-4 text-muted-foreground" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setDeletingId(p.id)}
+                  >
+                    <Trash className="w-4 h-4 text-destructive" />
+                  </Button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <Dialog
+        open={!!selected || creating}
+        onOpenChange={() => {
+          setSelected(null);
+          setCreating(false);
+        }}
+      >
+        <DialogContent className="sm:max-w-2xl">
+          <DialogTitle>
+            {creating ? "Добавить запчасть" : "Редактировать запчасть"}
+          </DialogTitle>
+          <AutopartModal
+            part={selected}
+            onClose={() => {
+              setSelected(null);
+              setCreating(false);
+            }}
+            isNew={creating}
+          />
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!movePart} onOpenChange={() => setMovePart(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogTitle>Переместить запчасть</DialogTitle>
+          {movePart && (
+            <MovePartModal part={movePart} onClose={() => setMovePart(null)} />
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!logsPartId} onOpenChange={() => setLogsPartId(null)}>
+        <DialogContent className="sm:max-w-xl">
+          <DialogTitle>История изменений</DialogTitle>
+          {logsPartId && <LogsModal autopartId={logsPartId} />}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!deletingId} onOpenChange={() => setDeletingId(null)}>
+        <DialogContent className="max-w-sm text-center">
+          <DialogTitle>Удалить запчасть?</DialogTitle>
+          <p className="text-sm text-muted-foreground">
+            Это действие необратимо. Вы уверены, что хотите удалить запчасть?
+          </p>
+
+          <div className="flex justify-end gap-2 mt-4">
+            <Button variant="outline" onClick={() => setDeletingId(null)}>
+              Отмена
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => deletingId && handleConfirmDelete(deletingId)}
+            >
+              Удалить
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={!!pricePartId} onOpenChange={() => setPricePartId(null)}>
+        <DialogContent className="sm:max-w-xl">
+          <DialogTitle>Цены по типам</DialogTitle>
+          {pricePartId && (
+            <PriceEditModal
+              autopartId={pricePartId}
+              onClose={() => setPricePartId(null)}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
