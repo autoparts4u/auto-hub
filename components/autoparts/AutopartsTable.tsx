@@ -33,9 +33,17 @@ interface Props {
   parts: AutopartWithStock[];
   brands: { id: number; name: string }[];
   warehouses: { id: number; name: string }[];
+  onlyView?: boolean;
+  priceAccessId?: number | null;
 }
 
-export function AutopartsTable({ parts, brands, warehouses }: Props) {
+export function AutopartsTable({
+  parts,
+  brands,
+  warehouses,
+  onlyView,
+  priceAccessId,
+}: Props) {
   const [selected, setSelected] = useState<AutopartWithStock | null>(null);
   const [movePart, setMovePart] = useState<AutopartWithStock | null>(null);
   const [creating, setCreating] = useState(false);
@@ -79,12 +87,12 @@ export function AutopartsTable({ parts, brands, warehouses }: Props) {
 
   return (
     <div className="w-full px-4">
-      <div className="flex items-center justify-between mb-6">
+      {!onlyView && <div className="flex items-center justify-between mb-6">
         <h2 className="text-2xl font-semibold tracking-tight">Автозапчасти</h2>
         <Button onClick={() => setCreating(true)}>
           <Plus className="w-4 h-4 mr-2" /> Добавить
         </Button>
-      </div>
+      </div>}
 
       <div className="mb-4 flex flex-wrap gap-4 items-end">
         <Input
@@ -111,22 +119,24 @@ export function AutopartsTable({ parts, brands, warehouses }: Props) {
           </Select>
         </div>
 
-        <div className="space-y-1">
-          <Label>Склад</Label>
-          <Select value={warehouse} onValueChange={setWarehouse}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Все склады" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Все</SelectItem>
-              {warehouses.map((w) => (
-                <SelectItem key={w.id} value={w.name}>
-                  {w.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        {!onlyView && (
+          <div className="space-y-1">
+            <Label>Склад</Label>
+            <Select value={warehouse} onValueChange={setWarehouse}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Все склады" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Все</SelectItem>
+                {warehouses.map((w) => (
+                  <SelectItem key={w.id} value={w.name}>
+                    {w.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
       </div>
 
       <div className="overflow-auto rounded-md border">
@@ -137,10 +147,10 @@ export function AutopartsTable({ parts, brands, warehouses }: Props) {
               <th className="p-3 text-center">Описание</th>
               <th className="p-3 text-center">Бренд</th>
               <th className="p-3 text-center">Категория</th>
-              <th className="p-3 text-center">Кол-во</th>
-              <th className="p-3 text-center">Склады</th>
+              {!onlyView && <th className="p-3 text-center">Кол-во</th>}
+              {!onlyView && <th className="p-3 text-center">Склады</th>}
               <th className="p-3 text-center">Цены</th>
-              <th className="p-3 text-center">Действия</th>
+              {!onlyView && <th className="p-3 text-center">Действия</th>}
             </tr>
           </thead>
           <tbody>
@@ -155,66 +165,78 @@ export function AutopartsTable({ parts, brands, warehouses }: Props) {
                 <td className="p-3 text-center">{p.description}</td>
                 <td className="p-3 text-center">{p.brand.name}</td>
                 <td className="p-3 text-center">{p.category.name}</td>
-                <td className="p-3 text-center">{p.totalQuantity}</td>
+                {!onlyView && (
+                  <td className="p-3 text-center">{p.totalQuantity}</td>
+                )}
+                {!onlyView && (
+                  <td className="p-3 text-center">
+                    <ul className="space-y-1">
+                      {p.warehouses.map((w) => (
+                        <li key={w.warehouseId} className="text-xs">
+                          {w.warehouseName}:{" "}
+                          <span className="font-semibold">{w.quantity}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </td>
+                )}
                 <td className="p-3 text-center">
-                  <ul className="space-y-1">
-                    {p.warehouses.map((w) => (
-                      <li key={w.warehouseId} className="text-xs">
-                        {w.warehouseName}:{" "}
-                        <span className="font-semibold">{w.quantity}</span>
-                      </li>
-                    ))}
-                  </ul>
+                  {!priceAccessId ? (
+                    <ul className="space-y-1 text-xs text-left">
+                      {p.prices.map((price) => (
+                        <li key={price.priceType.id}>
+                          <span className="font-semibold">
+                            {price.priceType.name}:
+                          </span>{" "}
+                          {price.price.toFixed(2)} $
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    `${p.prices
+                      .find((price) => price.priceType.id === priceAccessId)
+                      ?.price.toFixed(2)} $`
+                  )}
                 </td>
-                <td className="p-3 text-center">
-                  <ul className="space-y-1 text-xs text-left">
-                    {p.prices.map((price) => (
-                      <li key={price.priceType.id}>
-                        <span className="font-semibold">
-                          {price.priceType.name}:
-                        </span>{" "}
-                        {price.price.toFixed(2)} $
-                      </li>
-                    ))}
-                  </ul>
-                </td>
-                <td className="p-3 text-center flex items-center justify-center gap-2">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setSelected(p)}
-                  >
-                    <Pencil className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setMovePart(p)}
-                  >
-                    <ArrowRightLeft className="w-4 h-4 text-blue-500" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setPricePartId(p.id)}
-                  >
-                    <Tags className="w-4 h-4 text-green-600" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setLogsPartId(p.id)}
-                  >
-                    <FileText className="w-4 h-4 text-muted-foreground" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setDeletingId(p.id)}
-                  >
-                    <Trash className="w-4 h-4 text-destructive" />
-                  </Button>
-                </td>
+                {!onlyView && (
+                  <td className="p-3 text-center flex items-center justify-center gap-2">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setSelected(p)}
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setMovePart(p)}
+                    >
+                      <ArrowRightLeft className="w-4 h-4 text-blue-500" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setPricePartId(p.id)}
+                    >
+                      <Tags className="w-4 h-4 text-green-600" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setLogsPartId(p.id)}
+                    >
+                      <FileText className="w-4 h-4 text-muted-foreground" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setDeletingId(p.id)}
+                    >
+                      <Trash className="w-4 h-4 text-destructive" />
+                    </Button>
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>

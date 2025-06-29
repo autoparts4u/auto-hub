@@ -12,7 +12,7 @@ const GoogleSignIn = () => {
     >
       <Button className="w-full" variant="outline">
          {/* <Github /> */}
-        Continue with GitHub
+        Continue with Google
       </Button>
     </form>
   );
