@@ -14,6 +14,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+  TooltipProvider,
+} from "@/components/ui/tooltip";
 import { Label } from "@/components/ui/label";
 import { AutopartModal } from "./AutopartModal";
 import { MovePartModal } from "./MovePartModal";
@@ -87,12 +93,16 @@ export function AutopartsTable({
 
   return (
     <div className="w-full px-4">
-      {!onlyView && <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-semibold tracking-tight">Автозапчасти</h2>
-        <Button onClick={() => setCreating(true)}>
-          <Plus className="w-4 h-4 mr-2" /> Добавить
-        </Button>
-      </div>}
+      {!onlyView && (
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-2xl font-semibold tracking-tight">
+            Автозапчасти
+          </h2>
+          <Button onClick={() => setCreating(true)}>
+            <Plus className="w-4 h-4 mr-2" /> Добавить
+          </Button>
+        </div>
+      )}
 
       <div className="mb-4 flex flex-wrap gap-4 items-end">
         <Input
@@ -144,8 +154,8 @@ export function AutopartsTable({
           <thead className="bg-muted text-muted-foreground">
             <tr>
               <th className="p-3 text-center">Артикул</th>
-              <th className="p-3 text-center">Описание</th>
               <th className="p-3 text-center">Бренд</th>
+              <th className="p-3 text-center">Описание</th>
               <th className="p-3 text-center">Категория</th>
               {!onlyView && <th className="p-3 text-center">Кол-во</th>}
               {!onlyView && <th className="p-3 text-center">Склады</th>}
@@ -162,8 +172,8 @@ export function AutopartsTable({
                 <td className="p-3 text-center font-mono font-medium">
                   {p.article}
                 </td>
-                <td className="p-3 text-center">{p.description}</td>
                 <td className="p-3 text-center">{p.brand.name}</td>
+                <td className="p-3">{p.description}</td>
                 <td className="p-3 text-center">{p.category.name}</td>
                 {!onlyView && (
                   <td className="p-3 text-center">{p.totalQuantity}</td>
@@ -180,7 +190,7 @@ export function AutopartsTable({
                     </ul>
                   </td>
                 )}
-                <td className="p-3 text-center">
+                <td className="p-3 text-center whitespace-nowrap">
                   {!priceAccessId ? (
                     <ul className="space-y-1 text-xs text-left">
                       {p.prices.map((price) => (
@@ -193,48 +203,91 @@ export function AutopartsTable({
                       ))}
                     </ul>
                   ) : (
-                    `${p.prices
-                      .find((price) => price.priceType.id === priceAccessId)
-                      ?.price.toFixed(2)} $`
+                    `${
+                      p.prices
+                        .find((price) => price.priceType.id === priceAccessId)
+                        ?.price.toFixed(2) ?? "-"
+                    } $`
                   )}
                 </td>
                 {!onlyView && (
                   <td className="p-3 text-center flex items-center justify-center gap-2">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => setSelected(p)}
-                    >
-                      <Pencil className="w-4 h-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => setMovePart(p)}
-                    >
-                      <ArrowRightLeft className="w-4 h-4 text-blue-500" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => setPricePartId(p.id)}
-                    >
-                      <Tags className="w-4 h-4 text-green-600" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => setLogsPartId(p.id)}
-                    >
-                      <FileText className="w-4 h-4 text-muted-foreground" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => setDeletingId(p.id)}
-                    >
-                      <Trash className="w-4 h-4 text-destructive" />
-                    </Button>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setSelected(p)}
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom">
+                          <p>Редактировать</p>
+                        </TooltipContent>
+                      </Tooltip>
+
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setMovePart(p)}
+                          >
+                            <ArrowRightLeft className="w-4 h-4 text-blue-500" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom">
+                          <p>Переместить</p>
+                        </TooltipContent>
+                      </Tooltip>
+
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setPricePartId(p.id)}
+                          >
+                            <Tags className="w-4 h-4 text-green-600" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom">
+                          <p>Редактировать цены</p>
+                        </TooltipContent>
+                      </Tooltip>
+
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setLogsPartId(p.id)}
+                          >
+                            <FileText className="w-4 h-4 text-muted-foreground" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom">
+                          <p>История изменений</p>
+                        </TooltipContent>
+                      </Tooltip>
+
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setDeletingId(p.id)}
+                          >
+                            <Trash className="w-4 h-4 text-destructive" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom">
+                          <p>Удалить</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   </td>
                 )}
               </tr>

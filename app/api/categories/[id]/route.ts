@@ -27,7 +27,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: numb
   }
 
   const updated = await db.categories.update({
-    where: { id },
+    where: { id: Number(id) },
     data: { name },
   });
 

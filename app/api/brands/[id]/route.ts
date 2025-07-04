@@ -27,7 +27,7 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: numb
   }
 
   const updated = await db.brands.update({
-    where: { id: id },
+    where: { id: Number(id) },
     data: { name },
   });
 

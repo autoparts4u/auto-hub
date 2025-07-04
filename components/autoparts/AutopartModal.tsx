@@ -92,17 +92,20 @@ export function AutopartModal({ part, isNew, onClose }: AutopartModalProps) {
         quantity,
       }));
 
-    const res = await fetch("/api/autoparts", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        article,
-        description,
-        brandId: Number(brandId),
-        categoryId: Number(categoryId),
-        stock,
-      }),
-    });
+      const res = await fetch(
+        isNew ? "/api/autoparts" : `/api/autoparts/${part!.id}`,
+        {
+          method: isNew ? "POST" : "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            article,
+            description,
+            brandId: Number(brandId),
+            categoryId: Number(categoryId),
+            stock,
+          }),
+        }
+      );
 
     setSubmitting(false);
 
