@@ -10,7 +10,7 @@ export type AutopartWithStock = Pick<
   Autoparts,
   "id" | "article" | "description"
 > & {
-  category: Categories
+  category: Categories;
   brand: Brands;
   totalQuantity: number;
   warehouses: WarehouseStock[];
@@ -20,5 +20,12 @@ export type AutopartWithStock = Pick<
       name: string;
     };
     price: number;
+  }[];
+  analogues: {
+    id: string;
+    article: string;
+    description: string;
+    brand: Brands;
+    category: Categories;
   }[];
 };

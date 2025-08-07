@@ -1,11 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { PriceTypes } from "@prisma/client";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Trash, Pencil, Check } from "lucide-react";
+import {
+  Trash,
+  Pencil,
+  Save,
+  ArrowDownAZ,
+  ArrowUpAZ,
+  Search,
+} from "lucide-react";
 
 interface PriceTypesPanelProps {
   initialPriceTypes: PriceTypes[];
@@ -15,7 +22,9 @@ export function PriceTypesPanel({ initialPriceTypes }: PriceTypesPanelProps) {
   const [types, setTypes] = useState(initialPriceTypes);
   const [newName, setNewName] = useState("");
   const [editingId, setEditingId] = useState<number | null>(null);
-  const [editingName, setEditingName] = useState("");
+  const [editingValue, setEditingValue] = useState("");
+  const [search, setSearch] = useState("");
+  const [sortAsc, setSortAsc] = useState(true);
 
   const handleCreate = async () => {
     if (!newName.trim()) return;
@@ -46,80 +55,119 @@ export function PriceTypesPanel({ initialPriceTypes }: PriceTypesPanelProps) {
     }
   };
 
-  const handleEdit = async (id: number) => {
-    if (!editingName.trim()) return;
+  const handleEdit = (type: PriceTypes) => {
+    setEditingId(type.id);
+    setEditingValue(type.name);
+  };
+
+  const handleSave = async (id: number) => {
+    if (!editingValue.trim()) return;
 
     const res = await fetch(`/api/price-types/${id}`, {
       method: "PUT",
-      body: JSON.stringify({ name: editingName }),
+      body: JSON.stringify({ name: editingValue }),
     });
 
     if (res.ok) {
       setTypes((prev) =>
-        prev.map((t) => (t.id === id ? { ...t, name: editingName } : t))
+        prev.map((t) => (t.id === id ? { ...t, name: editingValue } : t))
       );
-      toast.success("Название обновлено");
       setEditingId(null);
-      setEditingName("");
+      setEditingValue("");
+      toast.success("Тип цены обновлён");
     } else {
       toast.error("Ошибка при обновлении");
     }
   };
 
+  const filteredAndSorted = useMemo(() => {
+    const filtered = types.filter((t) =>
+      t.name.toLowerCase().includes(search.toLowerCase())
+    );
+    return [...filtered].sort((a, b) =>
+      sortAsc ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name)
+    );
+  }, [types, search, sortAsc]);
+
   return (
     <div className="space-y-4">
-      <div className="flex gap-2">
+      <div className="flex flex-col md:flex-row gap-2">
         <Input
-          placeholder="Название типа цены"
           value={newName}
           onChange={(e) => setNewName(e.target.value)}
+          placeholder="Название типа цены"
         />
         <Button onClick={handleCreate}>
           <span className="mr-1">+</span> Добавить
         </Button>
       </div>
 
+      <div className="flex items-center justify-between gap-2 mt-4">
+        <div className="relative w-full max-w-sm">
+          <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Поиск по названию"
+            className="pl-8"
+          />
+        </div>
+        <Button
+          onClick={() => setSortAsc((prev) => !prev)}
+          variant="outline"
+          className="shrink-0"
+        >
+          {sortAsc ? (
+            <ArrowDownAZ className="w-4 h-4 mr-1" />
+          ) : (
+            <ArrowUpAZ className="w-4 h-4 mr-1" />
+          )}
+          Сортировка
+        </Button>
+      </div>
+
       <ul className="space-y-2">
-        {types.map((type) => (
+        {filteredAndSorted.map((t) => (
           <li
-            key={type.id}
+            key={t.id}
             className="flex items-center justify-between rounded border px-3 py-2"
           >
-            {editingId === type.id ? (
-              <div className="flex w-full items-center gap-2">
-                <Input
-                  value={editingName}
-                  onChange={(e) => setEditingName(e.target.value)}
-                  className="flex-1"
-                />
-                <Button size="icon" onClick={() => handleEdit(type.id)}>
-                  <Check className="w-4 h-4" />
-                </Button>
-              </div>
+            {editingId === t.id ? (
+              <Input
+                value={editingValue}
+                onChange={(e) => setEditingValue(e.target.value)}
+                className="mr-2"
+              />
             ) : (
-              <>
-                <span>{type.name}</span>
-                <div className="flex gap-1">
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    onClick={() => {
-                      setEditingId(type.id);
-                      setEditingName(type.name);
-                    }}
-                  >
-                    <Pencil className="w-4 h-4 text-muted-foreground" />
-                  </Button>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    onClick={() => handleDelete(type.id)}
-                  >
-                    <Trash className="w-4 h-4 text-destructive" />
-                  </Button>
-                </div>
-              </>
+              <span>{t.name}</span>
             )}
+
+            <div className="flex gap-1">
+              {editingId === t.id ? (
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  onClick={() => handleSave(t.id)}
+                >
+                  <Save className="w-4 h-4 text-green-600" />
+                </Button>
+              ) : (
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  onClick={() => handleEdit(t)}
+                >
+                  <Pencil className="w-4 h-4 text-muted-foreground" />
+                </Button>
+              )}
+              <Button
+                size="icon"
+                variant="ghost"
+                onClick={() => handleDelete(t.id)}
+              >
+                <Trash className="w-4 h-4 text-destructive" />
+              </Button>
+            </div>
           </li>
         ))}
       </ul>

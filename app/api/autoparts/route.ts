@@ -2,35 +2,39 @@ import db from "@/lib/db/db";
 import { NextResponse } from "next/server";
 
 export async function POST(req: Request) {
-  const { article, description, brandId, categoryId, stock } = await req.json();
+  try {
+    const { article, description, brandId, categoryId, stock, analogueIds } = await req.json();
 
-  if (!article || !description || !brandId || !categoryId) {
-    return NextResponse.json({ error: "Missing fields" }, { status: 400 });
-  }
-
-  const created = await db.autoparts.create({
-    data: {
-      article,
-      description,
-      brand_id: brandId,
-      category_id: categoryId,
-      warehouses: {
-        create: stock.map(
-          ({
-            warehouseId,
-            quantity,
-          }: {
-            warehouseId: number;
-            quantity: number;
-          }) => ({
-            warehouse: { connect: { id: Number(warehouseId) } },
-            quantity,
-          })
-        ),
+    const autopart = await db.autoparts.create({
+      data: {
+        article,
+        description,
+        brand_id: brandId,
+        category_id: categoryId,
+        warehouses: {
+          create: stock.map((s: { warehouseId: number; quantity: number }) => ({
+            warehouseId: s.warehouseId,
+            quantity: s.quantity,
+          })),
+        },
       },
-    },
-  });
+    });
 
+    if (analogueIds?.length) {
+      const analogueData = analogueIds.flatMap((id: string) => [
+        { partAId: autopart.id, partBId: id },
+        { partAId: id, partBId: autopart.id },
+      ]);
 
-  return NextResponse.json(created);
+      await db.analogues.createMany({
+        data: analogueData,
+        skipDuplicates: true,
+      });
+    }
+
+    return NextResponse.json(autopart, { status: 201 });
+  } catch (e) {
+    console.error(e);
+    return NextResponse.json({ error: "Ошибка при создании" }, { status: 500 });
+  }
 }

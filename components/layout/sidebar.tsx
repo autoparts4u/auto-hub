@@ -11,72 +11,118 @@ import {
   House,
   Cog,
   Users,
-  // Warehouse,
-  Settings2
+  Settings2,
+  X,
 } from "lucide-react";
 import { signOut } from "next-auth/react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import clsx from "clsx";
 
 const navItems = [
   { label: "Главная", href: "/dashboard", icon: House },
   { label: "Заказы", href: "/dashboard/orders", icon: Inbox },
   { label: "Запчасти", href: "/dashboard/autoparts", icon: Cog },
   { label: "Клиенты", href: "/dashboard/clients", icon: Users },
-  // { label: "Склады", href: "/dashboard/warehouses", icon: Warehouse },
   { label: "Общие", href: "/dashboard/general", icon: Settings2 },
 ];
 
 export function Sidebar() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Detect screen size
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
+
+  // Prevent body scroll when menu is open on mobile
+  useEffect(() => {
+    document.body.style.overflow = open && isMobile ? "hidden" : "";
+  }, [open, isMobile]);
+
+  const renderNavItem = (item: (typeof navItems)[number]) => {
+    const isActive = pathname === item.href;
+    return (
+      <Link key={item.href} href={item.href}>
+        <Button
+          variant={isActive ? "default" : "ghost"}
+          className={clsx(
+            "w-full justify-start gap-2",
+            collapsed && "justify-center"
+          )}
+        >
+          <item.icon className="h-5 w-5" />
+          {!collapsed && <span>{item.label}</span>}
+        </Button>
+      </Link>
+    );
+  };
 
   return (
     <>
-      {/* Mobile menu toggle */}
-      <div className="md:hidden flex items-center justify-between p-4 border-b bg-white">
+      {/* Mobile topbar */}
+      <div className="md:hidden flex items-center justify-between p-4 border-b bg-white z-40 relative">
         <span className="font-semibold">Admin Panel</span>
-        <Button variant="ghost" size="icon" onClick={() => setOpen(!open)}>
+        <Button variant="ghost" size="icon" onClick={() => setOpen(true)}>
           <Menu />
         </Button>
       </div>
 
+      {/* Overlay for mobile */}
+      {open && isMobile && (
+        <div
+          className="fixed inset-0 bg-black/50 z-40"
+          onClick={() => setOpen(false)}
+        />
+      )}
+
       {/* Sidebar */}
       <aside
-        className={`fixed md:static top-0 left-0 h-full w-64 bg-white border-r z-50 transform transition-transform ${
-          open ? "translate-x-0" : "-translate-x-full"
-        } md:translate-x-0 md:flex md:flex-col md:justify-between p-4 min-h-screen`}
+        className={clsx(
+          "bg-white z-50 border-r transition-all duration-300 flex flex-col",
+          "fixed inset-y-0 left-0 h-dvh", // ✅ занимает всю видимую высоту
+          open ? "translate-x-0" : "-translate-x-full",
+          collapsed ? "w-16" : "w-64", // ✅ ширина меняется при collapsed
+          "md:translate-x-0 md:static"
+        )}
       >
-        <div>
-          <h2 className="text-lg font-semibold mb-4 hidden md:block">
-            Admin Panel
-          </h2>
-          <nav className="space-y-1">
-            {navItems.map((item) => {
-              const isActive = pathname === item.href;
-              return (
-                <Link key={item.href} href={item.href}>
-                  <Button
-                    variant={isActive ? "default" : "ghost"}
-                    className="w-full justify-start gap-2 cursor-pointer"
-                  >
-                    <item.icon className="h-4 w-4" />
-                    {item.label}
-                  </Button>
-                </Link>
-              );
-            })}
-          </nav>
+        {/* Header */}
+        <div className="flex items-center justify-between p-4 border-b">
+          {!collapsed && <span className="font-semibold">Admin Panel</span>}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => {
+              if (isMobile) {
+                setOpen(false);
+              } else {
+                setCollapsed((prev) => !prev);
+              }
+            }}
+            className={clsx(collapsed && "mx-auto")}
+          >
+            {isMobile ? <X /> : <Menu />}
+          </Button>
         </div>
 
-        <div>
+        {/* Navigation items */}
+        <nav className="space-y-1 px-2 py-4">{navItems.map(renderNavItem)}</nav>
+
+        {/* Footer */}
+        <div className="mt-auto p-4">
           <Separator className="my-4" />
           <Button
             onClick={() => signOut({ callbackUrl: "/sign-in" })}
             variant="destructive"
-            className="w-full justify-start gap-2"
+            className={clsx("w-full gap-2", collapsed && "justify-center")}
           >
             <LogOut className="h-4 w-4" />
-            Выйти
+            {!collapsed && "Выйти"}
           </Button>
         </div>
       </aside>

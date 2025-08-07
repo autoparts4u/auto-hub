@@ -11,7 +11,7 @@ export async function DELETE(
     return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
   }
 
-  await db.brands.delete({ where: { id } });
+  await db.brands.delete({ where: { id: Number(id) } });
   return NextResponse.json({ success: true });
 }
 

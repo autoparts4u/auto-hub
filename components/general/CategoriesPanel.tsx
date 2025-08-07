@@ -1,11 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Categories } from "@prisma/client";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Trash, Plus, Pencil, Save } from "lucide-react";
+import {
+  Trash,
+  Plus,
+  Pencil,
+  Save,
+  ArrowDownAZ,
+  ArrowUpAZ,
+  Search,
+} from "lucide-react";
 
 interface CategoriesPanelProps {
   categories: Categories[];
@@ -16,6 +24,8 @@ export function CategoriesPanel({ categories }: CategoriesPanelProps) {
   const [newName, setNewName] = useState("");
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editingValue, setEditingValue] = useState("");
+  const [search, setSearch] = useState("");
+  const [sortAsc, setSortAsc] = useState(true);
 
   const handleCreate = async () => {
     if (!newName.trim()) return;
@@ -71,9 +81,18 @@ export function CategoriesPanel({ categories }: CategoriesPanelProps) {
     }
   };
 
+  const filteredAndSorted = useMemo(() => {
+    const filtered = localCategories.filter((c) =>
+      c.name.toLowerCase().includes(search.toLowerCase())
+    );
+    return [...filtered].sort((a, b) =>
+      sortAsc ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name)
+    );
+  }, [localCategories, search, sortAsc]);
+
   return (
     <div className="space-y-4">
-      <div className="flex gap-2">
+      <div className="flex flex-col md:flex-row gap-2">
         <Input
           value={newName}
           onChange={(e) => setNewName(e.target.value)}
@@ -84,8 +103,32 @@ export function CategoriesPanel({ categories }: CategoriesPanelProps) {
         </Button>
       </div>
 
+      <div className="flex items-center justify-between gap-2 mt-4">
+        <div className="relative w-full max-w-sm">
+          <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Поиск по названию"
+            className="pl-8"
+          />
+        </div>
+        <Button
+          onClick={() => setSortAsc((prev) => !prev)}
+          variant="outline"
+          className="shrink-0"
+        >
+          {sortAsc ? (
+            <ArrowDownAZ className="w-4 h-4 mr-1" />
+          ) : (
+            <ArrowUpAZ className="w-4 h-4 mr-1" />
+          )}
+          Сортировка
+        </Button>
+      </div>
+
       <ul className="space-y-2">
-        {localCategories.map((c) => (
+        {filteredAndSorted.map((c) => (
           <li
             key={c.id}
             className="flex items-center justify-between rounded border px-3 py-2"
@@ -118,7 +161,6 @@ export function CategoriesPanel({ categories }: CategoriesPanelProps) {
                   <Pencil className="w-4 h-4 text-muted-foreground" />
                 </Button>
               )}
-
               <Button
                 size="icon"
                 variant="ghost"

@@ -1,4 +1,3 @@
-// components/parts/AutopartsTable.tsx
 "use client";
 
 import { useState } from "react";
@@ -29,8 +28,10 @@ import {
   Pencil,
   Trash,
   ArrowRightLeft,
-  FileText,
+  // FileText,
   Tags,
+  ArrowUpAZ,
+  ArrowDownAZ,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { PriceEditModal } from "./PriceEditModal";
@@ -42,6 +43,13 @@ interface Props {
   onlyView?: boolean;
   priceAccessId?: number | null;
 }
+
+type SortKey =
+  | "article"
+  | "description"
+  | "brand"
+  | "category"
+  | "totalQuantity";
 
 export function AutopartsTable({
   parts,
@@ -59,6 +67,8 @@ export function AutopartsTable({
   const [search, setSearch] = useState("");
   const [brand, setBrand] = useState("all");
   const [warehouse, setWarehouse] = useState("all");
+  const [sortKey, setSortKey] = useState<SortKey>("article");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
   const router = useRouter();
 
   const handleConfirmDelete = async (id: string) => {
@@ -80,16 +90,70 @@ export function AutopartsTable({
     }
   };
 
-  const filteredParts = parts.filter((p) => {
-    const matchesSearch =
-      p.article.toLowerCase().includes(search.toLowerCase()) ||
-      p.description.toLowerCase().includes(search.toLowerCase());
-    const matchesBrand = brand === "all" || p.brand.name === brand;
-    const matchesWarehouse =
-      warehouse === "all" ||
-      p.warehouses.some((w) => w.warehouseName === warehouse);
-    return matchesSearch && matchesBrand && matchesWarehouse;
-  });
+  const filteredParts = parts
+    .filter((p) => {
+      const matchesSearch =
+        p.article.toLowerCase().includes(search.toLowerCase()) ||
+        p.description.toLowerCase().includes(search.toLowerCase());
+      const matchesBrand = brand === "all" || p.brand.name === brand;
+      const matchesWarehouse =
+        warehouse === "all" ||
+        p.warehouses.some((w) => w.warehouseName === warehouse);
+      return matchesSearch && matchesBrand && matchesWarehouse;
+    })
+    .sort((a, b) => {
+      const getValue = (part: AutopartWithStock) => {
+        switch (sortKey) {
+          case "article":
+            return part.article.toLowerCase();
+          case "description":
+            return part.description.toLowerCase();
+          case "brand":
+            return part.brand.name.toLowerCase();
+          case "category":
+            return part.category.name.toLowerCase();
+          case "totalQuantity":
+            return part.totalQuantity;
+        }
+      };
+      const valA = getValue(a);
+      const valB = getValue(b);
+
+      if (valA < valB) return sortOrder === "asc" ? -1 : 1;
+      if (valA > valB) return sortOrder === "asc" ? 1 : -1;
+      return 0;
+    });
+
+  const toggleSort = (key: SortKey) => {
+    if (sortKey === key) {
+      setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
+    } else {
+      setSortKey(key);
+      setSortOrder("asc");
+    }
+  };
+
+  const SortHeader = ({
+    label,
+    column,
+  }: {
+    label: string;
+    column: SortKey;
+  }) => (
+    <button
+      className="flex items-center justify-center w-full gap-1 font-semibold"
+      onClick={() => toggleSort(column)}
+    >
+      {label}
+      {sortKey === column ? (
+        sortOrder === "asc" ? (
+          <ArrowUpAZ className="w-4 h-4" />
+        ) : (
+          <ArrowDownAZ className="w-4 h-4" />
+        )
+      ) : null}
+    </button>
+  );
 
   return (
     <div className="w-full px-4">
@@ -148,16 +212,27 @@ export function AutopartsTable({
           </div>
         )}
       </div>
-
       <div className="overflow-auto rounded-md border">
         <table className="w-full text-sm text-left">
           <thead className="bg-muted text-muted-foreground">
             <tr>
-              <th className="p-3 text-center">Артикул</th>
-              <th className="p-3 text-center">Бренд</th>
-              <th className="p-3 text-center">Описание</th>
-              <th className="p-3 text-center">Категория</th>
-              {!onlyView && <th className="p-3 text-center">Кол-во</th>}
+              <th className="p-3 text-center">
+                <SortHeader label="Артикул" column="article" />
+              </th>
+              <th className="p-3 text-center">
+                <SortHeader label="Бренд" column="brand" />
+              </th>
+              <th className="p-3 text-center">
+                <SortHeader label="Описание" column="description" />
+              </th>
+              <th className="p-3 text-center">
+                <SortHeader label="Категория" column="category" />
+              </th>
+              {!onlyView && (
+                <th className="p-3 text-center">
+                  <SortHeader label="Кол-во" column="totalQuantity" />
+                </th>
+              )}
               {!onlyView && <th className="p-3 text-center">Склады</th>}
               <th className="p-3 text-center">Цены</th>
               {!onlyView && <th className="p-3 text-center">Действия</th>}
@@ -258,7 +333,7 @@ export function AutopartsTable({
                         </TooltipContent>
                       </Tooltip>
 
-                      <Tooltip>
+                      {/* <Tooltip>
                         <TooltipTrigger asChild>
                           <Button
                             variant="ghost"
@@ -271,7 +346,7 @@ export function AutopartsTable({
                         <TooltipContent side="bottom">
                           <p>История изменений</p>
                         </TooltipContent>
-                      </Tooltip>
+                      </Tooltip> */}
 
                       <Tooltip>
                         <TooltipTrigger asChild>
@@ -295,7 +370,6 @@ export function AutopartsTable({
           </tbody>
         </table>
       </div>
-
       <Dialog
         open={!!selected || creating}
         onOpenChange={() => {
@@ -303,7 +377,7 @@ export function AutopartsTable({
           setCreating(false);
         }}
       >
-        <DialogContent className="sm:max-w-2xl">
+        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogTitle>
             {creating ? "Добавить запчасть" : "Редактировать запчасть"}
           </DialogTitle>

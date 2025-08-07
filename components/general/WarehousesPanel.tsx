@@ -100,7 +100,7 @@ export function WarehousesPanel({ warehouses }: WarehousesPanelProps) {
 
   return (
     <div className="space-y-4">
-      <div className="grid gap-2 md:grid-cols-2">
+      <div className="flex gap-2">
         <Input
           value={newName}
           onChange={(e) => setNewName(e.target.value)}
@@ -111,11 +111,11 @@ export function WarehousesPanel({ warehouses }: WarehousesPanelProps) {
           onChange={(e) => setNewAddress(e.target.value)}
           placeholder="Адрес"
         />
-      </div>
       <Button onClick={handleCreate} disabled={loading}>
         <Plus className="w-4 h-4 mr-2" />
         Добавить
       </Button>
+      </div>
 
       <ul className="space-y-2 mt-6">
         {localWarehouses.map((w) => (

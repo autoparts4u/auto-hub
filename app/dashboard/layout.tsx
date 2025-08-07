@@ -8,9 +8,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
   if (!session || session.user.role !== "admin") redirect("/shop");
 
   return (
-    <div className="flex min-h-screen">
+    <div className="relative min-h-screen md:flex">
       <Sidebar />
-      <main className="flex-1 p-6 ml-64 md:ml-0">
+      <main className="flex-1 p-4 md:p-6">
         <Breadcrumbs />
         {children}
       </main>

@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Brands } from "@prisma/client";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Trash, Plus, Pencil, Save } from "lucide-react";
+import { Trash, Plus, Pencil, Save, ArrowDownAZ, ArrowUpAZ, Search } from "lucide-react";
 
 interface BrandsPanelProps {
   brands: Brands[];
@@ -16,6 +16,8 @@ export function BrandsPanel({ brands }: BrandsPanelProps) {
   const [newName, setNewName] = useState("");
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editingValue, setEditingValue] = useState("");
+  const [search, setSearch] = useState("");
+  const [sortAsc, setSortAsc] = useState(true);
 
   const handleCreate = async () => {
     if (!newName.trim()) return;
@@ -40,7 +42,7 @@ export function BrandsPanel({ brands }: BrandsPanelProps) {
 
     if (res.ok) {
       setLocalBrands((prev) => prev.filter((b) => b.id !== id));
-      toast.success("Бренд удален");
+      toast.success("Бренд удалён");
     } else {
       toast.error("Ошибка при удалении");
     }
@@ -71,9 +73,20 @@ export function BrandsPanel({ brands }: BrandsPanelProps) {
     }
   };
 
+  const filteredAndSortedBrands = useMemo(() => {
+    const filtered = localBrands.filter((b) =>
+      b.name.toLowerCase().includes(search.toLowerCase())
+    );
+    return [...filtered].sort((a, b) =>
+      sortAsc
+        ? a.name.localeCompare(b.name)
+        : b.name.localeCompare(a.name)
+    );
+  }, [localBrands, search, sortAsc]);
+
   return (
     <div className="space-y-4">
-      <div className="flex gap-2">
+      <div className="flex flex-col md:flex-row gap-2">
         <Input
           value={newName}
           onChange={(e) => setNewName(e.target.value)}
@@ -84,8 +97,32 @@ export function BrandsPanel({ brands }: BrandsPanelProps) {
         </Button>
       </div>
 
+      <div className="flex items-center justify-between gap-2 mt-4">
+        <div className="relative w-full max-w-sm">
+          <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Поиск по названию"
+            className="pl-8"
+          />
+        </div>
+        <Button
+          onClick={() => setSortAsc((prev) => !prev)}
+          variant="outline"
+          className="shrink-0"
+        >
+          {sortAsc ? (
+            <ArrowDownAZ className="w-4 h-4 mr-1" />
+          ) : (
+            <ArrowUpAZ className="w-4 h-4 mr-1" />
+          )}
+          Сортировка
+        </Button>
+      </div>
+
       <ul className="space-y-2">
-        {localBrands.map((b) => (
+        {filteredAndSortedBrands.map((b) => (
           <li
             key={b.id}
             className="flex items-center justify-between rounded border px-3 py-2"
@@ -101,11 +138,19 @@ export function BrandsPanel({ brands }: BrandsPanelProps) {
             )}
             <div className="flex gap-1">
               {editingId === b.id ? (
-                <Button size="icon" variant="ghost" onClick={() => handleSave(b.id)}>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  onClick={() => handleSave(b.id)}
+                >
                   <Save className="w-4 h-4 text-green-600" />
                 </Button>
               ) : (
-                <Button size="icon" variant="ghost" onClick={() => handleEdit(b)}>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  onClick={() => handleEdit(b)}
+                >
                   <Pencil className="w-4 h-4 text-muted-foreground" />
                 </Button>
               )}
