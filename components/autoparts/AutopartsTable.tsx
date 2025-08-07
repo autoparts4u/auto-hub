@@ -91,39 +91,49 @@ export function AutopartsTable({
   };
 
   const filteredParts = parts
-    .filter((p) => {
-      const matchesSearch =
-        p.article.toLowerCase().includes(search.toLowerCase()) ||
-        p.description.toLowerCase().includes(search.toLowerCase());
-      const matchesBrand = brand === "all" || p.brand.name === brand;
-      const matchesWarehouse =
-        warehouse === "all" ||
-        p.warehouses.some((w) => w.warehouseName === warehouse);
-      return matchesSearch && matchesBrand && matchesWarehouse;
-    })
-    .sort((a, b) => {
-      const getValue = (part: AutopartWithStock) => {
-        switch (sortKey) {
-          case "article":
-            return part.article.toLowerCase();
-          case "description":
-            return part.description.toLowerCase();
-          case "brand":
-            return part.brand.name.toLowerCase();
-          case "category":
-            return part.category.name.toLowerCase();
-          case "totalQuantity":
-            return part.totalQuantity;
-        }
-      };
-      const valA = getValue(a);
-      const valB = getValue(b);
+  .filter((p) => {
+    const query = search.toLowerCase();
 
-      if (valA < valB) return sortOrder === "asc" ? -1 : 1;
-      if (valA > valB) return sortOrder === "asc" ? 1 : -1;
-      return 0;
-    });
+    const matchesSelf =
+      p.article.toLowerCase().includes(query) ||
+      p.description.toLowerCase().includes(query);
 
+    const matchesAnalogue = p.analogues.some(
+      (a) =>
+        a.article.toLowerCase().includes(query) ||
+        a.description.toLowerCase().includes(query)
+    );
+
+    const matchesBrand = brand === "all" || p.brand.name === brand;
+
+    const matchesWarehouse =
+      warehouse === "all" ||
+      p.warehouses.some((w) => w.warehouseName === warehouse);
+
+    return (matchesSelf || matchesAnalogue) && matchesBrand && matchesWarehouse;
+  })
+  .sort((a, b) => {
+    const getValue = (part: AutopartWithStock) => {
+      switch (sortKey) {
+        case "article":
+          return part.article.toLowerCase();
+        case "description":
+          return part.description.toLowerCase();
+        case "brand":
+          return part.brand.name.toLowerCase();
+        case "category":
+          return part.category.name.toLowerCase();
+        case "totalQuantity":
+          return part.totalQuantity;
+      }
+    };
+    const valA = getValue(a);
+    const valB = getValue(b);
+
+    if (valA < valB) return sortOrder === "asc" ? -1 : 1;
+    if (valA > valB) return sortOrder === "asc" ? 1 : -1;
+    return 0;
+  });
   const toggleSort = (key: SortKey) => {
     if (sortKey === key) {
       setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));

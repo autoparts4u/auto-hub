@@ -52,10 +52,34 @@ const ShopPage = async () => {
           },
         },
       },
+      analoguesA: {
+        include: {
+          partB: {
+            include: {
+              brand: true,
+              category: true,
+            },
+          },
+        },
+      },
+      analoguesB: {
+        include: {
+          partA: {
+            include: {
+              brand: true,
+              category: true,
+            },
+          },
+        },
+      },
     },
   });
 
-  const formatted = autoparts.map((part) => ({
+  const formatted = autoparts.map((part) => {
+    const analoguesFromA = part.analoguesA.map((a) => a.partB);
+    const analoguesFromB = part.analoguesB.map((a) => a.partA);
+    const allAnalogues = [...analoguesFromA, ...analoguesFromB];
+    return {
     id: part.id,
     article: part.article,
     description: part.description,
@@ -71,7 +95,15 @@ const ShopPage = async () => {
       price: p.price,
       priceType: p.priceType,
     })),
-  }));
+    analogues: allAnalogues.map((a) => ({
+      id: a.id,
+      article: a.article,
+      description: a.description,
+      brand: a.brand,
+      category: a.category,
+    })),
+  }
+});
 
   const brands = await db.brands.findMany();
 

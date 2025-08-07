@@ -20,52 +20,13 @@ export async function DELETE(
   }
 }
 
-// export async function PATCH(
-//   req: Request,
-//   { params }: { params: Promise<{ id: string }> }
-// ) {
-//   try {
-//     const { id } = await params;
-//     const { article, description, brandId, categoryId, stock } = await req.json();
-
-//     // Обновляем саму запчасть
-//     await db.autoparts.update({
-//       where: { id },
-//       data: {
-//         article,
-//         description,
-//         brand_id: brandId,
-//         category_id: categoryId,
-//       },
-//     });
-
-//     // Удаляем старые записи о количестве на складах
-//     await db.autopartsWarehouses.deleteMany({
-//       where: { authopart_id: id },
-//     });
-
-//     // Добавляем актуальные
-//     await db.autopartsWarehouses.createMany({
-//       data: stock.map((s: { warehouseId: number; quantity: number }) => ({
-//         authopart_id: id,
-//         warehouse_id: s.warehouseId,
-//         quantity: s.quantity,
-//       })),
-//     });
-
-//     return NextResponse.json({ success: true });
-//   } catch (error) {
-//     console.error("Ошибка обновления запчасти:", error);
-//     return NextResponse.json({ error: "Ошибка обновления" }, { status: 500 });
-//   }
-// }
-
-export async function PATCH(req: Request, { params }: { params: { id: string } }) {
+export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params;
     const { article, description, brandId, categoryId, stock, analogueIds } = await req.json();
 
     const autopart = await db.autoparts.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         article,
         description,
@@ -84,14 +45,14 @@ export async function PATCH(req: Request, { params }: { params: { id: string } }
     // Обновляем аналоги: удаляем старые и добавляем новые
     await db.analogues.deleteMany({
       where: {
-        OR: [{ partAId: params.id }, { partBId: params.id }],
+        OR: [{ partAId: id }, { partBId: id }],
       },
     });
 
     if (analogueIds?.length) {
-      const analogueData = analogueIds.flatMap((id: string) => [
-        { partAId: params.id, partBId: id },
-        { partAId: id, partBId: params.id },
+      const analogueData = analogueIds.flatMap((analougeId: string) => [
+        { partAId: id, partBId: analougeId },
+        { partAId: analougeId, partBId: id },
       ]);
 
       await db.analogues.createMany({
