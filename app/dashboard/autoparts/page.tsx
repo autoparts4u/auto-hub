@@ -8,6 +8,7 @@ export default async function PartsPage() {
     include: {
       category: true,
       brand: true,
+      auto: true,
       warehouses: {
         include: {
           warehouse: {
@@ -17,8 +18,11 @@ export default async function PartsPage() {
       },
       prices: {
         include: {
+          priceType: true,
+        },
+        orderBy: {
           priceType: {
-            select: { id: true, name: true },
+            name: "asc", 
           },
         },
       },
@@ -53,13 +57,14 @@ export default async function PartsPage() {
     const analoguesFromA = part.analoguesA.map((a) => a.partB);
     const analoguesFromB = part.analoguesB.map((a) => a.partA);
     const allAnalogues = [...analoguesFromA, ...analoguesFromB];
-  
+
     return {
       id: part.id,
       article: part.article,
       description: part.description,
       category: part.category,
       brand: part.brand,
+      auto: part.auto,
       totalQuantity: part.warehouses.reduce((sum, w) => sum + w.quantity, 0),
       warehouses: part.warehouses.map((w) => ({
         warehouseId: w.warehouse.id,
@@ -80,5 +85,7 @@ export default async function PartsPage() {
     };
   });
 
-  return <AutopartsTable parts={formatted} brands={brands} warehouses={warehouses} />;
+  return (
+    <AutopartsTable parts={formatted} brands={brands} warehouses={warehouses} />
+  );
 }

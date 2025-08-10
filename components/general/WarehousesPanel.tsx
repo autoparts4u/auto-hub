@@ -40,9 +40,9 @@ export function WarehousesPanel({ warehouses }: WarehousesPanelProps) {
       setLocalWarehouses((prev) => [...prev, created]);
       setNewName("");
       setNewAddress("");
-      toast.success("Склад добавлен");
+      toast.success("База добавлена");
     } catch {
-      toast.error("Ошибка при добавлении склада");
+      toast.error("Ошибка при добавлении базы");
     } finally {
       setLoading(false);
     }
@@ -57,9 +57,9 @@ export function WarehousesPanel({ warehouses }: WarehousesPanelProps) {
       if (!res.ok) throw new Error();
 
       setLocalWarehouses((prev) => prev.filter((w) => w.id !== id));
-      toast.success("Склад удален");
+      toast.success("База удалена");
     } catch {
-      toast.error("Ошибка при удалении склада");
+      toast.error("Ошибка при удалении базы");
     }
   };
 
@@ -89,7 +89,7 @@ export function WarehousesPanel({ warehouses }: WarehousesPanelProps) {
           w.id === id ? { ...w, name: editingName, address: editingAddress } : w
         )
       );
-      toast.success("Склад обновлён");
+      toast.success("База обновлёна");
       setEditingId(null);
       setEditingName("");
       setEditingAddress("");
@@ -104,7 +104,7 @@ export function WarehousesPanel({ warehouses }: WarehousesPanelProps) {
         <Input
           value={newName}
           onChange={(e) => setNewName(e.target.value)}
-          placeholder="Название склада"
+          placeholder="Название базы"
         />
         <Input
           value={newAddress}

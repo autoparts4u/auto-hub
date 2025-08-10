@@ -260,7 +260,7 @@ export function AutopartModal({ part, isNew, onClose }: AutopartModalProps) {
       <div className="flex flex-col gap-1">
         <div className="flex items-center gap-2">
           <label className="w-1/6 text-sm font-medium text-right">
-            Категория
+            Группа
           </label>
           {loading ? (
             <Skeleton className="h-10 w-full rounded-md" />
@@ -277,7 +277,7 @@ export function AutopartModal({ part, isNew, onClose }: AutopartModalProps) {
                   "border-red-500": touched.categoryId && !categoryId,
                 })}
               >
-                <SelectValue placeholder="Выберите категорию" />
+                <SelectValue placeholder="Выберите группу" />
               </SelectTrigger>
               <SelectContent>
                 {categories.map((c) => (
@@ -302,7 +302,7 @@ export function AutopartModal({ part, isNew, onClose }: AutopartModalProps) {
         </div>
       ) : (
         <div className="grid gap-4 mt-4">
-          <h4 className="text-sm font-medium">Наличие на складах</h4>
+          <h4 className="text-sm font-medium">Наличие на базах</h4>
           {warehouses.map((wh) => (
             <div key={wh.id} className="flex items-center gap-2">
               <label className="w-1/6 text-sm text-right">{wh.name}</label>

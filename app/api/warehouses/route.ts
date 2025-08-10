@@ -9,9 +9,9 @@ export async function GET() {
     });
     return NextResponse.json(warehouses);
   } catch (error) {
-    console.error("Ошибка при получении складов:", error);
+    console.error("Ошибка при получении баз:", error);
     return NextResponse.json(
-      { error: "Ошибка при получении складов" },
+      { error: "Ошибка при получении баз" },
       { status: 500 }
     );
   }
@@ -35,9 +35,9 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(created);
   } catch (error) {
-    console.error("Ошибка при создании склада:", error);
+    console.error("Ошибка при создании базы:", error);
     return NextResponse.json(
-      { error: "Ошибка при создании склада" },
+      { error: "Ошибка при создании базы" },
       { status: 500 }
     );
   }

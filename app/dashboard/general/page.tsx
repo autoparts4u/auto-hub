@@ -22,8 +22,8 @@ export default async function GeneralPage() {
       <Tabs defaultValue="brands" className="w-full">
         <TabsList className="mb-4">
           <TabsTrigger value="brands">Бренды</TabsTrigger>
-          <TabsTrigger value="categories">Категории</TabsTrigger>
-          <TabsTrigger value="warehouses">Склады</TabsTrigger>
+          <TabsTrigger value="categories">Группы</TabsTrigger>
+          <TabsTrigger value="warehouses">Базы</TabsTrigger>
           <TabsTrigger value="price-types">Типы цен</TabsTrigger>
         </TabsList>
 

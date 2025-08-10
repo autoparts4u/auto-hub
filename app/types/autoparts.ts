@@ -1,4 +1,4 @@
-import { Autoparts, Brands, Categories } from "@prisma/client";
+import { Auto, Autoparts, Brands, Categories } from "@prisma/client";
 
 export type WarehouseStock = {
   warehouseId: number;
@@ -12,6 +12,7 @@ export type AutopartWithStock = Pick<
 > & {
   category: Categories;
   brand: Brands;
+  auto: Auto | null;
   totalQuantity: number;
   warehouses: WarehouseStock[];
   prices: {

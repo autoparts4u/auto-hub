@@ -34,7 +34,7 @@ export function MovePartModal({ part, onClose }: MovePartModalProps) {
         const data = await res.json();
         setWarehouses(data);
       } catch {
-        toast.error("Ошибка загрузки складов");
+        toast.error("Ошибка загрузки баз");
       } finally {
         setLoading(false);
       }
@@ -63,7 +63,7 @@ export function MovePartModal({ part, onClose }: MovePartModalProps) {
       (w) => w.warehouseId.toString() === fromWarehouseId
     );
     if (!fromStock || fromStock.quantity < numericQuantity) {
-      toast.error("Недостаточно запчастей на складе-источнике");
+      toast.error("Недостаточно запчастей на базе-источнике");
       return;
     }
 
@@ -112,7 +112,7 @@ export function MovePartModal({ part, onClose }: MovePartModalProps) {
   }
 
   const getWarehouseName = (id: number) =>
-    warehouses.find((w) => w.id === id)?.name || `Склад #${id}`;
+    warehouses.find((w) => w.id === id)?.name || `База #${id}`;
 
   const availableFromWarehouses = part.warehouses
     .filter((w) => w.quantity > 0)
@@ -130,7 +130,7 @@ export function MovePartModal({ part, onClose }: MovePartModalProps) {
           const name = getWarehouseName(stock.warehouseId);
           return (
             <div key={stock.warehouseId}>
-              На складе <strong>{name}</strong> — {stock.quantity} шт.
+              На базе <strong>{name}</strong> — {stock.quantity} шт.
             </div>
           );
         })}
@@ -139,14 +139,14 @@ export function MovePartModal({ part, onClose }: MovePartModalProps) {
       <div className="grid gap-4 py-4">
         {/* Со склада */}
         <div className="grid gap-2">
-          <Label htmlFor="from">Со склада</Label>
+          <Label htmlFor="from">С базы</Label>
           <select
             id="from"
             value={fromWarehouseId}
             onChange={(e) => setFromWarehouseId(e.target.value)}
             className="w-full border rounded px-3 py-2"
           >
-            <option value="">Выберите склад</option>
+            <option value="">Выберите базу</option>
             {availableFromWarehouses.map((w) => (
               <option key={w.id} value={w.id}>
                 {w.name} — {w.quantity} шт.
@@ -157,7 +157,7 @@ export function MovePartModal({ part, onClose }: MovePartModalProps) {
 
         {/* На склад */}
         <div className="grid gap-2">
-          <Label htmlFor="to">На склад</Label>
+          <Label htmlFor="to">На базу</Label>
           {/* <select
             id="to"
             value={toWarehouseId}
@@ -179,7 +179,7 @@ export function MovePartModal({ part, onClose }: MovePartModalProps) {
             onChange={(e) => setToWarehouseId(e.target.value)}
             className="w-full border rounded px-3 py-2"
           >
-            <option value="">Выберите склад</option>
+            <option value="">Выберите базу</option>
             {warehouses.map((w) => (
               <option key={w.id} value={w.id}>
                 {w.name}

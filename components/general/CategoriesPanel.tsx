@@ -39,9 +39,9 @@ export function CategoriesPanel({ categories }: CategoriesPanelProps) {
       const created = await res.json();
       setLocalCategories((prev) => [...prev, created]);
       setNewName("");
-      toast.success("Категория добавлена");
+      toast.success("Группа добавлена");
     } else {
-      toast.error("Ошибка при добавлении категории");
+      toast.error("Ошибка при добавлении группы");
     }
   };
 
@@ -50,7 +50,7 @@ export function CategoriesPanel({ categories }: CategoriesPanelProps) {
 
     if (res.ok) {
       setLocalCategories((prev) => prev.filter((c) => c.id !== id));
-      toast.success("Категория удалена");
+      toast.success("Группа удалена");
     } else {
       toast.error("Ошибка при удалении");
     }
@@ -75,9 +75,9 @@ export function CategoriesPanel({ categories }: CategoriesPanelProps) {
       );
       setEditingId(null);
       setEditingValue("");
-      toast.success("Категория обновлена");
+      toast.success("Группа обновлена");
     } else {
-      toast.error("Ошибка при обновлении категории");
+      toast.error("Ошибка при обновлении группы");
     }
   };
 
@@ -96,7 +96,7 @@ export function CategoriesPanel({ categories }: CategoriesPanelProps) {
         <Input
           value={newName}
           onChange={(e) => setNewName(e.target.value)}
-          placeholder="Название категории"
+          placeholder="Название группы"
         />
         <Button onClick={handleCreate}>
           <Plus className="w-4 h-4 mr-1" /> Добавить

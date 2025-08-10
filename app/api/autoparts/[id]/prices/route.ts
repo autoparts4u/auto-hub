@@ -14,7 +14,11 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
     },
   });
 
-  const allPriceTypes = await db.priceTypes.findMany();
+  const allPriceTypes = await db.priceTypes.findMany({
+    orderBy: {
+      name: "asc"
+    }
+  });
 
   // Возвращаем все типы цен, даже если цена не установлена
   const merged = allPriceTypes.map((type) => {

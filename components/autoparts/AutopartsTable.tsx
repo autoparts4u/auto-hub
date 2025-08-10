@@ -7,18 +7,24 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import {
   Tooltip,
   TooltipTrigger,
   TooltipContent,
   TooltipProvider,
 } from "@/components/ui/tooltip";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import { Label } from "@/components/ui/label";
 import { AutopartModal } from "./AutopartModal";
 import { MovePartModal } from "./MovePartModal";
@@ -32,6 +38,7 @@ import {
   Tags,
   ArrowUpAZ,
   ArrowDownAZ,
+  Check,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { PriceEditModal } from "./PriceEditModal";
@@ -49,7 +56,8 @@ type SortKey =
   | "description"
   | "brand"
   | "category"
-  | "totalQuantity";
+  | "totalQuantity"
+  | "auto";
 
 export function AutopartsTable({
   parts,
@@ -65,8 +73,10 @@ export function AutopartsTable({
   const [logsPartId, setLogsPartId] = useState<string | null>(null);
   const [pricePartId, setPricePartId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
-  const [brand, setBrand] = useState("all");
-  const [warehouse, setWarehouse] = useState("all");
+  const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
+  const [selectedWarehouses, setSelectedWarehouses] = useState<string[]>([]);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [selectedAutos, setSelectedAutos] = useState<string[]>([]);
   const [sortKey, setSortKey] = useState<SortKey>("article");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
   const router = useRouter();
@@ -91,49 +101,69 @@ export function AutopartsTable({
   };
 
   const filteredParts = parts
-  .filter((p) => {
-    const query = search.toLowerCase();
+    .filter((p) => {
+      const query = search.toLowerCase().replaceAll(/[/,.-\s]/g, "");
 
-    const matchesSelf =
-      p.article.toLowerCase().includes(query) ||
-      p.description.toLowerCase().includes(query);
+      const matchesSelf =
+        p.article.toLowerCase().replaceAll(/[/,.-\s]/g, "").includes(query) ||
+        p.description.toLowerCase().replaceAll(/[/,.-\s]/g, "").includes(query);
 
-    const matchesAnalogue = p.analogues.some(
-      (a) =>
-        a.article.toLowerCase().includes(query) ||
-        a.description.toLowerCase().includes(query)
-    );
+      const matchesAnalogue = p.analogues.some(
+        (a) =>
+          a.article.toLowerCase().replaceAll(/[/,.-\s]/g, "").includes(query) ||
+          a.description.toLowerCase().replaceAll(/[/,.-\s]/g, "").includes(query)
+      );
 
-    const matchesBrand = brand === "all" || p.brand.name === brand;
+      const matchesBrand =
+        selectedBrands.length === 0 || selectedBrands.includes(p.brand.name);
 
-    const matchesWarehouse =
-      warehouse === "all" ||
-      p.warehouses.some((w) => w.warehouseName === warehouse);
+      const matchesWarehouse =
+        selectedWarehouses.length === 0 ||
+        p.warehouses.some((w) => selectedWarehouses.includes(w.warehouseName));
 
-    return (matchesSelf || matchesAnalogue) && matchesBrand && matchesWarehouse;
-  })
-  .sort((a, b) => {
-    const getValue = (part: AutopartWithStock) => {
-      switch (sortKey) {
-        case "article":
-          return part.article.toLowerCase();
-        case "description":
-          return part.description.toLowerCase();
-        case "brand":
-          return part.brand.name.toLowerCase();
-        case "category":
-          return part.category.name.toLowerCase();
-        case "totalQuantity":
-          return part.totalQuantity;
-      }
-    };
-    const valA = getValue(a);
-    const valB = getValue(b);
+      const matchesCategory =
+        selectedCategories.length === 0 ||
+        selectedCategories.includes(p.category.name);
 
-    if (valA < valB) return sortOrder === "asc" ? -1 : 1;
-    if (valA > valB) return sortOrder === "asc" ? 1 : -1;
-    return 0;
-  });
+      const matchesAuto =
+        !p.auto ||
+        selectedAutos.length === 0 ||
+        selectedAutos.includes(p.auto.name);
+
+      return (
+        (matchesSelf || matchesAnalogue) &&
+        matchesBrand &&
+        matchesWarehouse &&
+        matchesCategory &&
+        matchesAuto
+      );
+    })
+    .sort((a, b) => {
+      const getValue = (part: AutopartWithStock) => {
+        switch (sortKey) {
+          case "article":
+            return part.article.toLowerCase();
+          case "description":
+            return part.description.toLowerCase();
+          case "brand":
+            return part.brand.name.toLowerCase();
+          case "category":
+            return part.category.name.toLowerCase();
+          case "auto":
+            return part.auto?.name.toLowerCase();
+          case "totalQuantity":
+            return part.totalQuantity;
+        }
+      };
+      const valA = getValue(a);
+      const valB = getValue(b);
+
+      if (!valA || !valB) return 0;
+
+      if (valA < valB) return sortOrder === "asc" ? -1 : 1;
+      if (valA > valB) return sortOrder === "asc" ? 1 : -1;
+      return 0;
+    });
   const toggleSort = (key: SortKey) => {
     if (sortKey === key) {
       setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
@@ -185,42 +215,200 @@ export function AutopartsTable({
           onChange={(e) => setSearch(e.target.value)}
           className="w-full sm:max-w-xs"
         />
-
         <div className="space-y-1">
-          <Label>Бренд</Label>
-          <Select value={brand} onValueChange={setBrand}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Все бренды" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Все</SelectItem>
-              {brands.map((b) => (
-                <SelectItem key={b.id} value={b.name}>
-                  {b.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <Label>Бренды</Label>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className="w-[240px] justify-between">
+                {selectedBrands.length === 0
+                  ? "Все бренды"
+                  : `${selectedBrands.length} выбрано`}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[240px] p-0">
+              <Command>
+                <CommandInput placeholder="Поиск бренда..." />
+                <CommandList>
+                  <CommandEmpty>Бренд не найден</CommandEmpty>
+                  <CommandGroup>
+                    {brands.map((b) => {
+                      const isSelected = selectedBrands.includes(b.name);
+                      return (
+                        <CommandItem
+                          key={b.id}
+                          onSelect={() => {
+                            setSelectedBrands(
+                              (prev) =>
+                                isSelected
+                                  ? prev.filter((name) => name !== b.name) // убрать
+                                  : [...prev, b.name] // добавить
+                            );
+                          }}
+                        >
+                          <div className="flex items-center gap-2">
+                            <Check
+                              className={`h-4 w-4 ${
+                                isSelected ? "opacity-100" : "opacity-0"
+                              }`}
+                            />
+                            {b.name}
+                          </div>
+                        </CommandItem>
+                      );
+                    })}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
         </div>
-
         {!onlyView && (
           <div className="space-y-1">
-            <Label>Склад</Label>
-            <Select value={warehouse} onValueChange={setWarehouse}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Все склады" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Все</SelectItem>
-                {warehouses.map((w) => (
-                  <SelectItem key={w.id} value={w.name}>
-                    {w.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Label>Базы</Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="w-[240px] justify-between">
+                  {selectedWarehouses.length === 0
+                    ? "Все базы"
+                    : `${selectedWarehouses.length} выбрано`}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[240px] p-0">
+                <Command>
+                  <CommandInput placeholder="Поиск базы..." />
+                  <CommandList>
+                    <CommandEmpty>База не найдена</CommandEmpty>
+                    <CommandGroup>
+                      {warehouses.map((w) => {
+                        const isSelected = selectedWarehouses.includes(w.name);
+                        return (
+                          <CommandItem
+                            key={w.id}
+                            onSelect={() => {
+                              setSelectedWarehouses((prev) =>
+                                isSelected
+                                  ? prev.filter((name) => name !== w.name)
+                                  : [...prev, w.name]
+                              );
+                            }}
+                          >
+                            <div className="flex items-center gap-2">
+                              <Check
+                                className={`h-4 w-4 ${
+                                  isSelected ? "opacity-100" : "opacity-0"
+                                }`}
+                              />
+                              {w.name}
+                            </div>
+                          </CommandItem>
+                        );
+                      })}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
           </div>
         )}
+        <div className="space-y-1">
+          <Label>Группы</Label>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className="w-[240px] justify-between">
+                {selectedCategories.length === 0
+                  ? "Все группы"
+                  : `${selectedCategories.length} выбрано`}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[240px] p-0">
+              <Command>
+                <CommandInput placeholder="Поиск группы..." />
+                <CommandList>
+                  <CommandEmpty>Группа не найдена</CommandEmpty>
+                  <CommandGroup>
+                    {Array.from(new Set(parts.map((p) => p.category.name))).map(
+                      (categoryName) => {
+                        const isSelected =
+                          selectedCategories.includes(categoryName);
+                        return (
+                          <CommandItem
+                            key={categoryName}
+                            onSelect={() => {
+                              setSelectedCategories((prev) =>
+                                isSelected
+                                  ? prev.filter((name) => name !== categoryName)
+                                  : [...prev, categoryName]
+                              );
+                            }}
+                          >
+                            <div className="flex items-center gap-2">
+                              <Check
+                                className={`h-4 w-4 ${
+                                  isSelected ? "opacity-100" : "opacity-0"
+                                }`}
+                              />
+                              {categoryName}
+                            </div>
+                          </CommandItem>
+                        );
+                      }
+                    )}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
+        </div>
+        <div className="space-y-1">
+          <Label>Авто</Label>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className="w-[240px] justify-between">
+                {selectedAutos.length === 0
+                  ? "Все авто"
+                  : `${selectedAutos.length} выбрано`}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[240px] p-0">
+              <Command>
+                <CommandInput placeholder="Поиск авто..." />
+                <CommandList>
+                  <CommandEmpty>Авто не найдено</CommandEmpty>
+                  <CommandGroup>
+                    {Array.from(new Set(parts.map((p) => p.auto?.name))).map(
+                      (autoName) => {
+                        if (!autoName) return;
+
+                        const isSelected = selectedAutos.includes(autoName);
+                        return (
+                          <CommandItem
+                            key={autoName}
+                            onSelect={() => {
+                              setSelectedAutos((prev) =>
+                                isSelected
+                                  ? prev.filter((name) => name !== autoName)
+                                  : [...prev, autoName]
+                              );
+                            }}
+                          >
+                            <div className="flex items-center gap-2">
+                              <Check
+                                className={`h-4 w-4 ${
+                                  isSelected ? "opacity-100" : "opacity-0"
+                                }`}
+                              />
+                              {autoName}
+                            </div>
+                          </CommandItem>
+                        );
+                      }
+                    )}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
+        </div>
       </div>
       <div className="overflow-auto rounded-md border">
         <table className="w-full text-sm text-left">
@@ -236,14 +424,17 @@ export function AutopartsTable({
                 <SortHeader label="Описание" column="description" />
               </th>
               <th className="p-3 text-center">
-                <SortHeader label="Категория" column="category" />
+                <SortHeader label="Группа" column="category" />
+              </th>
+              <th className="p-3 text-center">
+                <SortHeader label="Авто" column="auto" />
               </th>
               {!onlyView && (
                 <th className="p-3 text-center">
                   <SortHeader label="Кол-во" column="totalQuantity" />
                 </th>
               )}
-              {!onlyView && <th className="p-3 text-center">Склады</th>}
+              {!onlyView && <th className="p-3 text-center">Базы</th>}
               <th className="p-3 text-center">Цены</th>
               {!onlyView && <th className="p-3 text-center">Действия</th>}
             </tr>
@@ -254,17 +445,14 @@ export function AutopartsTable({
                 key={p.id}
                 className="border-t hover:bg-accent/40 transition-colors"
               >
-                <td className="p-3 text-center font-mono font-medium">
-                  {p.article}
-                </td>
-                <td className="p-3 text-center">{p.brand.name}</td>
+                <td className="p-3 font-mono font-medium">{p.article}</td>
+                <td className="p-3">{p.brand.name}</td>
                 <td className="p-3">{p.description}</td>
-                <td className="p-3 text-center">{p.category.name}</td>
+                <td className="p-3">{p.category.name}</td>
+                <td className="p-3">{p.auto?.name}</td>
+                {!onlyView && <td className="p-3">{p.totalQuantity}</td>}
                 {!onlyView && (
-                  <td className="p-3 text-center">{p.totalQuantity}</td>
-                )}
-                {!onlyView && (
-                  <td className="p-3 text-center">
+                  <td className="p-3">
                     <ul className="space-y-1">
                       {p.warehouses.map((w) => (
                         <li key={w.warehouseId} className="text-xs">
@@ -275,7 +463,7 @@ export function AutopartsTable({
                     </ul>
                   </td>
                 )}
-                <td className="p-3 text-center whitespace-nowrap">
+                <td className="p-3 whitespace-nowrap">
                   {!priceAccessId ? (
                     <ul className="space-y-1 text-xs text-left">
                       {p.prices.map((price) => (

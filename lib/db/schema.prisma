@@ -176,9 +176,11 @@ model Autoparts {
     description String
     brand_id    Int
     category_id Int
+    auto_id     Int?
 
     brand      Brands                @relation(fields: [brand_id], references: [id])
     category   Categories            @relation(fields: [category_id], references: [id])
+    auto       Auto?                 @relation(fields: [auto_id], references: [id])
     prices     AutopartPrices[]
     warehouses AutopartsWarehouses[]
     orderItems OrderItems[]
@@ -238,6 +240,12 @@ model Brands {
 }
 
 model Categories {
+    id    Int         @id @default(autoincrement())
+    name  String      @unique
+    parts Autoparts[]
+}
+
+model Auto {
     id    Int         @id @default(autoincrement())
     name  String      @unique
     parts Autoparts[]
