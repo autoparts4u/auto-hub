@@ -1,25 +1,18 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { PriceTypes } from "@prisma/client";
+import { Auto } from "@prisma/client";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import {
-  Trash,
-  Pencil,
-  Save,
-  ArrowDownAZ,
-  ArrowUpAZ,
-  Search,
-} from "lucide-react";
+import { Trash, Plus, Pencil, Save, ArrowDownAZ, ArrowUpAZ, Search } from "lucide-react";
 
-interface PriceTypesPanelProps {
-  priceTypes: PriceTypes[];
+interface AutosPanelProps {
+  autos: Auto[];
 }
 
-export function PriceTypesPanel({ priceTypes }: PriceTypesPanelProps) {
-  const [types, setTypes] = useState(priceTypes);
+export function AutosPanel({ autos }: AutosPanelProps) {
+  const [localAutos, setLocalAutos] = useState(autos);
   const [newName, setNewName] = useState("");
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editingValue, setEditingValue] = useState("");
@@ -29,65 +22,67 @@ export function PriceTypesPanel({ priceTypes }: PriceTypesPanelProps) {
   const handleCreate = async () => {
     if (!newName.trim()) return;
 
-    const res = await fetch("/api/price-types", {
+    const res = await fetch("/api/autos", {
       method: "POST",
       body: JSON.stringify({ name: newName }),
     });
 
     if (res.ok) {
       const created = await res.json();
-      setTypes((prev) => [...prev, created]);
+      setLocalAutos((prev) => [...prev, created]);
       setNewName("");
-      toast.success("Тип цены добавлен");
+      toast.success("Авто добавлен");
     } else {
-      toast.error("Ошибка при добавлении");
+      toast.error("Ошибка при добавлении авто");
     }
   };
 
   const handleDelete = async (id: number) => {
-    const res = await fetch(`/api/price-types/${id}`, { method: "DELETE" });
+    const res = await fetch(`/api/autos/${id}`, { method: "DELETE" });
 
     if (res.ok) {
-      setTypes((prev) => prev.filter((t) => t.id !== id));
-      toast.success("Тип цены удалён");
+      setLocalAutos((prev) => prev.filter((b) => b.id !== id));
+      toast.success("Авто удалён");
     } else {
       toast.error("Ошибка при удалении");
     }
   };
 
-  const handleEdit = (type: PriceTypes) => {
-    setEditingId(type.id);
-    setEditingValue(type.name);
+  const handleEdit = (auto: Auto) => {
+    setEditingId(auto.id);
+    setEditingValue(auto.name);
   };
 
   const handleSave = async (id: number) => {
     if (!editingValue.trim()) return;
 
-    const res = await fetch(`/api/price-types/${id}`, {
+    const res = await fetch(`/api/autos/${id}`, {
       method: "PUT",
       body: JSON.stringify({ name: editingValue }),
     });
 
     if (res.ok) {
-      setTypes((prev) =>
-        prev.map((t) => (t.id === id ? { ...t, name: editingValue } : t))
+      setLocalAutos((prev) =>
+        prev.map((b) => (b.id === id ? { ...b, name: editingValue } : b))
       );
       setEditingId(null);
       setEditingValue("");
-      toast.success("Тип цены обновлён");
+      toast.success("Авто обновлён");
     } else {
-      toast.error("Ошибка при обновлении");
+      toast.error("Ошибка при обновлении авто");
     }
   };
 
-  const filteredAndSorted = useMemo(() => {
-    const filtered = types.filter((t) =>
-      t.name.toLowerCase().includes(search.toLowerCase())
+  const filteredAndSortedAutos = useMemo(() => {
+    const filtered = localAutos.filter((b) =>
+      b.name.toLowerCase().includes(search.toLowerCase())
     );
     return [...filtered].sort((a, b) =>
-      sortAsc ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name)
+      sortAsc
+        ? a.name.localeCompare(b.name)
+        : b.name.localeCompare(a.name)
     );
-  }, [types, search, sortAsc]);
+  }, [localAutos, search, sortAsc]);
 
   return (
     <div className="space-y-4">
@@ -95,10 +90,10 @@ export function PriceTypesPanel({ priceTypes }: PriceTypesPanelProps) {
         <Input
           value={newName}
           onChange={(e) => setNewName(e.target.value)}
-          placeholder="Название типа цены"
+          placeholder="Название авто"
         />
         <Button onClick={handleCreate}>
-          <span className="mr-1">+</span> Добавить
+          <Plus className="w-4 h-4 mr-1" /> Добавить
         </Button>
       </div>
 
@@ -127,27 +122,26 @@ export function PriceTypesPanel({ priceTypes }: PriceTypesPanelProps) {
       </div>
 
       <ul className="space-y-2">
-        {filteredAndSorted.map((t) => (
+        {filteredAndSortedAutos.map((b) => (
           <li
-            key={t.id}
+            key={b.id}
             className="flex items-center justify-between rounded border px-3 py-2"
           >
-            {editingId === t.id ? (
+            {editingId === b.id ? (
               <Input
                 value={editingValue}
                 onChange={(e) => setEditingValue(e.target.value)}
                 className="mr-2"
               />
             ) : (
-              <span>{t.name}</span>
+              <span>{b.name}</span>
             )}
-
             <div className="flex gap-1">
-              {editingId === t.id ? (
+              {editingId === b.id ? (
                 <Button
                   size="icon"
                   variant="ghost"
-                  onClick={() => handleSave(t.id)}
+                  onClick={() => handleSave(b.id)}
                 >
                   <Save className="w-4 h-4 text-green-600" />
                 </Button>
@@ -155,7 +149,7 @@ export function PriceTypesPanel({ priceTypes }: PriceTypesPanelProps) {
                 <Button
                   size="icon"
                   variant="ghost"
-                  onClick={() => handleEdit(t)}
+                  onClick={() => handleEdit(b)}
                 >
                   <Pencil className="w-4 h-4 text-muted-foreground" />
                 </Button>
@@ -163,7 +157,7 @@ export function PriceTypesPanel({ priceTypes }: PriceTypesPanelProps) {
               <Button
                 size="icon"
                 variant="ghost"
-                onClick={() => handleDelete(t.id)}
+                onClick={() => handleDelete(b.id)}
               >
                 <Trash className="w-4 h-4 text-destructive" />
               </Button>

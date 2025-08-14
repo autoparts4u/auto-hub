@@ -5,16 +5,18 @@ import { BrandsPanel } from "@/components/general/BrandsPanel";
 import { CategoriesPanel } from "@/components/general/CategoriesPanel";
 import { WarehousesPanel } from "@/components/general/WarehousesPanel";
 import { PriceTypesPanel } from "@/components/general/PriceTypesPanel";
+import { AutosPanel } from "@/components/general/AutoPanel";
+import { TextsForSearchPanel } from "@/components/general/TextsForSearchPanel";
 
 export default async function GeneralPage() {
-  const [brands, categories, warehouses, priceTypes] = await Promise.all([
+  const [brands, categories, warehouses, priceTypes, autos, textsForSearch] = await Promise.all([
     db.brands.findMany(),
     db.categories.findMany(),
     db.warehouses.findMany(),
     db.priceTypes.findMany(),
+    db.auto.findMany(),
+    db.textForAuthopartsSearch.findMany()
   ]);
-
-  console.log(priceTypes);
 
   return (
     <div className="p-4">
@@ -23,6 +25,8 @@ export default async function GeneralPage() {
         <TabsList className="mb-4">
           <TabsTrigger value="brands">Бренды</TabsTrigger>
           <TabsTrigger value="categories">Группы</TabsTrigger>
+          <TabsTrigger value="auto">Авто</TabsTrigger>
+          <TabsTrigger value="texts-for-search">Текста для поиска</TabsTrigger>
           <TabsTrigger value="warehouses">Базы</TabsTrigger>
           <TabsTrigger value="price-types">Типы цен</TabsTrigger>
         </TabsList>
@@ -33,11 +37,17 @@ export default async function GeneralPage() {
         <TabsContent value="categories">
           <CategoriesPanel categories={categories} />
         </TabsContent>
+        <TabsContent value="auto">
+          <AutosPanel autos={autos} />
+        </TabsContent>
+        <TabsContent value="texts-for-search">
+          <TextsForSearchPanel textsForSearch={textsForSearch} />
+        </TabsContent>
         <TabsContent value="warehouses">
           <WarehousesPanel warehouses={warehouses} />
         </TabsContent>
         <TabsContent value="price-types">
-          <PriceTypesPanel initialPriceTypes={priceTypes} />
+          <PriceTypesPanel priceTypes={priceTypes} />
         </TabsContent>
       </Tabs>
     </div>

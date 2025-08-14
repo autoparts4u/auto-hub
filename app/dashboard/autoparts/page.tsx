@@ -9,6 +9,7 @@ export default async function PartsPage() {
       category: true,
       brand: true,
       auto: true,
+      textForSearch: true,
       warehouses: {
         include: {
           warehouse: {
@@ -22,7 +23,7 @@ export default async function PartsPage() {
         },
         orderBy: {
           priceType: {
-            name: "asc", 
+            name: "asc",
           },
         },
       },
@@ -53,6 +54,12 @@ export default async function PartsPage() {
 
   const warehouses = await db.warehouses.findMany();
 
+  const categories = await db.categories.findMany();
+
+  const autos = await db.auto.findMany();
+
+  const textsForSearch = await db.textForAuthopartsSearch.findMany();
+
   const formatted: AutopartWithStock[] = autoparts.map((part) => {
     const analoguesFromA = part.analoguesA.map((a) => a.partB);
     const analoguesFromB = part.analoguesB.map((a) => a.partA);
@@ -65,6 +72,7 @@ export default async function PartsPage() {
       category: part.category,
       brand: part.brand,
       auto: part.auto,
+      textForSearch: part.textForSearch,
       totalQuantity: part.warehouses.reduce((sum, w) => sum + w.quantity, 0),
       warehouses: part.warehouses.map((w) => ({
         warehouseId: w.warehouse.id,
@@ -86,6 +94,13 @@ export default async function PartsPage() {
   });
 
   return (
-    <AutopartsTable parts={formatted} brands={brands} warehouses={warehouses} />
+    <AutopartsTable
+      parts={formatted}
+      brands={brands}
+      categories={categories}
+      autos={autos}
+      warehouses={warehouses}
+      textsForSearch={textsForSearch}
+    />
   );
 }

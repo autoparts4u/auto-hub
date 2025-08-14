@@ -42,11 +42,15 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { PriceEditModal } from "./PriceEditModal";
+import { Auto, Categories, TextForAuthopartsSearch } from "@prisma/client";
 
 interface Props {
   parts: AutopartWithStock[];
   brands: { id: number; name: string }[];
   warehouses: { id: number; name: string }[];
+  categories: Categories[];
+  autos: Auto[];
+  textsForSearch: TextForAuthopartsSearch[];
   onlyView?: boolean;
   priceAccessId?: number | null;
 }
@@ -63,6 +67,9 @@ export function AutopartsTable({
   parts,
   brands,
   warehouses,
+  categories,
+  autos,
+  textsForSearch,
   onlyView,
   priceAccessId,
 }: Props) {
@@ -77,6 +84,7 @@ export function AutopartsTable({
   const [selectedWarehouses, setSelectedWarehouses] = useState<string[]>([]);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [selectedAutos, setSelectedAutos] = useState<string[]>([]);
+  const [selectedTextsForSearch, setSelectedTextsForSearch] = useState<string[]>([]);
   const [sortKey, setSortKey] = useState<SortKey>("article");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
   const router = useRouter();
@@ -106,7 +114,8 @@ export function AutopartsTable({
 
       const matchesSelf =
         p.article.toLowerCase().replaceAll(/[/,.-\s]/g, "").includes(query) ||
-        p.description.toLowerCase().replaceAll(/[/,.-\s]/g, "").includes(query);
+        p.description.toLowerCase().replaceAll(/[/,.-\s]/g, "").includes(query) ||
+        p.textForSearch?.text.toLowerCase().replaceAll(/[/,.-\s]/g, "").includes(query);
 
       const matchesAnalogue = p.analogues.some(
         (a) =>
@@ -130,12 +139,18 @@ export function AutopartsTable({
         selectedAutos.length === 0 ||
         selectedAutos.includes(p.auto.name);
 
+      const matchesTextsForSearch =
+        !p.textForSearch ||
+        selectedTextsForSearch.length === 0 ||
+        selectedTextsForSearch.includes(p.textForSearch.text);
+
       return (
         (matchesSelf || matchesAnalogue) &&
         matchesBrand &&
         matchesWarehouse &&
         matchesCategory &&
-        matchesAuto
+        matchesAuto &&
+        matchesTextsForSearch
       );
     })
     .sort((a, b) => {
@@ -326,8 +341,9 @@ export function AutopartsTable({
                 <CommandList>
                   <CommandEmpty>Группа не найдена</CommandEmpty>
                   <CommandGroup>
-                    {Array.from(new Set(parts.map((p) => p.category.name))).map(
-                      (categoryName) => {
+                    {categories.map(
+                      (category) => {
+                        const categoryName = category.name;
                         const isSelected =
                           selectedCategories.includes(categoryName);
                         return (
@@ -375,8 +391,10 @@ export function AutopartsTable({
                 <CommandList>
                   <CommandEmpty>Авто не найдено</CommandEmpty>
                   <CommandGroup>
-                    {Array.from(new Set(parts.map((p) => p.auto?.name))).map(
-                      (autoName) => {
+                    {autos.map(
+                      (auto) => {
+                        const autoName = auto.name;
+
                         if (!autoName) return;
 
                         const isSelected = selectedAutos.includes(autoName);
@@ -409,6 +427,58 @@ export function AutopartsTable({
             </PopoverContent>
           </Popover>
         </div>
+        {!onlyView && <div className="space-y-1">
+          <Label>Текст для поиска</Label>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className="w-[240px] justify-between">
+                {selectedTextsForSearch.length === 0
+                  ? "Все текста"
+                  : `${selectedTextsForSearch.length} выбрано`}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[240px] p-0">
+              <Command>
+                <CommandInput placeholder="Поиск текста..." />
+                <CommandList>
+                  <CommandEmpty>Текст не найдено</CommandEmpty>
+                  <CommandGroup>
+                    {textsForSearch.map(
+                      (textForSearch) => {
+                        const text = textForSearch.text;
+
+                        if (!text) return;
+
+                        const isSelected = selectedTextsForSearch.includes(text);
+                        return (
+                          <CommandItem
+                            key={text}
+                            onSelect={() => {
+                              setSelectedTextsForSearch((prev) =>
+                                isSelected
+                                  ? prev.filter((textContent) => textContent !== text)
+                                  : [...prev, text]
+                              );
+                            }}
+                          >
+                            <div className="flex items-center gap-2">
+                              <Check
+                                className={`h-4 w-4 ${
+                                  isSelected ? "opacity-100" : "opacity-0"
+                                }`}
+                              />
+                              {text}
+                            </div>
+                          </CommandItem>
+                        );
+                      }
+                    )}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
+        </div>}
       </div>
       <div className="overflow-auto rounded-md border">
         <table className="w-full text-sm text-left">

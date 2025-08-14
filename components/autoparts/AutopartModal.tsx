@@ -4,7 +4,12 @@ import { useEffect, useRef, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { AutopartWithStock } from "@/app/types/autoparts";
-import { Brands, Categories, Warehouses } from "@prisma/client";
+import {
+  Brands,
+  Categories,
+  TextForAuthopartsSearch,
+  Warehouses,
+} from "@prisma/client";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import {
@@ -33,8 +38,16 @@ export function AutopartModal({ part, isNew, onClose }: AutopartModalProps) {
   const [categoryId, setCategoryId] = useState<string>(
     part?.category.id.toString() ?? ""
   );
+  const [autoId, setAutoId] = useState<string>(part?.auto?.id.toString() ?? "");
+  const [textForSearchId, setTextForSearchId] = useState<string>(
+    part?.textForSearch?.id.toString() ?? ""
+  );
   const [brands, setBrands] = useState<Brands[]>([]);
   const [categories, setCategories] = useState<Categories[]>([]);
+  const [autos, setAutos] = useState<Categories[]>([]);
+  const [textsForSearch, setTextsForSearch] = useState<
+    TextForAuthopartsSearch[]
+  >([]);
   const [warehouses, setWarehouses] = useState<Warehouses[]>([]);
   const [stockByWarehouse, setStockByWarehouse] = useState<
     Record<string, number>
@@ -55,6 +68,8 @@ export function AutopartModal({ part, isNew, onClose }: AutopartModalProps) {
     description: false,
     brandId: false,
     categoryId: false,
+    autoId: false,
+    textForSearchId: false,
   });
 
   const articleRef = useRef<HTMLInputElement>(null);
@@ -62,19 +77,40 @@ export function AutopartModal({ part, isNew, onClose }: AutopartModalProps) {
   // Загрузка данных при открытии модалки
   useEffect(() => {
     const load = async () => {
-      const [brandsRes, categoriesRes, warehousesRes] = await Promise.all([
+      const [
+        brandsRes,
+        categoriesRes,
+        warehousesRes,
+        autosRes,
+        textsForSearchRes,
+      ] = await Promise.all([
         fetch("/api/brands"),
         fetch("/api/categories"),
         fetch("/api/warehouses"),
+        fetch("/api/autos"),
+        fetch("/api/texts-for-search"),
       ]);
-      const [brandsData, categoriesData, warehousesData] = await Promise.all([
+      const [
+        brandsData,
+        categoriesData,
+        warehousesData,
+        autosData,
+        textsForSearchData,
+      ] = await Promise.all([
         brandsRes.json(),
         categoriesRes.json(),
         warehousesRes.json(),
+        autosRes.json(),
+        textsForSearchRes.json(),
       ]);
       setBrands(brandsData);
       setCategories(categoriesData);
       setWarehouses(warehousesData);
+      setAutos(autosData);
+      setTextsForSearch(textsForSearchData);
+
+      console.log("first");
+      console.log(textsForSearch);
 
       if (part) {
         const initialStock: Record<string, number> = {};
@@ -135,6 +171,8 @@ export function AutopartModal({ part, isNew, onClose }: AutopartModalProps) {
       description: true,
       brandId: true,
       categoryId: true,
+      autoId: true,
+      textForSearchId: true,
     });
 
     if (!article || !description || !brandId || !categoryId) {
@@ -153,6 +191,9 @@ export function AutopartModal({ part, isNew, onClose }: AutopartModalProps) {
 
     const analogueIds = analogues.map((a) => a.id);
 
+    console.log("2");
+    console.log(textForSearchId);
+
     const res = await fetch(
       isNew ? "/api/autoparts" : `/api/autoparts/${part?.id}`,
       {
@@ -163,6 +204,8 @@ export function AutopartModal({ part, isNew, onClose }: AutopartModalProps) {
           description,
           brandId: Number(brandId),
           categoryId: Number(categoryId),
+          autoId: Number(autoId),
+          textForSearchId: textForSearchId && Number(textForSearchId),
           stock,
           analogueIds, // добавляем аналоги
         }),
@@ -259,9 +302,7 @@ export function AutopartModal({ part, isNew, onClose }: AutopartModalProps) {
 
       <div className="flex flex-col gap-1">
         <div className="flex items-center gap-2">
-          <label className="w-1/6 text-sm font-medium text-right">
-            Группа
-          </label>
+          <label className="w-1/6 text-sm font-medium text-right">Группа</label>
           {loading ? (
             <Skeleton className="h-10 w-full rounded-md" />
           ) : (
@@ -293,6 +334,79 @@ export function AutopartModal({ part, isNew, onClose }: AutopartModalProps) {
           <p className="text-sm text-red-500 ml-[16.66%]">Поле обязательно</p>
         )}
       </div>
+      <div className="flex flex-col gap-1">
+        <div className="flex items-center gap-2">
+          <label className="w-1/6 text-sm font-medium text-right">Авто</label>
+          {loading ? (
+            <Skeleton className="h-10 w-full rounded-md" />
+          ) : (
+            <Select
+              value={autoId}
+              onValueChange={(value) => {
+                setAutoId(value);
+                setTouched((prev) => ({ ...prev, autoId: true }));
+              }}
+            >
+              <SelectTrigger
+                className={clsx("w-full", {
+                  "border-red-500": touched.autoId && !autoId,
+                })}
+              >
+                <SelectValue placeholder="Выберите группу" />
+              </SelectTrigger>
+              <SelectContent>
+                {autos.map((c) => (
+                  <SelectItem key={c.id} value={c.id.toString()}>
+                    {c.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </div>
+        {touched.autoId && !autoId && (
+          <p className="text-sm text-red-500 ml-[16.66%]">Поле обязательно</p>
+        )}
+      </div>
+      <div className="flex flex-col gap-1">
+        <div className="flex items-center gap-2">
+          <label className="w-1/6 text-sm font-medium text-right">
+            Текст для поиска
+          </label>
+          {loading ? (
+            <Skeleton className="h-10 w-full rounded-md" />
+          ) : (
+            <Select
+              value={textForSearchId}
+              onValueChange={(value) => {
+                setTextForSearchId(value);
+                setTouched((prev) => ({ ...prev, textForSearchId: true }));
+              }}
+            >
+              <SelectTrigger
+                className={clsx(
+                  "w-full"
+                  //   {
+                  //   "border-red-500": touched.textForSearchId && !textsForSearch,
+                  // }
+                )}
+              >
+                <SelectValue placeholder="Выберите текст" />
+              </SelectTrigger>
+              <SelectContent>
+                {textsForSearch.map((c) => (
+                  <SelectItem key={c.id} value={c.id.toString()}>
+                    {c.text}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+        </div>
+        {/* {touched.categoryId && !categoryId && (
+          <p className="text-sm text-red-500 ml-[16.66%]">Поле обязательно</p>
+        )} */}
+      </div>
 
       {loading ? (
         <div className="space-y-3">
@@ -307,17 +421,23 @@ export function AutopartModal({ part, isNew, onClose }: AutopartModalProps) {
             <div key={wh.id} className="flex items-center gap-2">
               <label className="w-1/6 text-sm text-right">{wh.name}</label>
               <Input
-  type="number"
-  min={0}
-  value={stockByWarehouse[wh.id] === undefined ? "" : stockByWarehouse[wh.id] === 0 ? "" : stockByWarehouse[wh.id]}
-  onChange={(e) => {
-    const value = e.target.value;
-    setStockByWarehouse((prev) => ({
-      ...prev,
-      [wh.id]: value === "" ? "" : Number(value),
-    }));
-  }}
-/>
+                type="number"
+                min={0}
+                value={
+                  stockByWarehouse[wh.id] === undefined
+                    ? ""
+                    : stockByWarehouse[wh.id] === 0
+                    ? ""
+                    : stockByWarehouse[wh.id]
+                }
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setStockByWarehouse((prev) => ({
+                    ...prev,
+                    [wh.id]: value === "" ? "" : Number(value),
+                  }));
+                }}
+              />
             </div>
           ))}
         </div>

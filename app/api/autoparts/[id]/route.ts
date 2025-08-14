@@ -20,10 +20,24 @@ export async function DELETE(
   }
 }
 
-export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function PATCH(
+  req: Request,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
     const { id } = await params;
-    const { article, description, brandId, categoryId, stock, analogueIds } = await req.json();
+    const {
+      article,
+      description,
+      brandId,
+      categoryId,
+      autoId,
+      textForSearchId,
+      stock,
+      analogueIds,
+    } = await req.json();
+
+    console.log(textForSearchId)
 
     const autopart = await db.autoparts.update({
       where: { id },
@@ -32,10 +46,12 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
         description,
         brand_id: brandId,
         category_id: categoryId,
+        auto_id: autoId,
+        text_for_search_id: textForSearchId || null,
         warehouses: {
           deleteMany: {},
           create: stock.map((s: { warehouseId: number; quantity: number }) => ({
-            warehouseId: s.warehouseId,
+            warehouse: { connect: { id: s.warehouseId } },
             quantity: s.quantity,
           })),
         },
@@ -64,6 +80,9 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     return NextResponse.json(autopart);
   } catch (e) {
     console.error(e);
-    return NextResponse.json({ error: "Ошибка при обновлении" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Ошибка при обновлении" },
+      { status: 500 }
+    );
   }
 }
