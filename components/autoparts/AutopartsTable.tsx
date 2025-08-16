@@ -255,53 +255,6 @@ export function AutopartsTable({
           onChange={(e) => setSearch(e.target.value)}
           className="w-full sm:max-w-xs"
         />
-        <div className="space-y-1">
-          <Label>Бренды</Label>
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="outline" className="w-[240px] justify-between">
-                {selectedBrands.length === 0
-                  ? "Все бренды"
-                  : `${selectedBrands.length} выбрано`}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-[240px] p-0">
-              <Command>
-                <CommandInput placeholder="Поиск бренда..." />
-                <CommandList>
-                  <CommandEmpty>Бренд не найден</CommandEmpty>
-                  <CommandGroup>
-                    {brands.map((b) => {
-                      const isSelected = selectedBrands.includes(b.name);
-                      return (
-                        <CommandItem
-                          key={b.id}
-                          onSelect={() => {
-                            setSelectedBrands(
-                              (prev) =>
-                                isSelected
-                                  ? prev.filter((name) => name !== b.name) // убрать
-                                  : [...prev, b.name] // добавить
-                            );
-                          }}
-                        >
-                          <div className="flex items-center gap-2">
-                            <Check
-                              className={`h-4 w-4 ${
-                                isSelected ? "opacity-100" : "opacity-0"
-                              }`}
-                            />
-                            {b.name}
-                          </div>
-                        </CommandItem>
-                      );
-                    })}
-                  </CommandGroup>
-                </CommandList>
-              </Command>
-            </PopoverContent>
-          </Popover>
-        </div>
         {!onlyView && (
           <div className="space-y-1">
             <Label>Базы</Label>
@@ -448,6 +401,53 @@ export function AutopartsTable({
             </PopoverContent>
           </Popover>
         </div>
+        <div className="space-y-1">
+          <Label>Бренды</Label>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className="w-[240px] justify-between">
+                {selectedBrands.length === 0
+                  ? "Все бренды"
+                  : `${selectedBrands.length} выбрано`}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[240px] p-0">
+              <Command>
+                <CommandInput placeholder="Поиск бренда..." />
+                <CommandList>
+                  <CommandEmpty>Бренд не найден</CommandEmpty>
+                  <CommandGroup>
+                    {brands.map((b) => {
+                      const isSelected = selectedBrands.includes(b.name);
+                      return (
+                        <CommandItem
+                          key={b.id}
+                          onSelect={() => {
+                            setSelectedBrands(
+                              (prev) =>
+                                isSelected
+                                  ? prev.filter((name) => name !== b.name) // убрать
+                                  : [...prev, b.name] // добавить
+                            );
+                          }}
+                        >
+                          <div className="flex items-center gap-2">
+                            <Check
+                              className={`h-4 w-4 ${
+                                isSelected ? "opacity-100" : "opacity-0"
+                              }`}
+                            />
+                            {b.name}
+                          </div>
+                        </CommandItem>
+                      );
+                    })}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
+        </div>
         {!onlyView && (
           <div className="space-y-1">
             <Label>Текст для поиска</Label>
@@ -511,18 +511,24 @@ export function AutopartsTable({
               <th className="p-3 text-center">
                 <SortHeader label="Артикул" column="article" />
               </th>
-              <th className="p-3 text-center">
-                <SortHeader label="Бренд" column="brand" />
-              </th>
+              {!onlyView && (
+                <th className="p-3 text-center">
+                  <SortHeader label="Бренд" column="brand" />
+                </th>
+              )}
               <th className="p-3 text-center">
                 <SortHeader label="Описание" column="description" />
               </th>
-              <th className="p-3 text-center">
-                <SortHeader label="Группа" column="category" />
-              </th>
-              <th className="p-3 text-center">
-                <SortHeader label="Авто" column="auto" />
-              </th>
+              {!onlyView && (
+                <th className="p-3 text-center">
+                  <SortHeader label="Группа" column="category" />
+                </th>
+              )}
+              {!onlyView && (
+                <th className="p-3 text-center">
+                  <SortHeader label="Авто" column="auto" />
+                </th>
+              )}
               <th className="p-3 text-center">
                 <SortHeader
                   label={onlyView ? "Кол (общ)" : "Кол-во"}
@@ -542,10 +548,10 @@ export function AutopartsTable({
                 className="border-t hover:bg-accent/40 transition-colors"
               >
                 <td className="p-3 font-mono font-medium">{p.article}</td>
-                <td className="p-3">{p.brand.name}</td>
+                {!onlyView && <td className="p-3">{p.brand.name}</td>}
                 <td className="p-3">{p.description}</td>
-                <td className="p-3">{p.category.name}</td>
-                <td className="p-3">{p.auto?.name}</td>
+                {!onlyView && <td className="p-3">{p.category.name}</td>}
+                {!onlyView && <td className="p-3">{p.auto?.name}</td>}
                 <td className="p-3">
                   {!onlyView
                     ? p.totalQuantity
