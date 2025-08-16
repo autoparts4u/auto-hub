@@ -160,7 +160,7 @@ model OrderItems {
     item_final_price Float
 
     order     Orders     @relation(fields: [order_id], references: [id])
-    authopart Autoparts  @relation(fields: [authopart_id], references: [id])
+    authopart Autoparts  @relation(fields: [authopart_id], references: [id], onDelete: Cascade)
     warehouse Warehouses @relation(fields: [warehouse_id], references: [id])
 }
 
@@ -206,7 +206,7 @@ model AutopartLog {
     newValue   String?
     createdAt  DateTime @default(now())
 
-    autopart Autoparts @relation(fields: [autopartId], references: [id])
+    autopart Autoparts @relation(fields: [autopartId], references: [id], onDelete: Cascade)
 }
 
 model AutopartsWarehouses {
@@ -214,7 +214,7 @@ model AutopartsWarehouses {
     warehouse_id Int
     quantity     Int
 
-    authopart Autoparts  @relation(fields: [authopart_id], references: [id])
+    authopart Autoparts  @relation(fields: [authopart_id], references: [id], onDelete: Cascade)
     warehouse Warehouses @relation(fields: [warehouse_id], references: [id])
 
     @@id([authopart_id, warehouse_id])
@@ -225,7 +225,7 @@ model AutopartPrices {
     pricesType_id Int
     price         Float
 
-    authopart Autoparts  @relation(fields: [authopart_id], references: [id])
+    authopart Autoparts  @relation(fields: [authopart_id], references: [id], onDelete: Cascade)
     priceType PriceTypes @relation(fields: [pricesType_id], references: [id])
 
     @@id([authopart_id, pricesType_id])
@@ -262,8 +262,8 @@ model Analogues {
     partAId String
     partBId String
 
-    partA Autoparts @relation("PartA", fields: [partAId], references: [id])
-    partB Autoparts @relation("PartB", fields: [partBId], references: [id])
+    partA Autoparts @relation("PartA", fields: [partAId], references: [id], onDelete: Cascade)
+    partB Autoparts @relation("PartB", fields: [partBId], references: [id], onDelete: Cascade)
 
     @@unique([partAId, partBId])
 }

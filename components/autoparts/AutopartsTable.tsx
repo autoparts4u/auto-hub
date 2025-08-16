@@ -43,6 +43,7 @@ import {
 import { useRouter } from "next/navigation";
 import { PriceEditModal } from "./PriceEditModal";
 import { Auto, Categories, TextForAuthopartsSearch } from "@prisma/client";
+import ImportAutopartsButton from "./ImportAutopartsButton";
 
 interface Props {
   parts: AutopartWithStock[];
@@ -161,9 +162,9 @@ export function AutopartsTable({
         selectedAutos.includes(p.auto.name);
 
       const matchesTextsForSearch =
-        !p.textForSearch ||
         selectedTextsForSearch.length === 0 ||
-        selectedTextsForSearch.includes(p.textForSearch.text);
+        (p.textForSearch &&
+          selectedTextsForSearch.includes(p.textForSearch.text));
 
       return (
         (matchesSelf || matchesAnalogue) &&
@@ -238,13 +239,16 @@ export function AutopartsTable({
           <h2 className="text-2xl font-semibold tracking-tight">
             Автозапчасти
           </h2>
-          <Button onClick={() => setCreating(true)}>
-            <Plus className="w-4 h-4 mr-2" /> Добавить
-          </Button>
+          <div className="flex gap-4">
+            {!onlyView && <ImportAutopartsButton />}
+            <Button onClick={() => setCreating(true)}>
+              <Plus className="w-4 h-4 mr-2" /> Добавить
+            </Button>
+          </div>
         </div>
       )}
 
-      <div className="mb-4 flex flex-wrap gap-4 items-end">
+      <div className="sticky top-0 z-20 bg-white border-b mb-4 flex flex-wrap gap-4 items-end p-2">
         <Input
           placeholder="Поиск по описанию или артикулу"
           value={search}
@@ -520,7 +524,10 @@ export function AutopartsTable({
                 <SortHeader label="Авто" column="auto" />
               </th>
               <th className="p-3 text-center">
-                <SortHeader label="Кол-во" column="totalQuantity" />
+                <SortHeader
+                  label={onlyView ? "Кол (общ)" : "Кол-во"}
+                  column="totalQuantity"
+                />
               </th>
 
               {!onlyView && <th className="p-3 text-center">Базы</th>}
@@ -546,8 +553,8 @@ export function AutopartsTable({
                         p.warehouses.find(
                           (warehouse) =>
                             warehouse.warehouseId === warehouseAccessId
-                        )?.quantity || "-"
-                      }/${p.totalQuantity}`}
+                        )?.quantity || "0"
+                      } (${p.totalQuantity})`}
                 </td>
                 {!onlyView && (
                   <td className="p-3">

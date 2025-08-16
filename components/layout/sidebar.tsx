@@ -85,9 +85,10 @@ export function Sidebar() {
       <aside
         className={clsx(
           "bg-white z-50 border-r transition-all duration-300 flex flex-col",
-          "fixed inset-y-0 left-0 h-dvh", // ✅ занимает всю видимую высоту
+          // мобилка: фиксированное выезжающее меню
+          "fixed inset-y-0 left-0 h-dvh md:sticky md:top-0 md:h-screen",
           open ? "translate-x-0" : "-translate-x-full",
-          collapsed ? "w-16" : "w-64", // ✅ ширина меняется при collapsed
+          collapsed ? "w-16" : "w-64",
           "md:translate-x-0 md:static"
         )}
       >
