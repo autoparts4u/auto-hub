@@ -53,6 +53,7 @@ interface Props {
   textsForSearch: TextForAuthopartsSearch[];
   onlyView?: boolean;
   priceAccessId?: number | null;
+  warehouseAccessId?: number | null;
 }
 
 type SortKey =
@@ -72,6 +73,7 @@ export function AutopartsTable({
   textsForSearch,
   onlyView,
   priceAccessId,
+  warehouseAccessId,
 }: Props) {
   const [selected, setSelected] = useState<AutopartWithStock | null>(null);
   const [movePart, setMovePart] = useState<AutopartWithStock | null>(null);
@@ -84,10 +86,14 @@ export function AutopartsTable({
   const [selectedWarehouses, setSelectedWarehouses] = useState<string[]>([]);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [selectedAutos, setSelectedAutos] = useState<string[]>([]);
-  const [selectedTextsForSearch, setSelectedTextsForSearch] = useState<string[]>([]);
+  const [selectedTextsForSearch, setSelectedTextsForSearch] = useState<
+    string[]
+  >([]);
   const [sortKey, setSortKey] = useState<SortKey>("article");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
   const router = useRouter();
+
+  console.log(warehouseAccessId);
 
   const handleConfirmDelete = async (id: string) => {
     try {
@@ -113,14 +119,29 @@ export function AutopartsTable({
       const query = search.toLowerCase().replaceAll(/[/,.-\s]/g, "");
 
       const matchesSelf =
-        p.article.toLowerCase().replaceAll(/[/,.-\s]/g, "").includes(query) ||
-        p.description.toLowerCase().replaceAll(/[/,.-\s]/g, "").includes(query) ||
-        p.textForSearch?.text.toLowerCase().replaceAll(/[/,.-\s]/g, "").includes(query);
+        p.article
+          .toLowerCase()
+          .replaceAll(/[/,.-\s]/g, "")
+          .includes(query) ||
+        p.description
+          .toLowerCase()
+          .replaceAll(/[/,.-\s]/g, "")
+          .includes(query) ||
+        p.textForSearch?.text
+          .toLowerCase()
+          .replaceAll(/[/,.-\s]/g, "")
+          .includes(query);
 
       const matchesAnalogue = p.analogues.some(
         (a) =>
-          a.article.toLowerCase().replaceAll(/[/,.-\s]/g, "").includes(query) ||
-          a.description.toLowerCase().replaceAll(/[/,.-\s]/g, "").includes(query)
+          a.article
+            .toLowerCase()
+            .replaceAll(/[/,.-\s]/g, "")
+            .includes(query) ||
+          a.description
+            .toLowerCase()
+            .replaceAll(/[/,.-\s]/g, "")
+            .includes(query)
       );
 
       const matchesBrand =
@@ -341,34 +362,32 @@ export function AutopartsTable({
                 <CommandList>
                   <CommandEmpty>Группа не найдена</CommandEmpty>
                   <CommandGroup>
-                    {categories.map(
-                      (category) => {
-                        const categoryName = category.name;
-                        const isSelected =
-                          selectedCategories.includes(categoryName);
-                        return (
-                          <CommandItem
-                            key={categoryName}
-                            onSelect={() => {
-                              setSelectedCategories((prev) =>
-                                isSelected
-                                  ? prev.filter((name) => name !== categoryName)
-                                  : [...prev, categoryName]
-                              );
-                            }}
-                          >
-                            <div className="flex items-center gap-2">
-                              <Check
-                                className={`h-4 w-4 ${
-                                  isSelected ? "opacity-100" : "opacity-0"
-                                }`}
-                              />
-                              {categoryName}
-                            </div>
-                          </CommandItem>
-                        );
-                      }
-                    )}
+                    {categories.map((category) => {
+                      const categoryName = category.name;
+                      const isSelected =
+                        selectedCategories.includes(categoryName);
+                      return (
+                        <CommandItem
+                          key={categoryName}
+                          onSelect={() => {
+                            setSelectedCategories((prev) =>
+                              isSelected
+                                ? prev.filter((name) => name !== categoryName)
+                                : [...prev, categoryName]
+                            );
+                          }}
+                        >
+                          <div className="flex items-center gap-2">
+                            <Check
+                              className={`h-4 w-4 ${
+                                isSelected ? "opacity-100" : "opacity-0"
+                              }`}
+                            />
+                            {categoryName}
+                          </div>
+                        </CommandItem>
+                      );
+                    })}
                   </CommandGroup>
                 </CommandList>
               </Command>
@@ -391,72 +410,73 @@ export function AutopartsTable({
                 <CommandList>
                   <CommandEmpty>Авто не найдено</CommandEmpty>
                   <CommandGroup>
-                    {autos.map(
-                      (auto) => {
-                        const autoName = auto.name;
+                    {autos.map((auto) => {
+                      const autoName = auto.name;
 
-                        if (!autoName) return;
+                      if (!autoName) return;
 
-                        const isSelected = selectedAutos.includes(autoName);
-                        return (
-                          <CommandItem
-                            key={autoName}
-                            onSelect={() => {
-                              setSelectedAutos((prev) =>
-                                isSelected
-                                  ? prev.filter((name) => name !== autoName)
-                                  : [...prev, autoName]
-                              );
-                            }}
-                          >
-                            <div className="flex items-center gap-2">
-                              <Check
-                                className={`h-4 w-4 ${
-                                  isSelected ? "opacity-100" : "opacity-0"
-                                }`}
-                              />
-                              {autoName}
-                            </div>
-                          </CommandItem>
-                        );
-                      }
-                    )}
+                      const isSelected = selectedAutos.includes(autoName);
+                      return (
+                        <CommandItem
+                          key={autoName}
+                          onSelect={() => {
+                            setSelectedAutos((prev) =>
+                              isSelected
+                                ? prev.filter((name) => name !== autoName)
+                                : [...prev, autoName]
+                            );
+                          }}
+                        >
+                          <div className="flex items-center gap-2">
+                            <Check
+                              className={`h-4 w-4 ${
+                                isSelected ? "opacity-100" : "opacity-0"
+                              }`}
+                            />
+                            {autoName}
+                          </div>
+                        </CommandItem>
+                      );
+                    })}
                   </CommandGroup>
                 </CommandList>
               </Command>
             </PopoverContent>
           </Popover>
         </div>
-        {!onlyView && <div className="space-y-1">
-          <Label>Текст для поиска</Label>
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="outline" className="w-[240px] justify-between">
-                {selectedTextsForSearch.length === 0
-                  ? "Все текста"
-                  : `${selectedTextsForSearch.length} выбрано`}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-[240px] p-0">
-              <Command>
-                <CommandInput placeholder="Поиск текста..." />
-                <CommandList>
-                  <CommandEmpty>Текст не найдено</CommandEmpty>
-                  <CommandGroup>
-                    {textsForSearch.map(
-                      (textForSearch) => {
+        {!onlyView && (
+          <div className="space-y-1">
+            <Label>Текст для поиска</Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="w-[240px] justify-between">
+                  {selectedTextsForSearch.length === 0
+                    ? "Все текста"
+                    : `${selectedTextsForSearch.length} выбрано`}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[240px] p-0">
+                <Command>
+                  <CommandInput placeholder="Поиск текста..." />
+                  <CommandList>
+                    <CommandEmpty>Текст не найдено</CommandEmpty>
+                    <CommandGroup>
+                      {textsForSearch.map((textForSearch) => {
                         const text = textForSearch.text;
 
                         if (!text) return;
 
-                        const isSelected = selectedTextsForSearch.includes(text);
+                        const isSelected =
+                          selectedTextsForSearch.includes(text);
                         return (
                           <CommandItem
                             key={text}
                             onSelect={() => {
                               setSelectedTextsForSearch((prev) =>
                                 isSelected
-                                  ? prev.filter((textContent) => textContent !== text)
+                                  ? prev.filter(
+                                      (textContent) => textContent !== text
+                                    )
                                   : [...prev, text]
                               );
                             }}
@@ -471,14 +491,14 @@ export function AutopartsTable({
                             </div>
                           </CommandItem>
                         );
-                      }
-                    )}
-                  </CommandGroup>
-                </CommandList>
-              </Command>
-            </PopoverContent>
-          </Popover>
-        </div>}
+                      })}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
+          </div>
+        )}
       </div>
       <div className="overflow-auto rounded-md border">
         <table className="w-full text-sm text-left">
@@ -499,11 +519,10 @@ export function AutopartsTable({
               <th className="p-3 text-center">
                 <SortHeader label="Авто" column="auto" />
               </th>
-              {!onlyView && (
-                <th className="p-3 text-center">
-                  <SortHeader label="Кол-во" column="totalQuantity" />
-                </th>
-              )}
+              <th className="p-3 text-center">
+                <SortHeader label="Кол-во" column="totalQuantity" />
+              </th>
+
               {!onlyView && <th className="p-3 text-center">Базы</th>}
               <th className="p-3 text-center">Цены</th>
               {!onlyView && <th className="p-3 text-center">Действия</th>}
@@ -520,7 +539,16 @@ export function AutopartsTable({
                 <td className="p-3">{p.description}</td>
                 <td className="p-3">{p.category.name}</td>
                 <td className="p-3">{p.auto?.name}</td>
-                {!onlyView && <td className="p-3">{p.totalQuantity}</td>}
+                <td className="p-3">
+                  {!onlyView
+                    ? p.totalQuantity
+                    : `${
+                        p.warehouses.find(
+                          (warehouse) =>
+                            warehouse.warehouseId === warehouseAccessId
+                        )?.quantity || "-"
+                      }/${p.totalQuantity}`}
+                </td>
                 {!onlyView && (
                   <td className="p-3">
                     <ul className="space-y-1">
@@ -541,7 +569,7 @@ export function AutopartsTable({
                           <span className="font-semibold">
                             {price.priceType.name}:
                           </span>{" "}
-                          {price.price.toFixed(2)} $
+                          {price.price.toFixed(2)}
                         </li>
                       ))}
                     </ul>
@@ -550,7 +578,7 @@ export function AutopartsTable({
                       p.prices
                         .find((price) => price.priceType.id === priceAccessId)
                         ?.price.toFixed(2) ?? "-"
-                    } $`
+                    }`
                   )}
                 </td>
                 {!onlyView && (

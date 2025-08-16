@@ -27,13 +27,15 @@ model User {
     emailVerified DateTime?
     image         String?
 
-    role          Role    @default(user)
-    phone         String?
-    isConfirmed   Boolean @default(false)
-    address       String?
-    priceAccessId Int?
+    role              Role    @default(user)
+    phone             String?
+    isConfirmed       Boolean @default(false)
+    address           String?
+    priceAccessId     Int?
+    warehouseAccessId Int?
 
-    priceAccess PriceTypes? @relation("PriceAccess", fields: [priceAccessId], references: [id])
+    priceAccess     PriceTypes? @relation("PriceAccess", fields: [priceAccessId], references: [id])
+    warehouseAccess Warehouses? @relation(fields: [warehouseAccessId], references: [id])
 
     accounts      Account[]
     sessions      Session[]
@@ -163,11 +165,13 @@ model OrderItems {
 }
 
 model Warehouses {
-    id         Int                   @id @default(autoincrement())
-    name       String
-    address    String
-    parts      AutopartsWarehouses[]
-    orderItems OrderItems[]
+    id      Int    @id @default(autoincrement())
+    name    String
+    address String
+
+    parts       AutopartsWarehouses[]
+    orderItems  OrderItems[]
+    usersAccess User[]
 }
 
 model Autoparts {

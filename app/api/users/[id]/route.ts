@@ -7,18 +7,30 @@ export async function PATCH(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const { priceAccessId } = await req.json();
+  const body = await req.json();
 
-  if (!priceAccessId || isNaN(priceAccessId)) {
-    return NextResponse.json(
-      { error: "Invalid priceAccessId" },
-      { status: 400 }
-    );
+  const data: {
+    priceAccessId?: number | null;
+    warehouseAccessId?: number | null;
+  } = {};
+
+  if ("priceAccessId" in body) {
+    data.priceAccessId = body.priceAccessId ? Number(body.priceAccessId) : null;
+  }
+
+  if ("warehouseAccessId" in body) {
+    data.warehouseAccessId = body.warehouseAccessId
+      ? Number(body.warehouseAccessId)
+      : null;
+  }
+
+  if (!Object.keys(data).length) {
+    return NextResponse.json({ error: "No valid fields" }, { status: 400 });
   }
 
   const updated = await db.user.update({
     where: { id },
-    data: { priceAccessId: Number(priceAccessId) },
+    data,
   });
 
   return NextResponse.json(updated);

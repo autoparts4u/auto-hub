@@ -14,7 +14,7 @@ const ShopPage = async () => {
 
   const user = await db.user.findUnique({
     where: { id: session.user.id },
-    select: { priceAccessId: true },
+    select: { priceAccessId: true, warehouseAccessId: true },
   });
 
   const autoparts = await db.autoparts.findMany({
@@ -117,6 +117,7 @@ const ShopPage = async () => {
         textsForSearch={textsForSearch}
         onlyView={true}
         priceAccessId={user?.priceAccessId}
+        warehouseAccessId={user?.warehouseAccessId}
       />
     </div>
   );

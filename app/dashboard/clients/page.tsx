@@ -8,11 +8,14 @@ export default async function ClientsPage() {
       name: true,
       email: true,
       priceAccessId: true,
+      warehouseAccessId: true,
       role: true,
     },
   });
 
   const priceTypes = await db.priceTypes.findMany();
 
-  return <UsersTable initialUsers={users} priceTypes={priceTypes} />;
+  const warehouses = await db.warehouses.findMany();
+
+  return <UsersTable initialUsers={users} priceTypes={priceTypes} warehouses={warehouses} />;
 }
