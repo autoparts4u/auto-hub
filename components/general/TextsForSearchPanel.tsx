@@ -68,7 +68,6 @@ export function TextsForSearchPanel({ textsForSearch }: TextsForSearchPanelProps
       setEditingId(null);
       setEditingValue("");
       toast.success("Текст обновлён");
-      rou
     } else {
       toast.error("Ошибка при обновлении текста");
     }

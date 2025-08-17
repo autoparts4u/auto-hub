@@ -91,7 +91,7 @@ export function AutopartsTable({
   const [selectedTextsForSearch, setSelectedTextsForSearch] = useState<
     string[]
   >([]);
-  const [sortKey, setSortKey] = useState<SortKey>("article");
+  const [sortKey, setSortKey] = useState<SortKey>("description");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
   const router = useRouter();
 
@@ -412,6 +412,7 @@ export function AutopartsTable({
             </PopoverContent>
           </Popover>
         </div>
+        <br/>
         <div className="space-y-1">
           <Label>Бренды</Label>
           <Popover>
@@ -519,7 +520,7 @@ export function AutopartsTable({
         </Button>
       </div>
       <div className="overflow-auto rounded-md border">
-        <table className="w-full text-sm text-left">
+        <table className="min-w-full table-auto text-sm text-left">
           <thead className="bg-muted text-muted-foreground">
             <tr>
               <th className="p-3 text-center">
@@ -552,6 +553,7 @@ export function AutopartsTable({
 
               {!onlyView && <th className="p-3 text-center">Базы</th>}
               <th className="p-3 text-center">Цены</th>
+              {!onlyView && <th className="p-3 text-center">Текст</th>}
               {!onlyView && <th className="p-3 text-center">Действия</th>}
             </tr>
           </thead>
@@ -579,7 +581,7 @@ export function AutopartsTable({
                 {!onlyView && (
                   <td className="p-3">
                     <ul className="space-y-1">
-                      {p.warehouses.map((w) => (
+                      {p.warehouses.map((w) => w.quantity > 0 && (
                         <li key={w.warehouseId} className="text-xs">
                           {w.warehouseName}:{" "}
                           <span className="font-semibold">{w.quantity}</span>
@@ -608,6 +610,11 @@ export function AutopartsTable({
                     }`
                   )}
                 </td>
+                {!onlyView && (
+                  <td className="p-3">
+                    {p.textForSearch && <Check className={`h-4 w-4`} />}
+                  </td>
+                )}
                 {!onlyView && (
                   <td className="p-3 text-center flex items-center justify-center gap-2">
                     <TooltipProvider>
