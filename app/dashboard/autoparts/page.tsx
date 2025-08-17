@@ -50,15 +50,35 @@ export default async function PartsPage() {
     },
   });
 
-  const brands = await db.brands.findMany();
+  const brands = await db.brands.findMany({
+    orderBy: {
+      name: "asc"
+    }
+  });
 
-  const warehouses = await db.warehouses.findMany();
+  const warehouses = await db.warehouses.findMany({
+    orderBy: {
+      name: "asc"
+    }
+  });
 
-  const categories = await db.categories.findMany();
+  const categories = await db.categories.findMany({
+    orderBy: {
+      name: "asc"
+    }
+  });
 
-  const autos = await db.auto.findMany();
+  const autos = await db.auto.findMany({
+    orderBy: {
+      name: "asc"
+    }
+  });
 
-  const textsForSearch = await db.textForAuthopartsSearch.findMany();
+  const textsForSearch = await db.textForAuthopartsSearch.findMany({
+    orderBy: {
+      text: "asc"
+    }
+  });
 
   const formatted: AutopartWithStock[] = autoparts.map((part) => {
     const analoguesFromA = part.analoguesA.map((a) => a.partB);

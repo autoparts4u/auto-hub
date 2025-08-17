@@ -58,7 +58,7 @@ export function TextsForSearchPanel({ textsForSearch }: TextsForSearchPanelProps
 
     const res = await fetch(`/api/texts-for-search/${id}`, {
       method: "PUT",
-      body: JSON.stringify({ name: editingValue }),
+      body: JSON.stringify({ text: editingValue }),
     });
 
     if (res.ok) {
@@ -68,6 +68,7 @@ export function TextsForSearchPanel({ textsForSearch }: TextsForSearchPanelProps
       setEditingId(null);
       setEditingValue("");
       toast.success("Текст обновлён");
+      rou
     } else {
       toast.error("Ошибка при обновлении текста");
     }

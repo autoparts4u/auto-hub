@@ -39,6 +39,7 @@ import {
   ArrowUpAZ,
   ArrowDownAZ,
   Check,
+  RotateCcw,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { PriceEditModal } from "./PriceEditModal";
@@ -201,6 +202,7 @@ export function AutopartsTable({
       if (valA > valB) return sortOrder === "asc" ? 1 : -1;
       return 0;
     });
+
   const toggleSort = (key: SortKey) => {
     if (sortKey === key) {
       setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
@@ -208,6 +210,15 @@ export function AutopartsTable({
       setSortKey(key);
       setSortOrder("asc");
     }
+  };
+
+  const resetFilters = () => {
+    setSearch("");
+    setSelectedBrands([]);
+    setSelectedWarehouses([]);
+    setSelectedCategories([]);
+    setSelectedAutos([]);
+    setSelectedTextsForSearch([]);
   };
 
   const SortHeader = ({
@@ -503,6 +514,9 @@ export function AutopartsTable({
             </Popover>
           </div>
         )}
+        <Button onClick={() => resetFilters()}>
+          <RotateCcw />
+        </Button>
       </div>
       <div className="overflow-auto rounded-md border">
         <table className="w-full text-sm text-left">

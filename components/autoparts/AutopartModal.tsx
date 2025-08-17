@@ -511,7 +511,7 @@ export function AutopartModal({ part, isNew, onClose }: AutopartModalProps) {
           </div>
         )}
       </div>
-      <div className="flex justify-end">
+      <div className="flex justify-start">
         <Button onClick={handleSubmit} disabled={submitting}>
           {submitting ? "Сохранение..." : isNew ? "Добавить" : "Сохранить"}
         </Button>
