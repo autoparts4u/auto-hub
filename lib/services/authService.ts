@@ -49,7 +49,7 @@ export class AuthService {
       throw new Error("Пользователь не найден");
     }
 
-    const isPasswordValid = await bcrypt.compare(password, user.password);
+    const isPasswordValid = user.password && await bcrypt.compare(password, user.password);
 
     if (!isPasswordValid) {
       throw new Error("Неверный пароль");
