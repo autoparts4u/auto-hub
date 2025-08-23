@@ -3,8 +3,22 @@
 import { useEffect, useRef, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 import { AutopartWithStock } from "@/app/types/autoparts";
 import {
+  Auto,
   Brands,
   Categories,
   TextForAuthopartsSearch,
@@ -12,13 +26,6 @@ import {
 } from "@prisma/client";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import clsx from "clsx";
 
@@ -44,7 +51,7 @@ export function AutopartModal({ part, isNew, onClose }: AutopartModalProps) {
   );
   const [brands, setBrands] = useState<Brands[]>([]);
   const [categories, setCategories] = useState<Categories[]>([]);
-  const [autos, setAutos] = useState<Categories[]>([]);
+  const [autos, setAutos] = useState<Auto[]>([]);
   const [textsForSearch, setTextsForSearch] = useState<
     TextForAuthopartsSearch[]
   >([]);
@@ -215,11 +222,11 @@ export function AutopartModal({ part, isNew, onClose }: AutopartModalProps) {
     setSubmitting(false);
 
     if (!res.ok) {
-      toast.error("Ошибка сохранения запчасти");
+      toast.error("Ошибка сохранения детали");
       return;
     }
 
-    toast.success(part ? "Запчасть обновлена" : "Запчасть добавлена");
+    toast.success(part ? "Деталь обновлена" : "Деталь добавлена");
     onClose();
     router.refresh();
   };
@@ -265,147 +272,173 @@ export function AutopartModal({ part, isNew, onClose }: AutopartModalProps) {
         )}
       </div>
 
-      <div className="flex flex-col gap-1">
-        <div className="flex items-center gap-2">
-          <label className="w-1/6 text-sm font-medium text-right">Бренд</label>
-          {loading ? (
-            <Skeleton className="h-10 w-full rounded-md" />
-          ) : (
-            <Select
-              value={brandId}
-              onValueChange={(value) => {
-                setBrandId(value);
-                setTouched((prev) => ({ ...prev, brandId: true }));
-              }}
+      <div className="space-y-1">
+        <label className="text-sm font-medium">Бренд</label>
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              className={clsx(
+                "w-full justify-between",
+                touched.brandId && !brandId && "border-red-500"
+              )}
             >
-              <SelectTrigger
-                className={clsx("w-full", {
-                  "border-red-500": touched.brandId && !brandId,
-                })}
-              >
-                <SelectValue placeholder="Выберите бренд" />
-              </SelectTrigger>
-              <SelectContent>
-                {brands.map((b) => (
-                  <SelectItem key={b.id} value={b.id.toString()}>
-                    {b.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-        </div>
+              {brandId
+                ? brands.find((b) => b.id.toString() === brandId)?.name
+                : "Выберите бренд"}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-[300px] p-0">
+            <Command>
+              <CommandInput placeholder="Поиск бренда..." />
+              <CommandList>
+                <CommandEmpty>Бренд не найден</CommandEmpty>
+                <CommandGroup>
+                  {brands.map((b) => (
+                    <CommandItem
+                      key={b.id}
+                      onSelect={() => {
+                        setBrandId(b.id.toString());
+                        setTouched((prev) => ({ ...prev, brandId: true }));
+                      }}
+                    >
+                      {b.name}
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              </CommandList>
+            </Command>
+          </PopoverContent>
+        </Popover>
         {touched.brandId && !brandId && (
-          <p className="text-sm text-red-500 ml-[16.66%]">Поле обязательно</p>
+          <p className="text-sm text-red-500">Поле обязательно</p>
         )}
       </div>
 
-      <div className="flex flex-col gap-1">
-        <div className="flex items-center gap-2">
-          <label className="w-1/6 text-sm font-medium text-right">Группа</label>
-          {loading ? (
-            <Skeleton className="h-10 w-full rounded-md" />
-          ) : (
-            <Select
-              value={categoryId}
-              onValueChange={(value) => {
-                setCategoryId(value);
-                setTouched((prev) => ({ ...prev, categoryId: true }));
-              }}
+      <div className="space-y-1">
+        <label className="text-sm font-medium">Категория</label>
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              className={clsx(
+                "w-full justify-between",
+                touched.categoryId && !categoryId && "border-red-500"
+              )}
             >
-              <SelectTrigger
-                className={clsx("w-full", {
-                  "border-red-500": touched.categoryId && !categoryId,
-                })}
-              >
-                <SelectValue placeholder="Выберите группу" />
-              </SelectTrigger>
-              <SelectContent>
-                {categories.map((c) => (
-                  <SelectItem key={c.id} value={c.id.toString()}>
-                    {c.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-        </div>
+              {categoryId
+                ? categories.find((c) => c.id.toString() === categoryId)?.name
+                : "Выберите категорию"}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-[300px] p-0">
+            <Command>
+              <CommandInput placeholder="Поиск категории..." />
+              <CommandList>
+                <CommandEmpty>Категория не найдена</CommandEmpty>
+                <CommandGroup>
+                  {categories.map((c) => (
+                    <CommandItem
+                      key={c.id}
+                      onSelect={() => {
+                        setCategoryId(c.id.toString());
+                        setTouched((prev) => ({ ...prev, categoryId: true }));
+                      }}
+                    >
+                      {c.name}
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              </CommandList>
+            </Command>
+          </PopoverContent>
+        </Popover>
         {touched.categoryId && !categoryId && (
-          <p className="text-sm text-red-500 ml-[16.66%]">Поле обязательно</p>
+          <p className="text-sm text-red-500">Поле обязательно</p>
         )}
       </div>
-      <div className="flex flex-col gap-1">
-        <div className="flex items-center gap-2">
-          <label className="w-1/6 text-sm font-medium text-right">Авто</label>
-          {loading ? (
-            <Skeleton className="h-10 w-full rounded-md" />
-          ) : (
-            <Select
-              value={autoId}
-              onValueChange={(value) => {
-                setAutoId(value);
-                setTouched((prev) => ({ ...prev, autoId: true }));
-              }}
+      <div className="space-y-1">
+        <label className="text-sm font-medium">Авто</label>
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              className={clsx(
+                "w-full justify-between",
+                touched.autoId && !autoId && "border-red-500"
+              )}
             >
-              <SelectTrigger
-                className={clsx("w-full", {
-                  "border-red-500": touched.autoId && !autoId,
-                })}
-              >
-                <SelectValue placeholder="Выберите группу" />
-              </SelectTrigger>
-              <SelectContent>
-                {autos.map((c) => (
-                  <SelectItem key={c.id} value={c.id.toString()}>
-                    {c.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-        </div>
+              {autoId
+                ? autos.find((a) => a.id.toString() === autoId)?.name
+                : "Выберите авто"}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-[300px] p-0">
+            <Command>
+              <CommandInput placeholder="Поиск авто..." />
+              <CommandList>
+                <CommandEmpty>Авто не найдено</CommandEmpty>
+                <CommandGroup>
+                  {autos.map((a) => (
+                    <CommandItem
+                      key={a.id}
+                      onSelect={() => {
+                        setAutoId(a.id.toString());
+                        setTouched((prev) => ({ ...prev, autoId: true }));
+                      }}
+                    >
+                      {a.name}
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              </CommandList>
+            </Command>
+          </PopoverContent>
+        </Popover>
         {touched.autoId && !autoId && (
-          <p className="text-sm text-red-500 ml-[16.66%]">Поле обязательно</p>
+          <p className="text-sm text-red-500">Поле обязательно</p>
         )}
       </div>
-      <div className="flex flex-col gap-1">
-        <div className="flex items-center gap-2">
-          <label className="w-1/6 text-sm font-medium text-right">
-            Текст для поиска
-          </label>
-          {loading ? (
-            <Skeleton className="h-10 w-full rounded-md" />
-          ) : (
-            <Select
-              value={textForSearchId}
-              onValueChange={(value) => {
-                setTextForSearchId(value);
-                setTouched((prev) => ({ ...prev, textForSearchId: true }));
-              }}
+      <div className="space-y-1">
+        <label className="text-sm font-medium">Текст для поиска</label>
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              className="w-full justify-between min-h-20 whitespace-normal"
             >
-              <SelectTrigger
-                className={clsx(
-                  "w-full"
-                  //   {
-                  //   "border-red-500": touched.textForSearchId && !textsForSearch,
-                  // }
-                )}
-              >
-                <SelectValue placeholder="Выберите текст" />
-              </SelectTrigger>
-              <SelectContent>
-                {textsForSearch.map((c) => (
-                  <SelectItem key={c.id} value={c.id.toString()}>
-                    {c.text}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          )}
-        </div>
-        {/* {touched.categoryId && !categoryId && (
-          <p className="text-sm text-red-500 ml-[16.66%]">Поле обязательно</p>
-        )} */}
+              {textForSearchId
+                ? textsForSearch.find(
+                    (t) => t.id.toString() === textForSearchId
+                  )?.text
+                : "Выберите текст"}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-[400px] max-h-[300px] overflow-auto p-0">
+            <Command>
+              <CommandInput placeholder="Поиск текста..." />
+              <CommandList>
+                <CommandEmpty>Ничего не найдено</CommandEmpty>
+                <CommandGroup>
+                  {textsForSearch.map((t) => (
+                    <CommandItem
+                      key={t.id}
+                      onSelect={() => {
+                        setTextForSearchId(t.id.toString());
+                        setTouched((prev) => ({
+                          ...prev,
+                          textForSearchId: true,
+                        }));
+                      }}
+                    >
+                      {t.text}
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              </CommandList>
+            </Command>
+          </PopoverContent>
+        </Popover>
       </div>
 
       {loading ? (

@@ -14,7 +14,7 @@ import { PriceTypes, User, Warehouses } from "@prisma/client";
 type Props = {
   initialUsers: Pick<
     User,
-    "id" | "name" | "email" | "priceAccessId" | "warehouseAccessId" | "role"
+    "id" | "name" | "email" | "phone" | "priceAccessId" | "warehouseAccessId" | "role"
   >[];
   priceTypes: PriceTypes[];
   warehouses: Warehouses[];
@@ -61,6 +61,7 @@ export function UsersTable({ initialUsers, priceTypes, warehouses }: Props) {
             <tr>
               <th className="p-3 text-left">Имя</th>
               <th className="p-3 text-left">Email</th>
+              <th className="p-3 text-left">Телефон</th>
               <th className="p-3 text-left">Роль</th>
               <th className="p-3 text-left">Тип цены</th>
               <th className="p-3 text-left">База</th>
@@ -71,6 +72,7 @@ export function UsersTable({ initialUsers, priceTypes, warehouses }: Props) {
               <tr key={user.id} className="border-t">
                 <td className="p-3">{user.name ?? "—"}</td>
                 <td className="p-3">{user.email}</td>
+                <td className="p-3">{user.phone ?? "-"}</td>
                 <td className="p-3">{user.role}</td>
                 <td className="p-3">
                   <Select

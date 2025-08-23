@@ -34,7 +34,7 @@ export async function POST(req: Request) {
 
     if (!fromEntry || fromEntry.quantity < quantity) {
       return NextResponse.json(
-        { error: "Недостаточно запчастей на базе-источнике" },
+        { error: "Недостаточно деталей на базе-источнике" },
         { status: 400 }
       );
     }

@@ -95,8 +95,6 @@ export function AutopartsTable({
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
   const router = useRouter();
 
-  console.log(warehouseAccessId);
-
   const handleConfirmDelete = async (id: string) => {
     try {
       const res = await fetch(`/api/autoparts/${id}`, {
@@ -107,11 +105,11 @@ export function AutopartsTable({
         throw new Error("Ошибка удаления");
       }
 
-      toast.success("Запчасть удалена");
+      toast.success("Деталь удалена");
       setDeletingId(null);
       router.refresh();
     } catch (error) {
-      toast.error("Не удалось удалить запчасть");
+      toast.error("Не удалось удалить деталь");
       console.error(error);
     }
   };
@@ -247,9 +245,7 @@ export function AutopartsTable({
     <div className="w-full px-4">
       {!onlyView && (
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-semibold tracking-tight">
-            Автозапчасти
-          </h2>
+          <h2 className="text-2xl font-semibold tracking-tight"></h2>
           <div className="flex gap-4">
             {!onlyView && <ImportAutopartsButton />}
             <Button onClick={() => setCreating(true)}>
@@ -266,109 +262,13 @@ export function AutopartsTable({
           onChange={(e) => setSearch(e.target.value)}
           className="w-full sm:max-w-xs"
         />
-        {!onlyView && (
-          <div className="space-y-1">
-            <Label>Базы</Label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="outline" className="w-[240px] justify-between">
-                  {selectedWarehouses.length === 0
-                    ? "Все базы"
-                    : `${selectedWarehouses.length} выбрано`}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-[240px] p-0">
-                <Command>
-                  <CommandInput placeholder="Поиск базы..." />
-                  <CommandList>
-                    <CommandEmpty>База не найдена</CommandEmpty>
-                    <CommandGroup>
-                      {warehouses.map((w) => {
-                        const isSelected = selectedWarehouses.includes(w.name);
-                        return (
-                          <CommandItem
-                            key={w.id}
-                            onSelect={() => {
-                              setSelectedWarehouses((prev) =>
-                                isSelected
-                                  ? prev.filter((name) => name !== w.name)
-                                  : [...prev, w.name]
-                              );
-                            }}
-                          >
-                            <div className="flex items-center gap-2">
-                              <Check
-                                className={`h-4 w-4 ${
-                                  isSelected ? "opacity-100" : "opacity-0"
-                                }`}
-                              />
-                              {w.name}
-                            </div>
-                          </CommandItem>
-                        );
-                      })}
-                    </CommandGroup>
-                  </CommandList>
-                </Command>
-              </PopoverContent>
-            </Popover>
-          </div>
-        )}
-        <div className="space-y-1">
-          <Label>Группы</Label>
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="outline" className="w-[240px] justify-between">
-                {selectedCategories.length === 0
-                  ? "Все группы"
-                  : `${selectedCategories.length} выбрано`}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-[240px] p-0">
-              <Command>
-                <CommandInput placeholder="Поиск группы..." />
-                <CommandList>
-                  <CommandEmpty>Группа не найдена</CommandEmpty>
-                  <CommandGroup>
-                    {categories.map((category) => {
-                      const categoryName = category.name;
-                      const isSelected =
-                        selectedCategories.includes(categoryName);
-                      return (
-                        <CommandItem
-                          key={categoryName}
-                          onSelect={() => {
-                            setSelectedCategories((prev) =>
-                              isSelected
-                                ? prev.filter((name) => name !== categoryName)
-                                : [...prev, categoryName]
-                            );
-                          }}
-                        >
-                          <div className="flex items-center gap-2">
-                            <Check
-                              className={`h-4 w-4 ${
-                                isSelected ? "opacity-100" : "opacity-0"
-                              }`}
-                            />
-                            {categoryName}
-                          </div>
-                        </CommandItem>
-                      );
-                    })}
-                  </CommandGroup>
-                </CommandList>
-              </Command>
-            </PopoverContent>
-          </Popover>
-        </div>
         <div className="space-y-1">
           <Label>Авто</Label>
           <Popover>
             <PopoverTrigger asChild>
               <Button variant="outline" className="w-[240px] justify-between">
                 {selectedAutos.length === 0
-                  ? "Все авто"
+                  ? "Все"
                   : `${selectedAutos.length} выбрано`}
               </Button>
             </PopoverTrigger>
@@ -412,14 +312,61 @@ export function AutopartsTable({
             </PopoverContent>
           </Popover>
         </div>
-        <br/>
+        <div className="space-y-1">
+          <Label>Группы</Label>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className="w-[240px] justify-between">
+                {selectedCategories.length === 0
+                  ? "Все"
+                  : `${selectedCategories.length} выбрано`}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[240px] p-0">
+              <Command>
+                <CommandInput placeholder="Поиск группы..." />
+                <CommandList>
+                  <CommandEmpty>Группа не найдена</CommandEmpty>
+                  <CommandGroup>
+                    {categories.map((category) => {
+                      const categoryName = category.name;
+                      const isSelected =
+                        selectedCategories.includes(categoryName);
+                      return (
+                        <CommandItem
+                          key={categoryName}
+                          onSelect={() => {
+                            setSelectedCategories((prev) =>
+                              isSelected
+                                ? prev.filter((name) => name !== categoryName)
+                                : [...prev, categoryName]
+                            );
+                          }}
+                        >
+                          <div className="flex items-center gap-2">
+                            <Check
+                              className={`h-4 w-4 ${
+                                isSelected ? "opacity-100" : "opacity-0"
+                              }`}
+                            />
+                            {categoryName}
+                          </div>
+                        </CommandItem>
+                      );
+                    })}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
+        </div>
         <div className="space-y-1">
           <Label>Бренды</Label>
           <Popover>
             <PopoverTrigger asChild>
               <Button variant="outline" className="w-[240px] justify-between">
                 {selectedBrands.length === 0
-                  ? "Все бренды"
+                  ? "Все"
                   : `${selectedBrands.length} выбрано`}
               </Button>
             </PopoverTrigger>
@@ -462,12 +409,60 @@ export function AutopartsTable({
         </div>
         {!onlyView && (
           <div className="space-y-1">
+            <Label>Базы</Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="w-[240px] justify-between">
+                  {selectedWarehouses.length === 0
+                    ? "Все"
+                    : `${selectedWarehouses.length} выбрано`}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[240px] p-0">
+                <Command>
+                  <CommandInput placeholder="Поиск базы..." />
+                  <CommandList>
+                    <CommandEmpty>База не найдена</CommandEmpty>
+                    <CommandGroup>
+                      {warehouses.map((w) => {
+                        const isSelected = selectedWarehouses.includes(w.name);
+                        return (
+                          <CommandItem
+                            key={w.id}
+                            onSelect={() => {
+                              setSelectedWarehouses((prev) =>
+                                isSelected
+                                  ? prev.filter((name) => name !== w.name)
+                                  : [...prev, w.name]
+                              );
+                            }}
+                          >
+                            <div className="flex items-center gap-2">
+                              <Check
+                                className={`h-4 w-4 ${
+                                  isSelected ? "opacity-100" : "opacity-0"
+                                }`}
+                              />
+                              {w.name}
+                            </div>
+                          </CommandItem>
+                        );
+                      })}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
+          </div>
+        )}
+        {!onlyView && (
+          <div className="space-y-1">
             <Label>Текст для поиска</Label>
             <Popover>
               <PopoverTrigger asChild>
                 <Button variant="outline" className="w-[240px] justify-between">
                   {selectedTextsForSearch.length === 0
-                    ? "Все текста"
+                    ? "Все"
                     : `${selectedTextsForSearch.length} выбрано`}
                 </Button>
               </PopoverTrigger>
@@ -581,17 +576,22 @@ export function AutopartsTable({
                 {!onlyView && (
                   <td className="p-3">
                     <ul className="space-y-1">
-                      {p.warehouses.map((w) => w.quantity > 0 && (
-                        <li key={w.warehouseId} className="text-xs">
-                          {w.warehouseName}:{" "}
-                          <span className="font-semibold">{w.quantity}</span>
-                        </li>
-                      ))}
+                      {p.warehouses.map(
+                        (w) =>
+                          w.quantity > 0 && (
+                            <li key={w.warehouseId} className="text-xs">
+                              {w.warehouseName}:{" "}
+                              <span className="font-semibold">
+                                {w.quantity}
+                              </span>
+                            </li>
+                          )
+                      )}
                     </ul>
                   </td>
                 )}
                 <td className="p-3 whitespace-nowrap">
-                  {!priceAccessId ? (
+                  {!onlyView && !priceAccessId ? (
                     <ul className="space-y-1 text-xs text-left">
                       {p.prices.map((price) => (
                         <li key={price.priceType.id}>
@@ -709,7 +709,7 @@ export function AutopartsTable({
       >
         <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogTitle>
-            {creating ? "Добавить запчасть" : "Редактировать запчасть"}
+            {creating ? "Добавить деталь" : "Редактировать деталь"}
           </DialogTitle>
           <AutopartModal
             part={selected}
@@ -724,7 +724,7 @@ export function AutopartsTable({
 
       <Dialog open={!!movePart} onOpenChange={() => setMovePart(null)}>
         <DialogContent className="sm:max-w-md">
-          <DialogTitle>Переместить запчасть</DialogTitle>
+          <DialogTitle>Переместить деталь</DialogTitle>
           {movePart && (
             <MovePartModal part={movePart} onClose={() => setMovePart(null)} />
           )}
@@ -740,9 +740,9 @@ export function AutopartsTable({
 
       <Dialog open={!!deletingId} onOpenChange={() => setDeletingId(null)}>
         <DialogContent className="max-w-sm text-center">
-          <DialogTitle>Удалить запчасть?</DialogTitle>
+          <DialogTitle>Удалить деталь?</DialogTitle>
           <p className="text-sm text-muted-foreground">
-            Это действие необратимо. Вы уверены, что хотите удалить запчасть?
+            Это действие необратимо. Вы уверены, что хотите удалить деталь?
           </p>
 
           <div className="flex justify-end gap-2 mt-4">

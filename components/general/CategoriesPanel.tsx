@@ -164,7 +164,14 @@ export function CategoriesPanel({ categories }: CategoriesPanelProps) {
               <Button
                 size="icon"
                 variant="ghost"
-                onClick={() => handleDelete(c.id)}
+                onClick={() =>
+                  toast.warning(`Удалить "${c.name}"?`, {
+                    action: {
+                      label: "Да",
+                      onClick: () => handleDelete(c.id),
+                    },
+                  })
+                }
               >
                 <Trash className="w-4 h-4 text-destructive" />
               </Button>

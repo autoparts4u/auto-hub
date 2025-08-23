@@ -163,7 +163,14 @@ export function PriceTypesPanel({ priceTypes }: PriceTypesPanelProps) {
               <Button
                 size="icon"
                 variant="ghost"
-                onClick={() => handleDelete(t.id)}
+                onClick={() =>
+                  toast.warning(`Удалить "${t.name}"?`, {
+                    action: {
+                      label: "Да",
+                      onClick: () => handleDelete(t.id),
+                    },
+                  })
+                }
               >
                 <Trash className="w-4 h-4 text-destructive" />
               </Button>

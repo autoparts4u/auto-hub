@@ -7,7 +7,7 @@ import Google from "next-auth/providers/google";
 
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import db from "@/lib/db/db";
-import { schema } from "./schema";
+import { schemaSignIn } from "./schema";
 
 const adapter = PrismaAdapter(db);
 
@@ -21,7 +21,7 @@ export const authOptions: NextAuthConfig = {
         password: {},
       },
       authorize: async (credentials) => {
-        const validatedCredentials = schema.parse(credentials);
+        const validatedCredentials = schemaSignIn.parse(credentials);
 
         const user = await db.user.findUnique({
           where: {
@@ -33,7 +33,7 @@ export const authOptions: NextAuthConfig = {
           throw new Error("Invalid credentials.");
         }
 
-        const isPasswordValid = await bcrypt.compare(
+        const isPasswordValid = user.password && await bcrypt.compare(
           validatedCredentials.password,
           user.password
         );
@@ -59,7 +59,6 @@ export const authOptions: NextAuthConfig = {
       return token;
     },
     async session({ session, token }) {
-      
       if (token?.role === "admin" || token?.role === "user") {
         session.user.role = token.role;
       }

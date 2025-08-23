@@ -7,6 +7,7 @@ export default async function ClientsPage() {
       id: true,
       name: true,
       email: true,
+      phone: true,
       priceAccessId: true,
       warehouseAccessId: true,
       role: true,

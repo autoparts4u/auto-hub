@@ -48,6 +48,14 @@ const Page = async () => {
             autoComplete="email"
           />
           <Input
+            className="hidden" // TODO
+            name="phone"
+            placeholder="Phone"
+            type="tel"
+            // required
+            autoComplete="tel"
+          />
+          <Input
             name="password"
             placeholder="Password"
             type="password"

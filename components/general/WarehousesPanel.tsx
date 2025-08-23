@@ -111,10 +111,10 @@ export function WarehousesPanel({ warehouses }: WarehousesPanelProps) {
           onChange={(e) => setNewAddress(e.target.value)}
           placeholder="Адрес"
         />
-      <Button onClick={handleCreate} disabled={loading}>
-        <Plus className="w-4 h-4 mr-2" />
-        Добавить
-      </Button>
+        <Button onClick={handleCreate} disabled={loading}>
+          <Plus className="w-4 h-4 mr-2" />
+          Добавить
+        </Button>
       </div>
 
       <ul className="space-y-2 mt-6">
@@ -166,13 +166,19 @@ export function WarehousesPanel({ warehouses }: WarehousesPanelProps) {
                   <Pencil className="w-4 h-4 text-muted-foreground" />
                 </Button>
               )}
-
               <Button
-                variant="ghost"
                 size="icon"
-                onClick={() => handleDelete(w.id)}
+                variant="ghost"
+                onClick={() =>
+                  toast.warning(`Удалить "${w.name}"?`, {
+                    action: {
+                      label: "Да",
+                      onClick: () => handleDelete(w.id),
+                    },
+                  })
+                }
               >
-                <Trash className="w-4 h-4 text-red-500" />
+                <Trash className="w-4 h-4 text-destructive" />
               </Button>
             </div>
           </li>

@@ -5,6 +5,8 @@ import { AutopartsTable } from "@/components/autoparts/AutopartsTable";
 import { SignOut } from "@/components/sign-out";
 import { redirect } from "next/navigation";
 
+export const revalidate = 300;
+
 const ShopPage = async () => {
   const session = await auth();
 
@@ -105,7 +107,7 @@ const ShopPage = async () => {
   return (
     <div className="p-4">
       <div className="flex justify-between">
-        <h1 className="text-2xl font-bold mb-4">Доступные запчасти</h1>
+        <h1 className="text-2xl font-bold mb-4"></h1>
         <SignOut />
       </div>
       <AutopartsTable

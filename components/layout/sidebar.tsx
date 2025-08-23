@@ -21,7 +21,7 @@ import clsx from "clsx";
 const navItems = [
   { label: "Главная", href: "/dashboard", icon: House },
   { label: "Заказы", href: "/dashboard/orders", icon: Inbox },
-  { label: "Запчасти", href: "/dashboard/autoparts", icon: Cog },
+  { label: "Детали", href: "/dashboard/autoparts", icon: Cog },
   { label: "Клиенты", href: "/dashboard/clients", icon: Users },
   { label: "Общие", href: "/dashboard/general", icon: Settings2 },
 ];

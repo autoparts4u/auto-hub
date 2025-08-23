@@ -11,7 +11,7 @@ export function AutopartsHeader({
 }) {
   return (
     <div className="flex items-center justify-between gap-4 mb-6">
-      <h2 className="text-2xl font-semibold tracking-tight">Автозапчасти</h2>
+      <h2 className="text-2xl font-semibold tracking-tight">Детали</h2>
 
       <div className="flex items-center gap-2">
         {onSearchChange && (

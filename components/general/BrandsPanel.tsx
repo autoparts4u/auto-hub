@@ -5,7 +5,15 @@ import { Brands } from "@prisma/client";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Trash, Plus, Pencil, Save, ArrowDownAZ, ArrowUpAZ, Search } from "lucide-react";
+import {
+  Trash,
+  Plus,
+  Pencil,
+  Save,
+  ArrowDownAZ,
+  ArrowUpAZ,
+  Search,
+} from "lucide-react";
 
 interface BrandsPanelProps {
   brands: Brands[];
@@ -78,9 +86,7 @@ export function BrandsPanel({ brands }: BrandsPanelProps) {
       b.name.toLowerCase().includes(search.toLowerCase())
     );
     return [...filtered].sort((a, b) =>
-      sortAsc
-        ? a.name.localeCompare(b.name)
-        : b.name.localeCompare(a.name)
+      sortAsc ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name)
     );
   }, [localBrands, search, sortAsc]);
 
@@ -157,7 +163,14 @@ export function BrandsPanel({ brands }: BrandsPanelProps) {
               <Button
                 size="icon"
                 variant="ghost"
-                onClick={() => handleDelete(b.id)}
+                onClick={() =>
+                  toast.warning(`Удалить "${b.name}"?`, {
+                    action: {
+                      label: "Да",
+                      onClick: () => handleDelete(b.id),
+                    },
+                  })
+                }
               >
                 <Trash className="w-4 h-4 text-destructive" />
               </Button>

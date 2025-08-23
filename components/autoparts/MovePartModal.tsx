@@ -63,7 +63,7 @@ export function MovePartModal({ part, onClose }: MovePartModalProps) {
       (w) => w.warehouseId.toString() === fromWarehouseId
     );
     if (!fromStock || fromStock.quantity < numericQuantity) {
-      toast.error("Недостаточно запчастей на базе-источнике");
+      toast.error("Недостаточно деталей на базе-источнике");
       return;
     }
 

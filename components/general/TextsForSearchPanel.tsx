@@ -5,14 +5,25 @@ import { TextForAuthopartsSearch } from "@prisma/client";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Trash, Plus, Pencil, Save, ArrowDownAZ, ArrowUpAZ, Search } from "lucide-react";
+import {
+  Trash,
+  Plus,
+  Pencil,
+  Save,
+  ArrowDownAZ,
+  ArrowUpAZ,
+  Search,
+} from "lucide-react";
 
 interface TextsForSearchPanelProps {
   textsForSearch: TextForAuthopartsSearch[];
 }
 
-export function TextsForSearchPanel({ textsForSearch }: TextsForSearchPanelProps) {
-  const [localTextsForSearch, setLocalTextsForSearch] = useState(textsForSearch);
+export function TextsForSearchPanel({
+  textsForSearch,
+}: TextsForSearchPanelProps) {
+  const [localTextsForSearch, setLocalTextsForSearch] =
+    useState(textsForSearch);
   const [newText, setNewText] = useState("");
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editingValue, setEditingValue] = useState("");
@@ -38,7 +49,9 @@ export function TextsForSearchPanel({ textsForSearch }: TextsForSearchPanelProps
   };
 
   const handleDelete = async (id: number) => {
-    const res = await fetch(`/api/texts-for-search/${id}`, { method: "DELETE" });
+    const res = await fetch(`/api/texts-for-search/${id}`, {
+      method: "DELETE",
+    });
 
     if (res.ok) {
       setLocalTextsForSearch((prev) => prev.filter((b) => b.id !== id));
@@ -78,9 +91,7 @@ export function TextsForSearchPanel({ textsForSearch }: TextsForSearchPanelProps
       b.text.toLowerCase().includes(search.toLowerCase())
     );
     return [...filtered].sort((a, b) =>
-      sortAsc
-        ? a.text.localeCompare(b.text)
-        : b.text.localeCompare(a.text)
+      sortAsc ? a.text.localeCompare(b.text) : b.text.localeCompare(a.text)
     );
   }, [localTextsForSearch, search, sortAsc]);
 
@@ -157,7 +168,14 @@ export function TextsForSearchPanel({ textsForSearch }: TextsForSearchPanelProps
               <Button
                 size="icon"
                 variant="ghost"
-                onClick={() => handleDelete(b.id)}
+                onClick={() =>
+                  toast.warning(`Удалить "${b.text}"?`, {
+                    action: {
+                      label: "Да",
+                      onClick: () => handleDelete(b.id),
+                    },
+                  })
+                }
               >
                 <Trash className="w-4 h-4 text-destructive" />
               </Button>

@@ -1,6 +1,6 @@
 import bcrypt from "bcryptjs";
 
-import { schema } from "@/lib/schema";
+import { schemaSignUp } from "@/lib/schema";
 import db from "@/lib/db/db";
 import { executeAction } from "@/lib/executeAction";
 
@@ -9,7 +9,9 @@ const signUp = async (formData: FormData) => {
     actionFn: async () => {
       const email = formData.get("email");
       const password = formData.get("password");
-      const validatedData = schema.parse({ email, password });
+      const phone = formData.get("phone");
+
+      const validatedData = schemaSignUp.parse({ email, password, phone });
 
       const hashedPassword = await bcrypt.hash(validatedData.password, 10);
 
@@ -17,6 +19,7 @@ const signUp = async (formData: FormData) => {
         data: {
           email: validatedData.email.toLocaleLowerCase(),
           password: hashedPassword,
+          phone: validatedData.phone,
         },
       });
 

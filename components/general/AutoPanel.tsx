@@ -5,7 +5,15 @@ import { Auto } from "@prisma/client";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Trash, Plus, Pencil, Save, ArrowDownAZ, ArrowUpAZ, Search } from "lucide-react";
+import {
+  Trash,
+  Plus,
+  Pencil,
+  Save,
+  ArrowDownAZ,
+  ArrowUpAZ,
+  Search,
+} from "lucide-react";
 
 interface AutosPanelProps {
   autos: Auto[];
@@ -78,9 +86,7 @@ export function AutosPanel({ autos }: AutosPanelProps) {
       b.name.toLowerCase().includes(search.toLowerCase())
     );
     return [...filtered].sort((a, b) =>
-      sortAsc
-        ? a.name.localeCompare(b.name)
-        : b.name.localeCompare(a.name)
+      sortAsc ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name)
     );
   }, [localAutos, search, sortAsc]);
 
@@ -157,7 +163,14 @@ export function AutosPanel({ autos }: AutosPanelProps) {
               <Button
                 size="icon"
                 variant="ghost"
-                onClick={() => handleDelete(b.id)}
+                onClick={() =>
+                  toast.warning(`Удалить "${b.name}"?`, {
+                    action: {
+                      label: "Да",
+                      onClick: () => handleDelete(b.id),
+                    },
+                  })
+                }
               >
                 <Trash className="w-4 h-4 text-destructive" />
               </Button>
