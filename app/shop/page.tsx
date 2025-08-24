@@ -80,6 +80,7 @@ const ShopPage = async () => {
       id: part.id,
       article: part.article,
       description: part.description,
+      maxNumberShown: part.maxNumberShown,
       brand: part.brand,
       category: part.category,
       auto: part.auto,

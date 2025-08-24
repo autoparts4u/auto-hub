@@ -25,6 +25,7 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { AutopartModal } from "./AutopartModal";
 import { MovePartModal } from "./MovePartModal";
@@ -91,6 +92,9 @@ export function AutopartsTable({
   const [selectedTextsForSearch, setSelectedTextsForSearch] = useState<
     string[]
   >([]);
+  const [onlyInStock, setOnlyInStock] = useState<boolean | "indeterminate">(
+    true
+  );
   const [sortKey, setSortKey] = useState<SortKey>("description");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
   const router = useRouter();
@@ -145,13 +149,16 @@ export function AutopartsTable({
       );
 
       const matchesBrand =
-        selectedBrands.length === 0 || selectedBrands.includes(p.brand.name);
+        !p.brand ||
+        selectedBrands.length === 0 ||
+        selectedBrands.includes(p.brand.name);
 
       const matchesWarehouse =
         selectedWarehouses.length === 0 ||
         p.warehouses.some((w) => selectedWarehouses.includes(w.warehouseName));
 
       const matchesCategory =
+        !p.category ||
         selectedCategories.length === 0 ||
         selectedCategories.includes(p.category.name);
 
@@ -165,13 +172,16 @@ export function AutopartsTable({
         (p.textForSearch &&
           selectedTextsForSearch.includes(p.textForSearch.text));
 
+      const isInStock = onlyInStock ? p.totalQuantity > 0 : true;
+
       return (
         (matchesSelf || matchesAnalogue) &&
         matchesBrand &&
         matchesWarehouse &&
         matchesCategory &&
         matchesAuto &&
-        matchesTextsForSearch
+        matchesTextsForSearch &&
+        isInStock
       );
     })
     .sort((a, b) => {
@@ -182,9 +192,9 @@ export function AutopartsTable({
           case "description":
             return part.description.toLowerCase();
           case "brand":
-            return part.brand.name.toLowerCase();
+            return part.brand?.name.toLowerCase();
           case "category":
-            return part.category.name.toLowerCase();
+            return part.category?.name.toLowerCase();
           case "auto":
             return part.auto?.name.toLowerCase();
           case "totalQuantity":
@@ -514,6 +524,17 @@ export function AutopartsTable({
           <RotateCcw />
         </Button>
       </div>
+      <Label className="w-fit hover:bg-accent/50 flex items-start gap-3 rounded-lg border px-3 py-2 mb-2 has-[[aria-checked=true]]:border-blue-600 has-[[aria-checked=true]]:bg-blue-50 dark:has-[[aria-checked=true]]:border-blue-900 dark:has-[[aria-checked=true]]:bg-blue-950">
+        <Checkbox
+          id="inStock"
+          checked={onlyInStock}
+          onCheckedChange={setOnlyInStock}
+          className="data-[state=checked]:border-blue-600 data-[state=checked]:bg-blue-600 data-[state=checked]:text-white dark:data-[state=checked]:border-blue-700 dark:data-[state=checked]:bg-blue-700"
+        />
+        <div className="grid gap-1.5 font-normal">
+          <p className="text-sm leading-none font-medium">В наличии</p>
+        </div>
+      </Label>
       <div className="overflow-auto rounded-md border">
         <table className="min-w-full table-auto text-sm text-left">
           <thead className="bg-muted text-muted-foreground">
@@ -559,19 +580,28 @@ export function AutopartsTable({
                 className="border-t hover:bg-accent/40 transition-colors"
               >
                 <td className="p-3 font-mono font-medium">{p.article}</td>
-                {!onlyView && <td className="p-3">{p.brand.name}</td>}
+                {!onlyView && <td className="p-3">{p.brand?.name}</td>}
                 <td className="p-3">{p.description}</td>
-                {!onlyView && <td className="p-3">{p.category.name}</td>}
+                {!onlyView && <td className="p-3">{p.category?.name}</td>}
                 {!onlyView && <td className="p-3">{p.auto?.name}</td>}
                 <td className="p-3">
                   {!onlyView
                     ? p.totalQuantity
-                    : `${
-                        p.warehouses.find(
+                    : `${(() => {
+                        const quantity = p.warehouses.find(
                           (warehouse) =>
                             warehouse.warehouseId === warehouseAccessId
-                        )?.quantity || "0"
-                      } (${p.totalQuantity})`}
+                        )?.quantity;
+                        return quantity
+                          ? quantity > p.maxNumberShown
+                            ? `${p.maxNumberShown}+`
+                            : quantity
+                          : "0";
+                      })()} (${
+                        p.totalQuantity > p.maxNumberShown
+                          ? `${p.maxNumberShown}+`
+                          : p.totalQuantity
+                      })`}
                 </td>
                 {!onlyView && (
                   <td className="p-3">

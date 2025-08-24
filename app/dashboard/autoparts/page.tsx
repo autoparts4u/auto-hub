@@ -89,6 +89,7 @@ export default async function PartsPage() {
       id: part.id,
       article: part.article,
       description: part.description,
+      maxNumberShown: part.maxNumberShown,
       category: part.category,
       brand: part.brand,
       auto: part.auto,

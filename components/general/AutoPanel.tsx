@@ -92,27 +92,22 @@ export function AutosPanel({ autos }: AutosPanelProps) {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col md:flex-row gap-2">
-        <Input
-          value={newName}
-          onChange={(e) => setNewName(e.target.value)}
-          placeholder="Название авто"
-        />
-        <Button onClick={handleCreate}>
-          <Plus className="w-4 h-4 mr-1" /> Добавить
-        </Button>
-      </div>
-
-      <div className="flex items-center justify-between gap-2 mt-4">
+      <div className="flex gap-2 items-center">
         <div className="relative w-full max-w-sm">
           <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Поиск по названию"
+            value={newName}
+            onChange={(e) => {
+              setNewName(e.target.value);
+              setSearch(e.target.value); // поиск одновременно
+            }}
+            placeholder="Поиск или добавление авто"
             className="pl-8"
           />
         </div>
+        <Button onClick={handleCreate}>
+          <Plus className="w-4 h-4 mr-1" /> Добавить
+        </Button>
         <Button
           onClick={() => setSortAsc((prev) => !prev)}
           variant="outline"

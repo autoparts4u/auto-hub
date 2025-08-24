@@ -29,6 +29,7 @@ export async function PATCH(
     const {
       article,
       description,
+      maxNumberShown,
       brandId,
       categoryId,
       autoId,
@@ -44,6 +45,7 @@ export async function PATCH(
       data: {
         article,
         description,
+        maxNumberShown,
         brand_id: brandId,
         category_id: categoryId,
         auto_id: autoId,

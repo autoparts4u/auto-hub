@@ -20,7 +20,7 @@ export default async function GeneralPage() {
 
   return (
     <div className="p-4">
-      <h1 className="text-2xl font-bold mb-4">Саправочники</h1>
+      <h1 className="text-2xl font-bold mb-4">Справочники</h1>
       <Tabs defaultValue="brands" className="w-full">
         <TabsList className="mb-4">
           <TabsTrigger value="brands">Бренды</TabsTrigger>
@@ -28,7 +28,7 @@ export default async function GeneralPage() {
           <TabsTrigger value="auto">Авто</TabsTrigger>
           <TabsTrigger value="texts-for-search">Текст Поиска</TabsTrigger>
           <TabsTrigger value="warehouses">Базы</TabsTrigger>
-          <TabsTrigger value="price-types">Типы цен</TabsTrigger>
+          <TabsTrigger value="price-types">Тип ц</TabsTrigger>
         </TabsList>
 
         <TabsContent value="brands">

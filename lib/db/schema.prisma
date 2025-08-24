@@ -178,13 +178,14 @@ model Autoparts {
     id                 String @id @default(cuid())
     article            String @unique
     description        String
-    brand_id           Int
-    category_id        Int
+    brand_id           Int?
+    category_id        Int?
     auto_id            Int?
     text_for_search_id Int?
+    maxNumberShown     Int    @default(5)
 
-    brand         Brands                   @relation(fields: [brand_id], references: [id])
-    category      Categories               @relation(fields: [category_id], references: [id])
+    brand         Brands?                  @relation(fields: [brand_id], references: [id])
+    category      Categories?              @relation(fields: [category_id], references: [id])
     auto          Auto?                    @relation(fields: [auto_id], references: [id])
     textForSearch TextForAuthopartsSearch? @relation(fields: [text_for_search_id], references: [id])
     prices        AutopartPrices[]

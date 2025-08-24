@@ -39,11 +39,14 @@ export function AutopartModal({ part, isNew, onClose }: AutopartModalProps) {
   const router = useRouter();
   const [article, setArticle] = useState(part?.article ?? "");
   const [description, setDescription] = useState(part?.description ?? "");
+  const [maxNumberShown, setMaxNumberShown] = useState<string>(
+    part?.maxNumberShown?.toString() ?? "5"
+  );
   const [brandId, setBrandId] = useState<string>(
-    part?.brand.id.toString() ?? ""
+    part?.brand?.id.toString() ?? ""
   );
   const [categoryId, setCategoryId] = useState<string>(
-    part?.category.id.toString() ?? ""
+    part?.category?.id.toString() ?? ""
   );
   const [autoId, setAutoId] = useState<string>(part?.auto?.id.toString() ?? "");
   const [textForSearchId, setTextForSearchId] = useState<string>(
@@ -209,6 +212,7 @@ export function AutopartModal({ part, isNew, onClose }: AutopartModalProps) {
         body: JSON.stringify({
           article,
           description,
+          maxNumberShown: Number(maxNumberShown),
           brandId: Number(brandId),
           categoryId: Number(categoryId),
           autoId: Number(autoId),
@@ -271,7 +275,39 @@ export function AutopartModal({ part, isNew, onClose }: AutopartModalProps) {
           <p className="text-sm text-red-500 ml-[16.66%]">Поле обязательно</p>
         )}
       </div>
-
+      <div className="flex flex-col gap-1">
+        <div className="flex items-center gap-2">
+          <label className="w-1/6 text-sm font-medium text-right">
+            Максимум на складе
+          </label>
+          <Input
+            type="number"
+            min={1}
+            value={maxNumberShown}
+            onChange={(e) => setMaxNumberShown(e.target.value)}
+          />
+        </div>
+      </div>
+      <div className="flex flex-col gap-1">
+        <div className="flex items-center gap-2">
+          <label className="w-1/6 text-sm font-medium text-right">
+            Описание
+          </label>
+          <Input
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            onBlur={() =>
+              setTouched((prev) => ({ ...prev, description: true }))
+            }
+            className={clsx({
+              "border-red-500": touched.description && !description,
+            })}
+          />
+        </div>
+        {touched.description && !description && (
+          <p className="text-sm text-red-500 ml-[16.66%]">Поле обязательно</p>
+        )}
+      </div>
       <div className="space-y-1">
         <label className="text-sm font-medium">Бренд</label>
         <Popover>

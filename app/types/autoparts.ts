@@ -8,10 +8,10 @@ export type WarehouseStock = {
 
 export type AutopartWithStock = Pick<
   Autoparts,
-  "id" | "article" | "description"
+  "id" | "article" | "description" | "maxNumberShown"
 > & {
-  category: Categories;
-  brand: Brands;
+  category: Categories | null;
+  brand: Brands | null;
   auto: Auto | null;
   textForSearch: TextForAuthopartsSearch | null;
   totalQuantity: number;
@@ -27,7 +27,7 @@ export type AutopartWithStock = Pick<
     id: string;
     article: string;
     description: string;
-    brand: Brands;
-    category: Categories;
+    brand: Brands | null;
+    category: Categories | null;
   }[];
 };
