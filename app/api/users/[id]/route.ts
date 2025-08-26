@@ -13,6 +13,7 @@ export async function PATCH(
     priceAccessId?: number | null;
     warehouseAccessId?: number | null;
     isConfirmed?: boolean;
+    name?: string | null;
   } = {};
 
   if ("priceAccessId" in body) {
@@ -27,6 +28,10 @@ export async function PATCH(
 
   if ("isConfirmed" in body) {
     data.isConfirmed = Boolean(body.isConfirmed);
+  }
+
+  if ("name" in body) {
+    data.name = body.name;
   }
 
   if (!Object.keys(data).length) {

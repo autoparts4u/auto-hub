@@ -9,11 +9,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
+import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { PriceTypes, User, Warehouses } from "@prisma/client";
 
-type Props = {
-  initialUsers: Pick<
+type ShortUser = Pick<
     User,
     | "id"
     | "name"
@@ -22,8 +22,11 @@ type Props = {
     | "priceAccessId"
     | "warehouseAccessId"
     | "role"
-    | "isConfirmed"
-  >[];
+    | "isConfirmed" 
+  >
+
+type Props = {
+  initialUsers: ShortUser[];
   priceTypes: PriceTypes[];
   warehouses: Warehouses[];
 };
@@ -33,8 +36,8 @@ export function UsersTable({ initialUsers, priceTypes, warehouses }: Props) {
 
   const handleChange = async (
     userId: string,
-    field: "priceAccessId" | "warehouseAccessId",
-    value: number | null
+    field: keyof ShortUser,
+    value: string | number | null | boolean
   ) => {
     const prev = users.find((u) => u.id === userId)?.[field];
     setUsers((prevUsers) =>
@@ -51,7 +54,7 @@ export function UsersTable({ initialUsers, priceTypes, warehouses }: Props) {
       toast.error("Ошибка при обновлении");
       setUsers((prevUsers) =>
         prevUsers.map((u) =>
-          u.id === userId ? { ...u, [field]: prev ?? null } : u
+          u.id === userId ? { ...u, [field]: prev } : u
         )
       );
       return;
@@ -79,7 +82,26 @@ export function UsersTable({ initialUsers, priceTypes, warehouses }: Props) {
           <tbody>
             {users.map((user) => (
               <tr key={user.id} className="border-t">
-                <td className="p-3">{user.name ?? "—"}</td>
+                {/* редактируемое имя */}
+                <td className="p-3">
+                  <Input
+                    value={user.name ?? ""}
+                    onChange={(e) =>
+                      setUsers((prev) =>
+                        prev.map((u) =>
+                          u.id === user.id
+                            ? { ...u, name: e.target.value }
+                            : u
+                        )
+                      )
+                    }
+                    onBlur={(e) =>
+                      handleChange(user.id, "name", e.target.value)
+                    }
+                    placeholder="Введите имя"
+                    className="w-[180px]"
+                  />
+                </td>
                 <td className="p-3">{user.email}</td>
                 <td className="p-3">{user.phone ?? "-"}</td>
                 <td className="p-3">{user.role}</td>
@@ -137,31 +159,9 @@ export function UsersTable({ initialUsers, priceTypes, warehouses }: Props) {
                 <td className="p-3">
                   <Switch
                     checked={user.isConfirmed}
-                    onCheckedChange={async (val) => {
-                      const prev = user.isConfirmed;
-                      setUsers((prevUsers) =>
-                        prevUsers.map((u) =>
-                          u.id === user.id ? { ...u, isConfirmed: val } : u
-                        )
-                      );
-
-                      const res = await fetch(`/api/users/${user.id}`, {
-                        method: "PATCH",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ isConfirmed: val }),
-                      });
-
-                      if (!res.ok) {
-                        toast.error("Ошибка при обновлении");
-                        setUsers((prevUsers) =>
-                          prevUsers.map((u) =>
-                            u.id === user.id ? { ...u, isConfirmed: prev } : u
-                          )
-                        );
-                      } else {
-                        toast.success("Статус подтверждения обновлён");
-                      }
-                    }}
+                    onCheckedChange={(val) =>
+                      handleChange(user.id, "isConfirmed", val)
+                    }
                   />
                 </td>
               </tr>
