@@ -8,13 +8,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { PriceTypes, User, Warehouses } from "@prisma/client";
 
 type Props = {
   initialUsers: Pick<
     User,
-    "id" | "name" | "email" | "phone" | "priceAccessId" | "warehouseAccessId" | "role"
+    | "id"
+    | "name"
+    | "email"
+    | "phone"
+    | "priceAccessId"
+    | "warehouseAccessId"
+    | "role"
+    | "isConfirmed"
   >[];
   priceTypes: PriceTypes[];
   warehouses: Warehouses[];
@@ -65,6 +73,7 @@ export function UsersTable({ initialUsers, priceTypes, warehouses }: Props) {
               <th className="p-3 text-left">Роль</th>
               <th className="p-3 text-left">Тип цены</th>
               <th className="p-3 text-left">База</th>
+              <th className="p-3 text-left">Подтвержден</th>
             </tr>
           </thead>
           <tbody>
@@ -124,6 +133,36 @@ export function UsersTable({ initialUsers, priceTypes, warehouses }: Props) {
                       ))}
                     </SelectContent>
                   </Select>
+                </td>
+                <td className="p-3">
+                  <Switch
+                    checked={user.isConfirmed}
+                    onCheckedChange={async (val) => {
+                      const prev = user.isConfirmed;
+                      setUsers((prevUsers) =>
+                        prevUsers.map((u) =>
+                          u.id === user.id ? { ...u, isConfirmed: val } : u
+                        )
+                      );
+
+                      const res = await fetch(`/api/users/${user.id}`, {
+                        method: "PATCH",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ isConfirmed: val }),
+                      });
+
+                      if (!res.ok) {
+                        toast.error("Ошибка при обновлении");
+                        setUsers((prevUsers) =>
+                          prevUsers.map((u) =>
+                            u.id === user.id ? { ...u, isConfirmed: prev } : u
+                          )
+                        );
+                      } else {
+                        toast.success("Статус подтверждения обновлён");
+                      }
+                    }}
+                  />
                 </td>
               </tr>
             ))}

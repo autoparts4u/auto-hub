@@ -14,6 +14,16 @@ const ShopPage = async () => {
     redirect("/sign-in");
   }
 
+  // если нет телефона → редиректим на ввод
+  if (!session.user.phone) {
+    redirect("/add-phone");
+  }
+
+  // если аккаунт не подтвержден → редиректим
+  if (!session.user.isConfirmed) {
+    redirect("/confirm-account");
+  }
+
   const user = await db.user.findUnique({
     where: { id: session.user.id },
     select: { priceAccessId: true, warehouseAccessId: true },

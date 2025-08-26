@@ -4,6 +4,7 @@ declare module "next-auth" {
   interface User extends DefaultUser {
     role: "admin" | "user";
     phone: string | null;
+    isConfirmed: boolean;
   }
 
   interface Session {
@@ -12,6 +13,7 @@ declare module "next-auth" {
       email: string;
       role: "admin" | "user";
       phone: string | null;
+      isConfirmed: boolean;
     };
   }
 

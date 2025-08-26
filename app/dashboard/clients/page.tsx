@@ -11,6 +11,7 @@ export default async function ClientsPage() {
       priceAccessId: true,
       warehouseAccessId: true,
       role: true,
+      isConfirmed: true,
     },
   });
 

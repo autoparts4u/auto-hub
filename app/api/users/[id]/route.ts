@@ -12,6 +12,7 @@ export async function PATCH(
   const data: {
     priceAccessId?: number | null;
     warehouseAccessId?: number | null;
+    isConfirmed?: boolean;
   } = {};
 
   if ("priceAccessId" in body) {
@@ -22,6 +23,10 @@ export async function PATCH(
     data.warehouseAccessId = body.warehouseAccessId
       ? Number(body.warehouseAccessId)
       : null;
+  }
+
+  if ("isConfirmed" in body) {
+    data.isConfirmed = Boolean(body.isConfirmed);
   }
 
   if (!Object.keys(data).length) {

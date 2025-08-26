@@ -585,23 +585,33 @@ export function AutopartsTable({
                 {!onlyView && <td className="p-3">{p.category?.name}</td>}
                 {!onlyView && <td className="p-3">{p.auto?.name}</td>}
                 <td className="p-3">
-                  {!onlyView
-                    ? p.totalQuantity
-                    : `${(() => {
+                  {!onlyView ? (
+                    p.totalQuantity
+                  ) : warehouseAccessId ? (
+                    <>
+                      {(() => {
                         const quantity = p.warehouses.find(
                           (warehouse) =>
                             warehouse.warehouseId === warehouseAccessId
                         )?.quantity;
                         return quantity
                           ? quantity > p.maxNumberShown
-                            ? `${p.maxNumberShown}+`
+                            ? `${p.maxNumberShown}>`
                             : quantity
                           : "0";
-                      })()} (${
-                        p.totalQuantity > p.maxNumberShown
-                          ? `${p.maxNumberShown}+`
-                          : p.totalQuantity
-                      })`}
+                      })()}
+                      <span className="text-muted-foreground">
+                        {" "}
+                        (
+                        {p.totalQuantity > p.maxNumberShown
+                          ? `${p.maxNumberShown}>`
+                          : p.totalQuantity}
+                        )
+                      </span>
+                    </>
+                  ) : (
+                    "-"
+                  )}
                 </td>
                 {!onlyView && (
                   <td className="p-3">
