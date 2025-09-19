@@ -13,6 +13,9 @@ export default async function ClientsPage() {
       role: true,
       isConfirmed: true,
     },
+    orderBy: {
+      createdAt: "desc",
+    }
   });
 
   const priceTypes = await db.priceTypes.findMany();

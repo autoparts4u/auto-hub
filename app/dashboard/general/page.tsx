@@ -28,7 +28,7 @@ export default async function GeneralPage() {
           <TabsTrigger value="auto">Авто</TabsTrigger>
           <TabsTrigger value="texts-for-search">Текст Поиска</TabsTrigger>
           <TabsTrigger value="warehouses">Базы</TabsTrigger>
-          <TabsTrigger value="price-types">Тип ц</TabsTrigger>
+          <TabsTrigger value="price-types">типЦ</TabsTrigger>
         </TabsList>
 
         <TabsContent value="brands">

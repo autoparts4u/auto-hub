@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, forwardRef, useImperativeHandle } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,7 +16,7 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import { AutopartWithStock } from "@/app/types/autoparts";
+import { AutopartWithStock, AutopartFormData } from "@/app/types/autoparts";
 import {
   Auto,
   Brands,
@@ -24,19 +24,24 @@ import {
   TextForAuthopartsSearch,
   Warehouses,
 } from "@prisma/client";
-import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
 import clsx from "clsx";
+
+interface AutopartModalRef {
+  handleSubmit: () => Promise<void>;
+}
 
 interface AutopartModalProps {
   part?: AutopartWithStock | null;
   isNew?: boolean;
   onClose: () => void;
+  onSubmit?: (formData: AutopartFormData) => Promise<void>;
+  submitting?: boolean;
 }
 
-export function AutopartModal({ part, isNew, onClose }: AutopartModalProps) {
-  const router = useRouter();
+export const AutopartModal = forwardRef<AutopartModalRef, AutopartModalProps>(
+  ({ part, onSubmit }, ref) => {
   const [article, setArticle] = useState(part?.article ?? "");
   const [description, setDescription] = useState(part?.description ?? "");
   const [maxNumberShown, setMaxNumberShown] = useState<string>(
@@ -63,7 +68,6 @@ export function AutopartModal({ part, isNew, onClose }: AutopartModalProps) {
     Record<string, number>
   >({});
   const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
 
   const [analogueSearch, setAnalogueSearch] = useState("");
   const [analogueResults, setAnalogueResults] = useState<AutopartWithStock[]>(
@@ -83,6 +87,10 @@ export function AutopartModal({ part, isNew, onClose }: AutopartModalProps) {
   });
 
   const articleRef = useRef<HTMLInputElement>(null);
+
+  useImperativeHandle(ref, () => ({
+    handleSubmit,
+  }));
 
   // Загрузка данных при открытии модалки
   useEffect(() => {
@@ -118,9 +126,6 @@ export function AutopartModal({ part, isNew, onClose }: AutopartModalProps) {
       setWarehouses(warehousesData);
       setAutos(autosData);
       setTextsForSearch(textsForSearchData);
-
-      console.log("first");
-      console.log(textsForSearch);
 
       if (part) {
         const initialStock: Record<string, number> = {};
@@ -175,7 +180,30 @@ export function AutopartModal({ part, isNew, onClose }: AutopartModalProps) {
     setAnalogueResults((prev) => prev.filter((p) => p.id !== analogue.id));
   };
 
-  const handleSubmit = async () => {
+  const getFormData = (): AutopartFormData => {
+    const stock = Object.entries(stockByWarehouse)
+      .filter(([, qty]) => qty > 0)
+      .map(([warehouseId, quantity]) => ({
+        warehouseId: Number(warehouseId),
+        quantity,
+      }));
+
+    const analogueIds = analogues.map((a) => a.id);
+
+    return {
+      article,
+      description,
+      maxNumberShown: Number(maxNumberShown),
+      brandId: Number(brandId),
+      categoryId: Number(categoryId),
+      autoId: Number(autoId),
+      textForSearchId: textForSearchId ? Number(textForSearchId) : undefined,
+      stock,
+      analogueIds,
+    };
+  };
+
+  const validateForm = () => {
     setTouched({
       article: true,
       description: true,
@@ -187,52 +215,19 @@ export function AutopartModal({ part, isNew, onClose }: AutopartModalProps) {
 
     if (!article || !description || !brandId || !categoryId) {
       toast.error("Пожалуйста, заполните все поля");
-      return;
+      return false;
     }
+    return true;
+  };
 
-    setSubmitting(true);
+  const handleSubmit = async () => {
+    if (!validateForm()) return;
 
-    const stock = Object.entries(stockByWarehouse)
-      .filter(([, qty]) => qty > 0)
-      .map(([warehouseId, quantity]) => ({
-        warehouseId: Number(warehouseId),
-        quantity,
-      }));
-
-    const analogueIds = analogues.map((a) => a.id);
-
-    console.log("2");
-    console.log(textForSearchId);
-
-    const res = await fetch(
-      isNew ? "/api/autoparts" : `/api/autoparts/${part?.id}`,
-      {
-        method: isNew ? "POST" : "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          article,
-          description,
-          maxNumberShown: Number(maxNumberShown),
-          brandId: Number(brandId),
-          categoryId: Number(categoryId),
-          autoId: Number(autoId),
-          textForSearchId: textForSearchId && Number(textForSearchId),
-          stock,
-          analogueIds, // добавляем аналоги
-        }),
-      }
-    );
-
-    setSubmitting(false);
-
-    if (!res.ok) {
-      toast.error("Ошибка сохранения детали");
-      return;
+    const formData = getFormData();
+    
+    if (onSubmit) {
+      await onSubmit(formData);
     }
-
-    toast.success(part ? "Деталь обновлена" : "Деталь добавлена");
-    onClose();
-    router.refresh();
   };
 
   return (
@@ -287,26 +282,6 @@ export function AutopartModal({ part, isNew, onClose }: AutopartModalProps) {
             onChange={(e) => setMaxNumberShown(e.target.value)}
           />
         </div>
-      </div>
-      <div className="flex flex-col gap-1">
-        <div className="flex items-center gap-2">
-          <label className="w-1/6 text-sm font-medium text-right">
-            Описание
-          </label>
-          <Input
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            onBlur={() =>
-              setTouched((prev) => ({ ...prev, description: true }))
-            }
-            className={clsx({
-              "border-red-500": touched.description && !description,
-            })}
-          />
-        </div>
-        {touched.description && !description && (
-          <p className="text-sm text-red-500 ml-[16.66%]">Поле обязательно</p>
-        )}
       </div>
       <div className="space-y-1">
         <label className="text-sm font-medium">Бренд</label>
@@ -580,11 +555,8 @@ export function AutopartModal({ part, isNew, onClose }: AutopartModalProps) {
           </div>
         )}
       </div>
-      <div className="flex justify-start">
-        <Button onClick={handleSubmit} disabled={submitting}>
-          {submitting ? "Сохранение..." : isNew ? "Добавить" : "Сохранить"}
-        </Button>
-      </div>
     </div>
   );
-}
+});
+
+AutopartModal.displayName = "AutopartModal";
