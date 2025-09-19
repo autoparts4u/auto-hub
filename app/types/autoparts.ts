@@ -31,3 +31,18 @@ export type AutopartWithStock = Pick<
     category: Categories | null;
   }[];
 };
+
+export type AutopartFormData = {
+  article: string;
+  description: string;
+  maxNumberShown: number;
+  brandId: number;
+  categoryId: number;
+  autoId: number;
+  textForSearchId?: number;
+  stock: {
+    warehouseId: number;
+    quantity: number;
+  }[];
+  analogueIds: string[];
+};
