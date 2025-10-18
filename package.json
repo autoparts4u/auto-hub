@@ -10,7 +10,8 @@
     "db:migrate": "npx prisma migrate dev",
     "db:studio": "npx prisma studio",
     "db:push": "npx prisma db push",
-    "db:reset": "prisma migrate reset && prisma migrate dev"
+    "db:reset": "prisma migrate reset && prisma migrate dev",
+    "db:seed": "tsx lib/db/seed.ts"
   },
   "prisma": {
     "schema": "lib/db/schema.prisma"
@@ -58,6 +59,7 @@
     "eslint-config-next": "15.2.2",
     "prisma": "^6.6.0",
     "tailwindcss": "^4",
+    "tsx": "^4.20.6",
     "typescript": "^5"
   }
 }

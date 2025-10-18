@@ -6,15 +6,17 @@ import { CategoriesPanel } from "@/components/general/CategoriesPanel";
 import { WarehousesPanel } from "@/components/general/WarehousesPanel";
 import { PriceTypesPanel } from "@/components/general/PriceTypesPanel";
 import { AutosPanel } from "@/components/general/AutoPanel";
+import { EngineVolumesPanel } from "@/components/general/EngineVolumesPanel";
 import { TextsForSearchPanel } from "@/components/general/TextsForSearchPanel";
 
 export default async function GeneralPage() {
-  const [brands, categories, warehouses, priceTypes, autos, textsForSearch] = await Promise.all([
+  const [brands, categories, warehouses, priceTypes, autos, engineVolumes, textsForSearch] = await Promise.all([
     db.brands.findMany(),
     db.categories.findMany(),
     db.warehouses.findMany(),
     db.priceTypes.findMany(),
     db.auto.findMany(),
+    db.engineVolume.findMany(),
     db.textForAuthopartsSearch.findMany()
   ]);
 
@@ -26,6 +28,7 @@ export default async function GeneralPage() {
           <TabsTrigger value="brands">Бренды</TabsTrigger>
           <TabsTrigger value="categories">Группы</TabsTrigger>
           <TabsTrigger value="auto">Авто</TabsTrigger>
+          <TabsTrigger value="engine-volumes">Объем двигателя</TabsTrigger>
           <TabsTrigger value="texts-for-search">Текст Поиска</TabsTrigger>
           <TabsTrigger value="warehouses">Базы</TabsTrigger>
           <TabsTrigger value="price-types">типЦ</TabsTrigger>
@@ -39,6 +42,9 @@ export default async function GeneralPage() {
         </TabsContent>
         <TabsContent value="auto">
           <AutosPanel autos={autos} />
+        </TabsContent>
+        <TabsContent value="engine-volumes">
+          <EngineVolumesPanel engineVolumes={engineVolumes} />
         </TabsContent>
         <TabsContent value="texts-for-search">
           <TextsForSearchPanel textsForSearch={textsForSearch} />

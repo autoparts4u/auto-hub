@@ -180,17 +180,19 @@ model Autoparts {
     description        String
     brand_id           Int?
     category_id        Int?
-    auto_id            Int?
     text_for_search_id Int?
     maxNumberShown     Int    @default(5)
+    year_from          Int?
+    year_to            Int?
 
-    brand         Brands?                  @relation(fields: [brand_id], references: [id])
-    category      Categories?              @relation(fields: [category_id], references: [id])
-    auto          Auto?                    @relation(fields: [auto_id], references: [id])
-    textForSearch TextForAuthopartsSearch? @relation(fields: [text_for_search_id], references: [id])
-    prices        AutopartPrices[]
-    warehouses    AutopartsWarehouses[]
-    orderItems    OrderItems[]
+    brand          Brands?                      @relation(fields: [brand_id], references: [id])
+    category       Categories?                  @relation(fields: [category_id], references: [id])
+    textForSearch  TextForAuthopartsSearch?     @relation(fields: [text_for_search_id], references: [id])
+    prices         AutopartPrices[]
+    warehouses     AutopartsWarehouses[]
+    orderItems     OrderItems[]
+    autos          AutopartsAutos[]
+    engineVolumes  AutopartsEngineVolumes[]
 
     analoguesA  Analogues[]   @relation("PartA")
     analoguesB  Analogues[]   @relation("PartB")
@@ -253,9 +255,35 @@ model Categories {
 }
 
 model Auto {
-    id    Int         @id @default(autoincrement())
-    name  String      @unique
-    parts Autoparts[]
+    id    Int              @id @default(autoincrement())
+    name  String           @unique
+    parts AutopartsAutos[]
+}
+
+model AutopartsAutos {
+    autopart_id String
+    auto_id     Int
+
+    autopart Autoparts @relation(fields: [autopart_id], references: [id], onDelete: Cascade)
+    auto     Auto      @relation(fields: [auto_id], references: [id])
+
+    @@id([autopart_id, auto_id])
+}
+
+model EngineVolume {
+    id    Int                        @id @default(autoincrement())
+    name  String                     @unique
+    parts AutopartsEngineVolumes[]
+}
+
+model AutopartsEngineVolumes {
+    autopart_id      String
+    engine_volume_id Int
+
+    autopart     Autoparts    @relation(fields: [autopart_id], references: [id], onDelete: Cascade)
+    engineVolume EngineVolume @relation(fields: [engine_volume_id], references: [id])
+
+    @@id([autopart_id, engine_volume_id])
 }
 
 model Analogues {

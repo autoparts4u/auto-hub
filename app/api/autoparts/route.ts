@@ -9,7 +9,10 @@ export async function POST(req: Request) {
       maxNumberShown,
       brandId,
       categoryId,
-      autoId,
+      autoIds,
+      engineVolumeIds,
+      yearFrom,
+      yearTo,
       textForSearchId,
       stock,
       analogueIds,
@@ -22,12 +25,23 @@ export async function POST(req: Request) {
         maxNumberShown,
         brand_id: brandId,
         category_id: categoryId,
-        auto_id: autoId,
+        year_from: yearFrom || null,
+        year_to: yearTo || null,
         text_for_search_id: textForSearchId || null,
         warehouses: {
           create: stock.map((s: { warehouseId: number; quantity: number }) => ({
             warehouseId: s.warehouseId,
             quantity: s.quantity,
+          })),
+        },
+        autos: {
+          create: autoIds.map((autoId: number) => ({
+            auto: { connect: { id: autoId } },
+          })),
+        },
+        engineVolumes: {
+          create: engineVolumeIds.map((engineVolumeId: number) => ({
+            engineVolume: { connect: { id: engineVolumeId } },
           })),
         },
       },

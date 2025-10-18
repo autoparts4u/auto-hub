@@ -119,8 +119,14 @@ export async function POST(req: Request) {
               description: row["описание"]?.trim() || "",
               brand_id: brand?.id,
               category_id: category?.id,
-              auto_id: auto?.id || null,
               text_for_search_id: textForSearch?.id || null,
+              autos: auto
+                ? {
+                    create: {
+                      auto: { connect: { id: auto.id } },
+                    },
+                  }
+                : undefined,
             },
           });
 

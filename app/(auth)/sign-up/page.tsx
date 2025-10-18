@@ -13,7 +13,7 @@ const Page = async () => {
   return (
     <div className="min-h-screen flex justify-center pt-[15vh] px-4">
       <div className="w-full max-w-sm space-y-6">
-        <h1 className="text-2xl font-bold text-center mb-6">Create Account</h1>
+        <h1 className="text-2xl font-bold text-center mb-6">Создать аккаунт</h1>
 
         <GoogleSignIn />
 
@@ -23,7 +23,7 @@ const Page = async () => {
           </div>
           <div className="relative flex justify-center text-sm">
             <span className="bg-background px-2 text-muted-foreground">
-              Or continue with email
+              Или продолжить с email
             </span>
           </div>
         </div>
@@ -50,26 +50,26 @@ const Page = async () => {
           />
           <Input
             name="phone"
-            placeholder="Phone"
+            placeholder="Телефон"
             type="tel"
             required
             autoComplete="tel"
           />
           <Input
             name="password"
-            placeholder="Password"
+            placeholder="Пароль"
             type="password"
             required
             autoComplete="new-password"
           />
           <Button className="w-full" type="submit">
-            Sign Up
+            Зарегистрироваться
           </Button>
         </form>
 
         <div className="text-center">
           <Button asChild variant="link">
-            <Link href="/sign-in">Already have an account? Sign in</Link>
+            <Link href="/sign-in">Уже есть аккаунт? Войти</Link>
           </Button>
         </div>
       </div>

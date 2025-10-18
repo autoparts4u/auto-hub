@@ -21,6 +21,7 @@ import {
   Auto,
   Brands,
   Categories,
+  EngineVolume,
   TextForAuthopartsSearch,
   Warehouses,
 } from "@prisma/client";
@@ -47,19 +48,27 @@ export const AutopartModal = forwardRef<AutopartModalRef, AutopartModalProps>(
   const [maxNumberShown, setMaxNumberShown] = useState<string>(
     part?.maxNumberShown?.toString() ?? "5"
   );
+  const [yearFrom, setYearFrom] = useState<string>(
+    part?.year_from?.toString() ?? ""
+  );
+  const [yearTo, setYearTo] = useState<string>(
+    part?.year_to?.toString() ?? ""
+  );
   const [brandId, setBrandId] = useState<string>(
     part?.brand?.id.toString() ?? ""
   );
   const [categoryId, setCategoryId] = useState<string>(
     part?.category?.id.toString() ?? ""
   );
-  const [autoId, setAutoId] = useState<string>(part?.auto?.id.toString() ?? "");
+  const [selectedAutos, setSelectedAutos] = useState<Auto[]>(part?.autos ?? []);
+  const [selectedEngineVolumes, setSelectedEngineVolumes] = useState<EngineVolume[]>(part?.engineVolumes ?? []);
   const [textForSearchId, setTextForSearchId] = useState<string>(
     part?.textForSearch?.id.toString() ?? ""
   );
   const [brands, setBrands] = useState<Brands[]>([]);
   const [categories, setCategories] = useState<Categories[]>([]);
   const [autos, setAutos] = useState<Auto[]>([]);
+  const [engineVolumes, setEngineVolumes] = useState<EngineVolume[]>([]);
   const [textsForSearch, setTextsForSearch] = useState<
     TextForAuthopartsSearch[]
   >([]);
@@ -82,7 +91,8 @@ export const AutopartModal = forwardRef<AutopartModalRef, AutopartModalProps>(
     description: false,
     brandId: false,
     categoryId: false,
-    autoId: false,
+    selectedAutos: false,
+    selectedEngineVolumes: false,
     textForSearchId: false,
   });
 
@@ -100,12 +110,14 @@ export const AutopartModal = forwardRef<AutopartModalRef, AutopartModalProps>(
         categoriesRes,
         warehousesRes,
         autosRes,
+        engineVolumesRes,
         textsForSearchRes,
       ] = await Promise.all([
         fetch("/api/brands"),
         fetch("/api/categories"),
         fetch("/api/warehouses"),
         fetch("/api/autos"),
+        fetch("/api/engine-volumes"),
         fetch("/api/texts-for-search"),
       ]);
       const [
@@ -113,18 +125,21 @@ export const AutopartModal = forwardRef<AutopartModalRef, AutopartModalProps>(
         categoriesData,
         warehousesData,
         autosData,
+        engineVolumesData,
         textsForSearchData,
       ] = await Promise.all([
         brandsRes.json(),
         categoriesRes.json(),
         warehousesRes.json(),
         autosRes.json(),
+        engineVolumesRes.json(),
         textsForSearchRes.json(),
       ]);
       setBrands(brandsData);
       setCategories(categoriesData);
       setWarehouses(warehousesData);
       setAutos(autosData);
+      setEngineVolumes(engineVolumesData);
       setTextsForSearch(textsForSearchData);
 
       if (part) {
@@ -189,6 +204,8 @@ export const AutopartModal = forwardRef<AutopartModalRef, AutopartModalProps>(
       }));
 
     const analogueIds = analogues.map((a) => a.id);
+    const autoIds = selectedAutos.map((a) => a.id);
+    const engineVolumeIds = selectedEngineVolumes.map((ev) => ev.id);
 
     return {
       article,
@@ -196,7 +213,10 @@ export const AutopartModal = forwardRef<AutopartModalRef, AutopartModalProps>(
       maxNumberShown: Number(maxNumberShown),
       brandId: Number(brandId),
       categoryId: Number(categoryId),
-      autoId: Number(autoId),
+      autoIds,
+      engineVolumeIds,
+      yearFrom: yearFrom ? Number(yearFrom) : undefined,
+      yearTo: yearTo ? Number(yearTo) : undefined,
       textForSearchId: textForSearchId ? Number(textForSearchId) : undefined,
       stock,
       analogueIds,
@@ -209,12 +229,13 @@ export const AutopartModal = forwardRef<AutopartModalRef, AutopartModalProps>(
       description: true,
       brandId: true,
       categoryId: true,
-      autoId: true,
+      selectedAutos: true,
+      selectedEngineVolumes: true,
       textForSearchId: true,
     });
 
     if (!article || !description || !brandId || !categoryId) {
-      toast.error("Пожалуйста, заполните все поля");
+      toast.error("Пожалуйста, заполните обязательные поля: артикул, описание, бренд и категория");
       return false;
     }
     return true;
@@ -280,6 +301,36 @@ export const AutopartModal = forwardRef<AutopartModalRef, AutopartModalProps>(
             min={1}
             value={maxNumberShown}
             onChange={(e) => setMaxNumberShown(e.target.value)}
+          />
+        </div>
+      </div>
+      <div className="flex flex-col gap-1">
+        <div className="flex items-center gap-2">
+          <label className="w-1/6 text-sm font-medium text-right">
+            Год с
+          </label>
+          <Input
+            type="number"
+            min={1900}
+            max={2100}
+            placeholder="Например: 2010"
+            value={yearFrom}
+            onChange={(e) => setYearFrom(e.target.value)}
+          />
+        </div>
+      </div>
+      <div className="flex flex-col gap-1">
+        <div className="flex items-center gap-2">
+          <label className="w-1/6 text-sm font-medium text-right">
+            Год до
+          </label>
+          <Input
+            type="number"
+            min={1900}
+            max={2100}
+            placeholder="Например: 2020"
+            value={yearTo}
+            onChange={(e) => setYearTo(e.target.value)}
           />
         </div>
       </div>
@@ -370,18 +421,42 @@ export const AutopartModal = forwardRef<AutopartModalRef, AutopartModalProps>(
       </div>
       <div className="space-y-1">
         <label className="text-sm font-medium">Авто</label>
+        
+        {loading ? (
+          <Skeleton className="h-20 w-full rounded-md" />
+        ) : selectedAutos.length > 0 ? (
+          <ul className="space-y-1 mb-3">
+            {selectedAutos.map((auto) => (
+              <li
+                key={auto.id}
+                className="flex justify-between items-center border p-2 rounded"
+              >
+                <span>{auto.name}</span>
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  onClick={() =>
+                    setSelectedAutos((prev) => prev.filter((a) => a.id !== auto.id))
+                  }
+                >
+                  Удалить
+                </Button>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-sm text-muted-foreground mb-3">
+            Авто не выбрано
+          </p>
+        )}
+        
         <Popover>
           <PopoverTrigger asChild>
             <Button
               variant="outline"
-              className={clsx(
-                "w-full justify-between",
-                touched.autoId && !autoId && "border-red-500"
-              )}
+              className="w-full justify-between"
             >
-              {autoId
-                ? autos.find((a) => a.id.toString() === autoId)?.name
-                : "Выберите авто"}
+              Добавить авто
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-[300px] p-0">
@@ -390,25 +465,89 @@ export const AutopartModal = forwardRef<AutopartModalRef, AutopartModalProps>(
               <CommandList>
                 <CommandEmpty>Авто не найдено</CommandEmpty>
                 <CommandGroup>
-                  {autos.map((a) => (
-                    <CommandItem
-                      key={a.id}
-                      onSelect={() => {
-                        setAutoId(a.id.toString());
-                        setTouched((prev) => ({ ...prev, autoId: true }));
-                      }}
-                    >
-                      {a.name}
-                    </CommandItem>
-                  ))}
+                  {autos
+                    .filter((a) => !selectedAutos.find((sa) => sa.id === a.id))
+                    .map((a) => (
+                      <CommandItem
+                        key={a.id}
+                        onSelect={() => {
+                          setSelectedAutos((prev) => [...prev, a]);
+                          setTouched((prev) => ({ ...prev, selectedAutos: true }));
+                        }}
+                      >
+                        {a.name}
+                      </CommandItem>
+                    ))}
                 </CommandGroup>
               </CommandList>
             </Command>
           </PopoverContent>
         </Popover>
-        {touched.autoId && !autoId && (
-          <p className="text-sm text-red-500">Поле обязательно</p>
+      </div>
+      <div className="space-y-1">
+        <label className="text-sm font-medium">Объем двигателя</label>
+        
+        {loading ? (
+          <Skeleton className="h-20 w-full rounded-md" />
+        ) : selectedEngineVolumes.length > 0 ? (
+          <ul className="space-y-1 mb-3">
+            {selectedEngineVolumes.map((ev) => (
+              <li
+                key={ev.id}
+                className="flex justify-between items-center border p-2 rounded"
+              >
+                <span>{ev.name}</span>
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  onClick={() =>
+                    setSelectedEngineVolumes((prev) => prev.filter((e) => e.id !== ev.id))
+                  }
+                >
+                  Удалить
+                </Button>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-sm text-muted-foreground mb-3">
+            Объем двигателя не выбран
+          </p>
         )}
+        
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              className="w-full justify-between"
+            >
+              Добавить объем двигателя
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-[300px] p-0">
+            <Command>
+              <CommandInput placeholder="Поиск объема двигателя..." />
+              <CommandList>
+                <CommandEmpty>Объем двигателя не найден</CommandEmpty>
+                <CommandGroup>
+                  {engineVolumes
+                    .filter((ev) => !selectedEngineVolumes.find((sev) => sev.id === ev.id))
+                    .map((ev) => (
+                      <CommandItem
+                        key={ev.id}
+                        onSelect={() => {
+                          setSelectedEngineVolumes((prev) => [...prev, ev]);
+                          setTouched((prev) => ({ ...prev, selectedEngineVolumes: true }));
+                        }}
+                      >
+                        {ev.name}
+                      </CommandItem>
+                    ))}
+                </CommandGroup>
+              </CommandList>
+            </Command>
+          </PopoverContent>
+        </Popover>
       </div>
       <div className="space-y-1">
         <label className="text-sm font-medium">Текст для поиска</label>

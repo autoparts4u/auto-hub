@@ -32,7 +32,10 @@ export async function PATCH(
       maxNumberShown,
       brandId,
       categoryId,
-      autoId,
+      autoIds,
+      engineVolumeIds,
+      yearFrom,
+      yearTo,
       textForSearchId,
       stock,
       analogueIds,
@@ -48,13 +51,26 @@ export async function PATCH(
         maxNumberShown,
         brand_id: brandId,
         category_id: categoryId,
-        auto_id: autoId,
+        year_from: yearFrom || null,
+        year_to: yearTo || null,
         text_for_search_id: textForSearchId || null,
         warehouses: {
           deleteMany: {},
           create: stock.map((s: { warehouseId: number; quantity: number }) => ({
             warehouse: { connect: { id: s.warehouseId } },
             quantity: s.quantity,
+          })),
+        },
+        autos: {
+          deleteMany: {},
+          create: autoIds.map((autoId: number) => ({
+            auto: { connect: { id: autoId } },
+          })),
+        },
+        engineVolumes: {
+          deleteMany: {},
+          create: engineVolumeIds.map((engineVolumeId: number) => ({
+            engineVolume: { connect: { id: engineVolumeId } },
           })),
         },
       },

@@ -8,7 +8,16 @@ export default async function PartsPage() {
     include: {
       category: true,
       brand: true,
-      auto: true,
+      autos: {
+        include: {
+          auto: true,
+        },
+      },
+      engineVolumes: {
+        include: {
+          engineVolume: true,
+        },
+      },
       textForSearch: true,
       warehouses: {
         include: {
@@ -74,6 +83,12 @@ export default async function PartsPage() {
     }
   });
 
+  const engineVolumes = await db.engineVolume.findMany({
+    orderBy: {
+      name: "asc"
+    }
+  });
+
   const textsForSearch = await db.textForAuthopartsSearch.findMany({
     orderBy: {
       text: "asc"
@@ -84,23 +99,28 @@ export default async function PartsPage() {
     const analoguesFromA = part.analoguesA.map((a) => a.partB);
     const analoguesFromB = part.analoguesB.map((a) => a.partA);
     const allAnalogues = [...analoguesFromA, ...analoguesFromB];
+    // TypeScript doesn't infer year_from/year_to from include, so we use type assertion
+    const partWithYears = part as typeof part & { year_from: number | null; year_to: number | null };
 
     return {
-      id: part.id,
-      article: part.article,
-      description: part.description,
-      maxNumberShown: part.maxNumberShown,
-      category: part.category,
-      brand: part.brand,
-      auto: part.auto,
-      textForSearch: part.textForSearch,
-      totalQuantity: part.warehouses.reduce((sum, w) => sum + w.quantity, 0),
-      warehouses: part.warehouses.map((w) => ({
+      id: partWithYears.id,
+      article: partWithYears.article,
+      description: partWithYears.description,
+      maxNumberShown: partWithYears.maxNumberShown,
+      year_from: partWithYears.year_from,
+      year_to: partWithYears.year_to,
+      category: partWithYears.category,
+      brand: partWithYears.brand,
+      autos: partWithYears.autos.map((a) => a.auto),
+      engineVolumes: partWithYears.engineVolumes.map((ev) => ev.engineVolume),
+      textForSearch: partWithYears.textForSearch,
+      totalQuantity: partWithYears.warehouses.reduce((sum, w) => sum + w.quantity, 0),
+      warehouses: partWithYears.warehouses.map((w) => ({
         warehouseId: w.warehouse.id,
         warehouseName: w.warehouse.name,
         quantity: w.quantity,
       })),
-      prices: part.prices.map((p) => ({
+      prices: partWithYears.prices.map((p) => ({
         price: p.price,
         priceType: p.priceType,
       })),
@@ -120,6 +140,7 @@ export default async function PartsPage() {
       brands={brands}
       categories={categories}
       autos={autos}
+      engineVolumes={engineVolumes}
       warehouses={warehouses}
       textsForSearch={textsForSearch}
     />

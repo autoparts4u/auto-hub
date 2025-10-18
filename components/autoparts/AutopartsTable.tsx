@@ -47,7 +47,7 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { PriceEditModal } from "./PriceEditModal";
-import { Auto, Categories, TextForAuthopartsSearch } from "@prisma/client";
+import { Auto, Categories, TextForAuthopartsSearch, EngineVolume } from "@prisma/client";
 import ImportAutopartsButton from "./ImportAutopartsButton";
 
 interface Props {
@@ -56,6 +56,7 @@ interface Props {
   warehouses: { id: number; name: string }[];
   categories: Categories[];
   autos: Auto[];
+  engineVolumes: EngineVolume[];
   textsForSearch: TextForAuthopartsSearch[];
   onlyView?: boolean;
   priceAccessId?: number | null;
@@ -76,6 +77,7 @@ export function AutopartsTable({
   warehouses,
   categories,
   autos,
+  engineVolumes,
   textsForSearch,
   onlyView,
   priceAccessId,
@@ -92,6 +94,9 @@ export function AutopartsTable({
   const [selectedWarehouses, setSelectedWarehouses] = useState<string[]>([]);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [selectedAutos, setSelectedAutos] = useState<string[]>([]);
+  const [selectedEngineVolumes, setSelectedEngineVolumes] = useState<string[]>([]);
+  const [filterYearFrom, setFilterYearFrom] = useState<string>("");
+  const [filterYearTo, setFilterYearTo] = useState<string>("");
   const [selectedTextsForSearch, setSelectedTextsForSearch] = useState<
     string[]
   >([]);
@@ -200,9 +205,22 @@ export function AutopartsTable({
         selectedCategories.includes(p.category.name);
 
       const matchesAuto =
-        !p.auto ||
         selectedAutos.length === 0 ||
-        selectedAutos.includes(p.auto.name);
+        p.autos.some((auto) => selectedAutos.includes(auto.name));
+
+      const matchesEngineVolume =
+        selectedEngineVolumes.length === 0 ||
+        p.engineVolumes.some((ev) => selectedEngineVolumes.includes(ev.name));
+
+      const matchesYearFrom = 
+        !filterYearFrom ||
+        p.year_to == null ||
+        (typeof p.year_to === 'number' && p.year_to >= Number(filterYearFrom));
+
+      const matchesYearTo = 
+        !filterYearTo ||
+        p.year_from == null ||
+        (typeof p.year_from === 'number' && p.year_from <= Number(filterYearTo));
 
       const matchesTextsForSearch =
         selectedTextsForSearch.length === 0 ||
@@ -217,6 +235,9 @@ export function AutopartsTable({
         matchesWarehouse &&
         matchesCategory &&
         matchesAuto &&
+        matchesEngineVolume &&
+        matchesYearFrom &&
+        matchesYearTo &&
         matchesTextsForSearch &&
         isInStock
       );
@@ -233,7 +254,7 @@ export function AutopartsTable({
           case "category":
             return part.category?.name.toLowerCase();
           case "auto":
-            return part.auto?.name.toLowerCase();
+            return part.autos.map((a) => a.name).join(", ").toLowerCase();
           case "totalQuantity":
             return part.totalQuantity;
         }
@@ -262,6 +283,9 @@ export function AutopartsTable({
     setSelectedWarehouses([]);
     setSelectedCategories([]);
     setSelectedAutos([]);
+    setSelectedEngineVolumes([]);
+    setFilterYearFrom("");
+    setFilterYearTo("");
     setSelectedTextsForSearch([]);
     setCurrentPage(1);
   };
@@ -366,51 +390,157 @@ export function AutopartsTable({
           className="w-full sm:max-w-xs"
         />
         <div className="space-y-1">
-          <Label>Авто</Label>
+          <Label>Параметры авто</Label>
           <Popover>
             <PopoverTrigger asChild>
               <Button variant="outline" className="w-[240px] justify-between">
-                {selectedAutos.length === 0
+                {selectedAutos.length === 0 && selectedEngineVolumes.length === 0 && !filterYearFrom && !filterYearTo
                   ? "Все"
-                  : `${selectedAutos.length} выбрано`}
+                  : `Фильтры (${selectedAutos.length + selectedEngineVolumes.length + (filterYearFrom ? 1 : 0) + (filterYearTo ? 1 : 0)})`}
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-[240px] p-0">
-              <Command>
-                <CommandInput placeholder="Поиск авто..." />
-                <CommandList>
-                  <CommandEmpty>Авто не найдено</CommandEmpty>
-                  <CommandGroup>
-                    {autos.map((auto) => {
-                      const autoName = auto.name;
-
-                      if (!autoName) return;
-
-                      const isSelected = selectedAutos.includes(autoName);
-                      return (
-                        <CommandItem
-                          key={autoName}
-                          onSelect={() => {
-                            const newAutos = isSelected
-                              ? selectedAutos.filter((name) => name !== autoName)
-                              : [...selectedAutos, autoName];
-                            handleAutoChange(newAutos);
-                          }}
+            <PopoverContent className="w-[320px] p-4">
+              <div className="space-y-4">
+                {/* Марки авто */}
+                <div className="space-y-2">
+                  <Label className="text-sm font-semibold">Марки авто</Label>
+                  <Command className="border rounded-md">
+                    <CommandInput placeholder="Поиск марки..." />
+                    <CommandList className="max-h-[150px]">
+                      <CommandEmpty>Марка не найдена</CommandEmpty>
+                      <CommandGroup>
+                        {autos.map((auto) => {
+                          const autoName = auto.name;
+                          if (!autoName) return null;
+                          const isSelected = selectedAutos.includes(autoName);
+                          return (
+                            <CommandItem
+                              key={autoName}
+                              onSelect={() => {
+                                const newAutos = isSelected
+                                  ? selectedAutos.filter((name) => name !== autoName)
+                                  : [...selectedAutos, autoName];
+                                handleAutoChange(newAutos);
+                              }}
+                            >
+                              <div className="flex items-center gap-2">
+                                <Check
+                                  className={`h-4 w-4 ${
+                                    isSelected ? "opacity-100" : "opacity-0"
+                                  }`}
+                                />
+                                {autoName}
+                              </div>
+                            </CommandItem>
+                          );
+                        })}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                  {selectedAutos.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {selectedAutos.map((auto) => (
+                        <span
+                          key={auto}
+                          className="inline-flex items-center gap-1 bg-primary/10 text-primary text-xs px-2 py-0.5 rounded-md cursor-pointer hover:bg-primary/20"
+                          onClick={() => handleAutoChange(selectedAutos.filter((a) => a !== auto))}
                         >
-                          <div className="flex items-center gap-2">
-                            <Check
-                              className={`h-4 w-4 ${
-                                isSelected ? "opacity-100" : "opacity-0"
-                              }`}
-                            />
-                            {autoName}
-                          </div>
-                        </CommandItem>
-                      );
-                    })}
-                  </CommandGroup>
-                </CommandList>
-              </Command>
+                          {auto}
+                          <span className="text-xs">×</span>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Объемы двигателя */}
+                <div className="space-y-2">
+                  <Label className="text-sm font-semibold">Объемы двигателя</Label>
+                  <Command className="border rounded-md">
+                    <CommandInput placeholder="Поиск объема..." />
+                    <CommandList className="max-h-[150px]">
+                      <CommandEmpty>Объем не найден</CommandEmpty>
+                      <CommandGroup>
+                        {engineVolumes.map((ev) => {
+                          const volumeName = ev.name;
+                          if (!volumeName) return null;
+                          const isSelected = selectedEngineVolumes.includes(volumeName);
+                          return (
+                            <CommandItem
+                              key={ev.id}
+                              onSelect={() => {
+                                const newVolumes = isSelected
+                                  ? selectedEngineVolumes.filter((name) => name !== volumeName)
+                                  : [...selectedEngineVolumes, volumeName];
+                                setSelectedEngineVolumes(newVolumes);
+                                setCurrentPage(1);
+                              }}
+                            >
+                              <div className="flex items-center gap-2">
+                                <Check
+                                  className={`h-4 w-4 ${
+                                    isSelected ? "opacity-100" : "opacity-0"
+                                  }`}
+                                />
+                                {volumeName}
+                              </div>
+                            </CommandItem>
+                          );
+                        })}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                  {selectedEngineVolumes.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {selectedEngineVolumes.map((volume) => (
+                        <span
+                          key={volume}
+                          className="inline-flex items-center gap-1 bg-primary/10 text-primary text-xs px-2 py-0.5 rounded-md cursor-pointer hover:bg-primary/20"
+                          onClick={() => setSelectedEngineVolumes(selectedEngineVolumes.filter((v) => v !== volume))}
+                        >
+                          {volume}
+                          <span className="text-xs">×</span>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Диапазон лет */}
+                <div className="space-y-2">
+                  <Label className="text-sm font-semibold">Годы</Label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <Input
+                        type="number"
+                        placeholder="От"
+                        value={filterYearFrom}
+                        onChange={(e) => {
+                          setFilterYearFrom(e.target.value);
+                          setCurrentPage(1);
+                        }}
+                        className="h-9"
+                        min="1900"
+                        max="2100"
+                      />
+                    </div>
+                    <div>
+                      <Input
+                        type="number"
+                        placeholder="До"
+                        value={filterYearTo}
+                        onChange={(e) => {
+                          setFilterYearTo(e.target.value);
+                          setCurrentPage(1);
+                        }}
+                        className="h-9"
+                        min="1900"
+                        max="2100"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
             </PopoverContent>
           </Popover>
         </div>
@@ -620,129 +750,226 @@ export function AutopartsTable({
           </div>
         </Label>
       </div>
-      {/* Десктопная таблица */}
-      <div className="hidden lg:block">
-        {/* Sticky заголовок */}
-        <div className={`sticky z-20 bg-muted text-muted-foreground rounded-t-md border border-b-0 ${!onlyView ? 'top-[190px]' : 'top-[170px]'}`}>
-          <div className="overflow-x-auto">
-            <table className="w-full table-fixed text-sm text-left" style={{ minWidth: '800px', maxWidth: '1200px' }}>
-              <colgroup>
-                <col style={{ width: '120px' }} />
-                {!onlyView && <col style={{ width: '80px' }} />}
-                <col style={{ width: '200px' }} />
-                {!onlyView && <col style={{ width: '100px' }} />}
-                {!onlyView && <col style={{ width: '100px' }} />}
-                <col style={{ width: '70px' }} />
-                {!onlyView && <col style={{ width: '100px' }} />}
-                <col style={{ width: '100px' }} />
-                {!onlyView && <col style={{ width: '50px' }} />}
-                {!onlyView && <col style={{ width: '100px' }} />}
-              </colgroup>
-              <thead>
-              <tr>
-                <th className="p-3 text-center">
-                  <SortHeader label="Артикул" column="article" />
+      {/* Десктопная и планшетная таблица */}
+      <div className="hidden md:block rounded-lg border shadow-sm overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse text-sm">
+            <thead className="bg-muted/50">
+              <tr className="border-b">
+              <th className="px-3 py-3.5 text-center text-xs font-semibold tracking-wider whitespace-nowrap border-r">
+                <SortHeader label="Артикул" column="article" />
+              </th>
+              {!onlyView && (
+                <th className="px-3 py-3.5 text-center text-xs font-semibold tracking-wider whitespace-nowrap border-r">
+                  <SortHeader label="Бренд" column="brand" />
                 </th>
-                {!onlyView && (
-                  <th className="p-3 text-center">
-                    <SortHeader label="Бренд" column="brand" />
-                  </th>
-                )}
-                <th className="p-3 text-center">
-                  <SortHeader label="Описание" column="description" />
+              )}
+              <th className="px-3 py-3.5 text-center text-xs font-semibold tracking-wider border-r">
+                <SortHeader label="Описание" column="description" />
+              </th>
+              {!onlyView && (
+                <th className="px-3 py-3.5 text-center text-xs font-semibold tracking-wider whitespace-nowrap border-r">
+                  <SortHeader label="Группа" column="category" />
                 </th>
-                {!onlyView && (
-                  <th className="p-3 text-center">
-                    <SortHeader label="Группа" column="category" />
-                  </th>
-                )}
-                {!onlyView && (
-                  <th className="p-3 text-center">
-                    <SortHeader label="Авто" column="auto" />
-                  </th>
-                )}
-                <th className="p-3 text-center">
-                  <SortHeader
-                    label={onlyView ? "Кол (общ)" : "Кол-во"}
-                    column="totalQuantity"
-                  />
+              )}
+              {!onlyView && (
+                <th className="px-3 py-3.5 text-center text-xs font-semibold tracking-wider whitespace-nowrap border-r">
+                  <SortHeader label="Авто" column="auto" />
                 </th>
-
-                {!onlyView && <th className="p-3 text-center">Базы</th>}
-                <th className="p-3 text-center">Цены</th>
-                {!onlyView && <th className="p-3 text-center">Текст</th>}
-                {!onlyView && <th className="p-3 text-center">Действия</th>}
-              </tr>
-            </thead>
-            </table>
-          </div>
-        </div>
-        
-        {/* Тело таблицы */}
-        <div className="overflow-x-auto rounded-b-md border border-t-0">
-          <table className="w-full table-fixed text-sm text-left" style={{ minWidth: '800px', maxWidth: '1200px' }}>
-            <colgroup>
-              <col style={{ width: '120px' }} />
-              {!onlyView && <col style={{ width: '80px' }} />}
-              <col style={{ width: '200px' }} />
-              {!onlyView && <col style={{ width: '100px' }} />}
-              {!onlyView && <col style={{ width: '100px' }} />}
-              <col style={{ width: '70px' }} />
-              {!onlyView && <col style={{ width: '100px' }} />}
-              <col style={{ width: '100px' }} />
-              {!onlyView && <col style={{ width: '50px' }} />}
-              {!onlyView && <col style={{ width: '100px' }} />}
-            </colgroup>
-            <tbody>
-            {filteredParts.map((p) => (
+              )}
+              {!onlyView && (
+                <th className="px-2 py-3.5 text-center text-xs font-semibold tracking-wider whitespace-nowrap border-r w-24">
+                  Объем
+                </th>
+              )}
+              {!onlyView && (
+                <th className="px-2 py-3.5 text-center text-xs font-semibold tracking-wider whitespace-nowrap border-r w-24">
+                  Годы
+                </th>
+              )}
+              <th className="px-2 py-3.5 text-center text-xs font-semibold tracking-wider whitespace-nowrap border-r w-20">
+                <SortHeader
+                  label={onlyView ? "Кол (общ)" : "Кол-во"}
+                  column="totalQuantity"
+                />
+              </th>
+              {!onlyView && (
+                <th className="px-3 py-3.5 text-center text-xs font-semibold tracking-wider whitespace-nowrap border-r">
+                  Базы
+                </th>
+              )}
+              <th className="px-3 py-3.5 text-center text-xs font-semibold tracking-wider whitespace-nowrap border-r">
+                Цены
+              </th>
+              {!onlyView && (
+                <th className="px-2 py-3.5 text-center text-xs font-semibold tracking-wider whitespace-nowrap border-r w-16">
+                  Текст
+                </th>
+              )}
+              {!onlyView && (
+                <th className="px-2 py-3.5 text-center text-xs font-semibold tracking-wider whitespace-nowrap w-[70px]">
+                  Действия
+                </th>
+              )}
+            </tr>
+          </thead>
+          <tbody className="bg-background">
+            {filteredParts.map((p, index) => (
               <tr
                 key={p.id}
-                className="border-t hover:bg-accent/40 transition-colors"
+                className={`border-b hover:bg-accent transition-colors ${
+                  index % 2 === 0 ? 'bg-background' : 'bg-muted/50'
+                }`}
               >
-                <td className="p-3 font-mono font-medium truncate" title={p.article}>{p.article}</td>
-                {!onlyView && <td className="p-3 truncate" title={p.brand?.name}>{p.brand?.name}</td>}
-                <td className="p-3 truncate" title={p.description}>{p.description}</td>
-                {!onlyView && <td className="p-3 truncate" title={p.category?.name}>{p.category?.name}</td>}
-                {!onlyView && <td className="p-3 truncate" title={p.auto?.name}>{p.auto?.name}</td>}
-                <td className="p-3 text-center">
+                <td className="px-3 py-4 text-sm font-mono font-medium whitespace-nowrap border-r">
+                  <TooltipProvider delayDuration={300}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="max-w-[120px] truncate cursor-help">
+                          {p.article}
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="max-w-xs">
+                        <p className="font-mono">{p.article}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </td>
+                {!onlyView && (
+                  <td className="px-3 py-4 text-sm border-r">
+                    <TooltipProvider delayDuration={300}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="max-w-[100px] truncate cursor-help">
+                            {p.brand?.name || "-"}
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="max-w-xs">
+                          <p>{p.brand?.name || "-"}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </td>
+                )}
+                <td className="px-3 py-4 text-sm border-r">
+                  <TooltipProvider delayDuration={300}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="max-w-[250px] truncate cursor-help">
+                          {p.description}
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="max-w-md">
+                        <p>{p.description}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </td>
+                {!onlyView && (
+                  <td className="px-3 py-4 text-sm border-r">
+                    <TooltipProvider delayDuration={300}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="max-w-[120px] truncate cursor-help">
+                            {p.category?.name || "-"}
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="max-w-xs">
+                          <p>{p.category?.name || "-"}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </td>
+                )}
+                {!onlyView && (
+                  <td className="px-3 py-4 text-sm border-r">
+                    <TooltipProvider delayDuration={300}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="max-w-[120px] truncate cursor-help">
+                            {p.autos.map((a) => a.name).join(", ") || "-"}
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="max-w-xs">
+                          <p>{p.autos.map((a) => a.name).join(", ") || "-"}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </td>
+                )}
+                {!onlyView && (
+                  <td className="px-2 py-4 text-sm border-r">
+                    <TooltipProvider delayDuration={300}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="max-w-[80px] truncate cursor-help text-xs">
+                            {p.engineVolumes.map((ev) => ev.name).join(", ") || "-"}
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="max-w-xs">
+                          <p>{p.engineVolumes.map((ev) => ev.name).join(", ") || "-"}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </td>
+                )}
+                {!onlyView && (
+                  <td className="px-2 py-4 text-sm text-center border-r">
+                    <div className="text-xs whitespace-nowrap">
+                      {p.year_from && p.year_to ? (
+                        `${p.year_from}-${p.year_to}`
+                      ) : p.year_from ? (
+                        `от ${p.year_from}`
+                      ) : p.year_to ? (
+                        `до ${p.year_to}`
+                      ) : (
+                        "-"
+                      )}
+                    </div>
+                  </td>
+                )}
+                <td className="px-2 py-4 text-sm text-center font-semibold whitespace-nowrap border-r">
                   {!onlyView ? (
-                    p.totalQuantity
+                    <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
+                      {p.totalQuantity}
+                    </span>
                   ) : warehouseAccessId ? (
-                    <>
-                      {(() => {
-                        const quantity = p.warehouses.find(
-                          (warehouse) =>
-                            warehouse.warehouseId === warehouseAccessId
-                        )?.quantity;
-                        return quantity
-                          ? quantity > p.maxNumberShown
-                            ? `${p.maxNumberShown}>`
-                            : quantity
-                          : "0";
-                      })()}
-                      <span className="text-muted-foreground">
-                        {" "}
+                    <div className="flex flex-col items-center gap-1">
+                      <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
+                        {(() => {
+                          const quantity = p.warehouses.find(
+                            (warehouse) =>
+                              warehouse.warehouseId === warehouseAccessId
+                          )?.quantity;
+                          return quantity
+                            ? quantity > p.maxNumberShown
+                              ? `${p.maxNumberShown}>`
+                              : quantity
+                            : "0";
+                        })()}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
                         (
                         {p.totalQuantity > p.maxNumberShown
                           ? `${p.maxNumberShown}>`
                           : p.totalQuantity}
                         )
                       </span>
-                    </>
+                    </div>
                   ) : (
                     "-"
                   )}
                 </td>
                 {!onlyView && (
-                  <td className="p-3">
-                    <div className="max-h-20 overflow-y-auto">
-                      <ul className="space-y-1">
+                  <td className="px-3 py-4 text-sm border-r">
+                    <div className="max-h-24 overflow-y-auto pr-2 custom-scrollbar">
+                      <ul className="space-y-1.5">
                         {p.warehouses.map(
                           (w) =>
                             w.quantity > 0 && (
-                              <li key={w.warehouseId} className="text-xs truncate">
-                                {w.warehouseName}:{" "}
-                                <span className="font-semibold">
+                              <li key={w.warehouseId} className="flex items-center justify-between gap-2 text-xs bg-muted/30 rounded px-2 py-1">
+                                <span className="truncate">{w.warehouseName}</span>
+                                <span className="font-semibold whitespace-nowrap text-primary">
                                   {w.quantity}
                                 </span>
                               </li>
@@ -752,21 +979,23 @@ export function AutopartsTable({
                     </div>
                   </td>
                 )}
-                <td className="p-3">
-                  <div className="max-h-20 overflow-y-auto">
+                <td className="px-3 py-4 text-sm border-r">
+                  <div className="max-h-24 overflow-y-auto pr-2 custom-scrollbar">
                     {!onlyView && !priceAccessId ? (
-                      <ul className="space-y-1 text-xs text-left">
+                      <ul className="space-y-1.5">
                         {p.prices.map((price) => (
-                          <li key={price.priceType.id} className="truncate">
-                            <span className="font-semibold">
+                          <li key={price.priceType.id} className="flex items-center justify-between gap-2 text-xs bg-muted/30 rounded px-2 py-1">
+                            <span className="font-medium truncate">
                               {price.priceType.name}:
-                            </span>{" "}
-                            {price.price.toFixed(2)}
+                            </span>
+                            <span className="font-semibold whitespace-nowrap text-green-600 dark:text-green-500">
+                              {price.price.toFixed(2)}
+                            </span>
                           </li>
                         ))}
                       </ul>
                     ) : (
-                      <span className="text-sm">
+                      <span className="inline-flex items-center justify-center px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
                         {p.prices
                           .find((price) => price.priceType.id === priceAccessId)
                           ?.price.toFixed(2) ?? "-"}
@@ -775,164 +1004,242 @@ export function AutopartsTable({
                   </div>
                 </td>
                 {!onlyView && (
-                  <td className="p-3 text-center">
-                    {p.textForSearch && <Check className={`h-4 w-4`} />}
+                  <td className="px-2 py-4 text-center border-r">
+                    {p.textForSearch && (
+                      <div className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-green-100 dark:bg-green-900/30">
+                        <Check className="w-3.5 h-3.5 text-green-600 dark:text-green-500" />
+                      </div>
+                    )}
                   </td>
                 )}
                 {!onlyView && (
-                  <td className="p-3 text-center">
-                    <div className="flex items-center justify-center gap-1 flex-wrap">
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => setSelected(p)}
-                          >
-                            <Pencil className="w-4 h-4" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent side="bottom">
-                          <p>Редактировать</p>
-                        </TooltipContent>
-                      </Tooltip>
+                  <td className="px-2 py-3 text-center">
+                    <div className="grid grid-cols-2 gap-0.5">
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7"
+                              onClick={() => setSelected(p)}
+                            >
+                              <Pencil className="w-3.5 h-3.5" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent side="bottom">
+                            <p>Редактировать</p>
+                          </TooltipContent>
+                        </Tooltip>
 
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => setMovePart(p)}
-                          >
-                            <ArrowRightLeft className="w-4 h-4 text-blue-500" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent side="bottom">
-                          <p>Переместить</p>
-                        </TooltipContent>
-                      </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7"
+                              onClick={() => setMovePart(p)}
+                            >
+                              <ArrowRightLeft className="w-3.5 h-3.5 text-blue-500" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent side="bottom">
+                            <p>Переместить</p>
+                          </TooltipContent>
+                        </Tooltip>
 
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => setPricePartId(p.id)}
-                          >
-                            <Tags className="w-4 h-4 text-green-600" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent side="bottom">
-                          <p>Редактировать цены</p>
-                        </TooltipContent>
-                      </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7"
+                              onClick={() => setPricePartId(p.id)}
+                            >
+                              <Tags className="w-3.5 h-3.5 text-green-600" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent side="bottom">
+                            <p>Редактировать цены</p>
+                          </TooltipContent>
+                        </Tooltip>
 
-                      {/* <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => setLogsPartId(p.id)}
-                          >
-                            <FileText className="w-4 h-4 text-muted-foreground" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent side="bottom">
-                          <p>История изменений</p>
-                        </TooltipContent>
-                      </Tooltip> */}
-
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => setDeletingId(p.id)}
-                          >
-                            <Trash className="w-4 h-4 text-destructive" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent side="bottom">
-                          <p>Удалить</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7"
+                              onClick={() => setDeletingId(p.id)}
+                            >
+                              <Trash className="w-3.5 h-3.5 text-destructive" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent side="bottom">
+                            <p>Удалить</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                     </div>
                   </td>
                 )}
               </tr>
             ))}
-            </tbody>
-          </table>
+          </tbody>
+        </table>
         </div>
       </div>
 
       {/* Мобильная версия таблицы */}
-      <div className="lg:hidden space-y-4">
-        {filteredParts.map((p) => (
-          <div key={p.id} className="border rounded-lg p-4 space-y-3">
-            <div className="flex justify-between items-start">
-              <div className="flex-1 min-w-0">
-                <h3 className="font-mono font-medium text-sm truncate" title={p.article}>
-                  {p.article}
-                </h3>
-                <p className="text-sm text-muted-foreground truncate" title={p.description}>
-                  {p.description}
-                </p>
-              </div>
-              <div className="text-right text-sm">
-                <div className="font-semibold">{p.totalQuantity}</div>
-                <div className="text-muted-foreground">шт.</div>
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-2 gap-2 text-xs">
-              {!onlyView && p.brand && (
-                <div>
-                  <span className="text-muted-foreground">Бренд:</span>
-                  <div className="font-medium truncate" title={p.brand.name}>
-                    {p.brand.name}
-                  </div>
+      <div className="md:hidden space-y-3">
+        {filteredParts.map((p, index) => (
+          <div key={p.id} className={`border rounded-lg hover:shadow-md transition-shadow ${
+            index % 2 === 0 ? 'bg-card' : 'bg-muted/50'
+          }`}>
+            <div className="p-4 space-y-3">
+              <div className="flex justify-between items-start gap-3">
+                <div className="flex-1 min-w-0 space-y-1">
+                  <h3 className="font-mono font-semibold text-sm" title={p.article}>
+                    {p.article}
+                  </h3>
+                  <p className="text-sm text-muted-foreground line-clamp-2" title={p.description}>
+                    {p.description}
+                  </p>
                 </div>
-              )}
-              {!onlyView && p.category && (
-                <div>
-                  <span className="text-muted-foreground">Группа:</span>
-                  <div className="font-medium truncate" title={p.category.name}>
-                    {p.category.name}
+                <div className="flex-shrink-0">
+                  <div className="inline-flex items-center justify-center px-3 py-1.5 rounded-full text-sm font-semibold bg-primary/10 text-primary">
+                    {!onlyView ? (
+                      p.totalQuantity
+                    ) : warehouseAccessId ? (
+                      <>
+                        {(() => {
+                          const quantity = p.warehouses.find(
+                            (warehouse) =>
+                              warehouse.warehouseId === warehouseAccessId
+                          )?.quantity;
+                          return quantity
+                            ? quantity > p.maxNumberShown
+                              ? `${p.maxNumberShown}>`
+                              : quantity
+                            : "0";
+                        })()}
+                      </>
+                    ) : (
+                      "-"
+                    )}
                   </div>
-                </div>
-              )}
-              {!onlyView && p.auto && (
-                <div>
-                  <span className="text-muted-foreground">Авто:</span>
-                  <div className="font-medium truncate" title={p.auto.name}>
-                    {p.auto.name}
-                  </div>
-                </div>
-              )}
-              <div>
-                <span className="text-muted-foreground">Цена:</span>
-                <div className="font-medium">
-                  {!onlyView && !priceAccessId ? (
-                    p.prices.length > 0 ? `${p.prices[0].price.toFixed(2)}` : "-"
-                  ) : (
-                    p.prices
-                      .find((price) => price.priceType.id === priceAccessId)
-                      ?.price.toFixed(2) ?? "-"
+                  {onlyView && warehouseAccessId && (
+                    <div className="text-xs text-center text-muted-foreground mt-1">
+                      ({p.totalQuantity > p.maxNumberShown
+                        ? `${p.maxNumberShown}>`
+                        : p.totalQuantity})
+                    </div>
                   )}
                 </div>
               </div>
+              
+              <div className="grid grid-cols-2 gap-3 text-xs">
+                {!onlyView && p.brand && (
+                  <div className="space-y-1">
+                    <span className="text-muted-foreground font-medium">Бренд</span>
+                    <div className="font-semibold truncate" title={p.brand.name}>
+                      {p.brand.name}
+                    </div>
+                  </div>
+                )}
+                {!onlyView && p.category && (
+                  <div className="space-y-1">
+                    <span className="text-muted-foreground font-medium">Группа</span>
+                    <div className="font-semibold truncate" title={p.category.name}>
+                      {p.category.name}
+                    </div>
+                  </div>
+                )}
+                {!onlyView && p.autos.length > 0 && (
+                  <div className="space-y-1">
+                    <span className="text-muted-foreground font-medium">Авто</span>
+                    <div className="font-semibold truncate" title={p.autos.map((a) => a.name).join(", ")}>
+                      {p.autos.map((a) => a.name).join(", ")}
+                    </div>
+                  </div>
+                )}
+                {!onlyView && p.engineVolumes.length > 0 && (
+                  <div className="space-y-1">
+                    <span className="text-muted-foreground font-medium">Объем</span>
+                    <div className="font-semibold truncate" title={p.engineVolumes.map((ev) => ev.name).join(", ")}>
+                      {p.engineVolumes.map((ev) => ev.name).join(", ")}
+                    </div>
+                  </div>
+                )}
+                {!onlyView && (p.year_from != null || p.year_to != null) && (
+                  <div className="space-y-1">
+                    <span className="text-muted-foreground font-medium">Годы</span>
+                    <div className="font-semibold">
+                      {p.year_from && p.year_to ? (
+                        `${p.year_from}-${p.year_to}`
+                      ) : p.year_from ? (
+                        `от ${p.year_from}`
+                      ) : (
+                        `до ${p.year_to}`
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Цены */}
+              <div className="pt-3 border-t">
+                <div className="text-xs text-muted-foreground font-medium mb-2">Цены</div>
+                {!onlyView && !priceAccessId ? (
+                  <div className="flex flex-wrap gap-2">
+                    {p.prices.map((price) => (
+                      <div key={price.priceType.id} className="inline-flex items-center gap-1.5 bg-green-50 dark:bg-green-900/20 rounded-md px-2.5 py-1.5 text-xs">
+                        <span className="font-medium text-muted-foreground">
+                          {price.priceType.name}:
+                        </span>
+                        <span className="font-semibold text-green-700 dark:text-green-400">
+                          {price.price.toFixed(2)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="inline-flex items-center justify-center px-3 py-1.5 rounded-full text-sm font-semibold bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                    {p.prices
+                      .find((price) => price.priceType.id === priceAccessId)
+                      ?.price.toFixed(2) ?? "-"}
+                  </div>
+                )}
+              </div>
+
+              {/* Склады */}
+              {!onlyView && p.warehouses.some((w) => w.quantity > 0) && (
+                <div className="pt-3 border-t">
+                  <div className="text-xs text-muted-foreground font-medium mb-2">Склады</div>
+                  <div className="flex flex-wrap gap-2">
+                    {p.warehouses.map(
+                      (w) =>
+                        w.quantity > 0 && (
+                          <div key={w.warehouseId} className="inline-flex items-center gap-1.5 bg-muted/50 rounded-md px-2.5 py-1.5 text-xs">
+                            <span className="truncate">{w.warehouseName}:</span>
+                            <span className="font-semibold text-primary">
+                              {w.quantity}
+                            </span>
+                          </div>
+                        )
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
 
             {!onlyView && (
-              <div className="flex items-center justify-between pt-2 border-t">
+              <div className="flex items-center justify-between px-4 py-3 bg-muted/30 rounded-b-lg border-t">
                 <div className="flex items-center gap-2">
                   {p.textForSearch && (
-                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                      <Check className="h-3 w-3" />
-                      <span>Есть текст</span>
+                    <div className="inline-flex items-center gap-1.5 text-xs font-medium text-green-600 dark:text-green-500 bg-green-50 dark:bg-green-900/20 px-2.5 py-1 rounded-md">
+                      <Check className="h-3.5 w-3.5" />
+                      <span>Текст</span>
                     </div>
                   )}
                 </div>
@@ -942,7 +1249,8 @@ export function AutopartsTable({
                       <TooltipTrigger asChild>
                         <Button
                           variant="ghost"
-                          size="sm"
+                          size="icon"
+                          className="h-9 w-9"
                           onClick={() => setSelected(p)}
                         >
                           <Pencil className="w-4 h-4" />
@@ -957,7 +1265,8 @@ export function AutopartsTable({
                       <TooltipTrigger asChild>
                         <Button
                           variant="ghost"
-                          size="sm"
+                          size="icon"
+                          className="h-9 w-9"
                           onClick={() => setMovePart(p)}
                         >
                           <ArrowRightLeft className="w-4 h-4 text-blue-500" />
@@ -972,14 +1281,15 @@ export function AutopartsTable({
                       <TooltipTrigger asChild>
                         <Button
                           variant="ghost"
-                          size="sm"
+                          size="icon"
+                          className="h-9 w-9"
                           onClick={() => setPricePartId(p.id)}
                         >
                           <Tags className="w-4 h-4 text-green-600" />
                         </Button>
                       </TooltipTrigger>
                       <TooltipContent side="bottom">
-                        <p>Редактировать цены</p>
+                        <p>Цены</p>
                       </TooltipContent>
                     </Tooltip>
 
@@ -987,7 +1297,8 @@ export function AutopartsTable({
                       <TooltipTrigger asChild>
                         <Button
                           variant="ghost"
-                          size="sm"
+                          size="icon"
+                          className="h-9 w-9"
                           onClick={() => setDeletingId(p.id)}
                         >
                           <Trash className="w-4 h-4 text-destructive" />
@@ -1006,9 +1317,9 @@ export function AutopartsTable({
       </div>
 
       {/* Пагинация */}
-      <div className="flex items-center justify-between mt-4">
-        <div className="flex items-center gap-2">
-          <Label htmlFor="pageSize" className="text-sm">
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 p-4 bg-muted/30 rounded-lg border">
+        <div className="flex items-center gap-2 flex-wrap justify-center sm:justify-start">
+          <Label htmlFor="pageSize" className="text-sm font-medium whitespace-nowrap">
             Показать:
           </Label>
           <select
@@ -1018,21 +1329,21 @@ export function AutopartsTable({
               setPageSize(Number(e.target.value));
               setCurrentPage(1);
             }}
-            className="border rounded px-2 py-1 text-sm"
+            className="border border-border bg-background rounded-md px-3 py-1.5 text-sm font-medium shadow-sm hover:bg-accent transition-colors focus:outline-none focus:ring-2 focus:ring-ring"
           >
             <option value={25}>25</option>
             <option value={50}>50</option>
             <option value={100}>100</option>
             <option value={200}>200</option>
           </select>
-          <span className="text-sm text-muted-foreground">
-            из {totalItems} записей
+          <span className="text-sm text-muted-foreground whitespace-nowrap">
+            из <span className="font-semibold text-foreground">{totalItems}</span> записей
           </span>
         </div>
 
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">
-            Страница {currentPage} из {totalPages}
+        <div className="flex flex-col sm:flex-row items-center gap-3">
+          <span className="text-sm text-muted-foreground whitespace-nowrap">
+            Страница <span className="font-semibold text-foreground">{currentPage}</span> из <span className="font-semibold text-foreground">{totalPages}</span>
           </span>
           
           <div className="flex items-center gap-1">
@@ -1041,6 +1352,8 @@ export function AutopartsTable({
               size="sm"
               onClick={goToFirstPage}
               disabled={currentPage === 1}
+              className="h-9 w-9 p-0 hidden sm:inline-flex"
+              title="Первая страница"
             >
               <ChevronsLeft className="h-4 w-4" />
             </Button>
@@ -1049,42 +1362,48 @@ export function AutopartsTable({
               size="sm"
               onClick={goToPreviousPage}
               disabled={currentPage === 1}
+              className="h-9 w-9 p-0"
+              title="Предыдущая страница"
             >
               <ChevronLeft className="h-4 w-4" />
             </Button>
             
             {/* Показываем номера страниц */}
-            {(() => {
-              const pages = [];
-              const maxVisiblePages = 5;
-              let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
-              const endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
-              
-              if (endPage - startPage + 1 < maxVisiblePages) {
-                startPage = Math.max(1, endPage - maxVisiblePages + 1);
-              }
+            <div className="hidden sm:flex items-center gap-1">
+              {(() => {
+                const pages = [];
+                const maxVisiblePages = 5;
+                let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+                const endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+                
+                if (endPage - startPage + 1 < maxVisiblePages) {
+                  startPage = Math.max(1, endPage - maxVisiblePages + 1);
+                }
 
-              for (let i = startPage; i <= endPage; i++) {
-                pages.push(
-                  <Button
-                    key={i}
-                    variant={i === currentPage ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => goToPage(i)}
-                    className="w-8 h-8 p-0"
-                  >
-                    {i}
-                  </Button>
-                );
-              }
-              return pages;
-            })()}
+                for (let i = startPage; i <= endPage; i++) {
+                  pages.push(
+                    <Button
+                      key={i}
+                      variant={i === currentPage ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => goToPage(i)}
+                      className="h-9 min-w-[36px] px-3 font-medium"
+                    >
+                      {i}
+                    </Button>
+                  );
+                }
+                return pages;
+              })()}
+            </div>
             
             <Button
               variant="outline"
               size="sm"
               onClick={goToNextPage}
               disabled={currentPage === totalPages}
+              className="h-9 w-9 p-0"
+              title="Следующая страница"
             >
               <ChevronRight className="h-4 w-4" />
             </Button>
@@ -1093,6 +1412,8 @@ export function AutopartsTable({
               size="sm"
               onClick={goToLastPage}
               disabled={currentPage === totalPages}
+              className="h-9 w-9 p-0 hidden sm:inline-flex"
+              title="Последняя страница"
             >
               <ChevronsRight className="h-4 w-4" />
             </Button>
