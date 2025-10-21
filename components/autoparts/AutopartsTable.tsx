@@ -95,8 +95,7 @@ export function AutopartsTable({
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [selectedAutos, setSelectedAutos] = useState<string[]>([]);
   const [selectedEngineVolumes, setSelectedEngineVolumes] = useState<string[]>([]);
-  const [filterYearFrom, setFilterYearFrom] = useState<string>("");
-  const [filterYearTo, setFilterYearTo] = useState<string>("");
+  const [filterYear, setFilterYear] = useState<string>("");
   const [selectedTextsForSearch, setSelectedTextsForSearch] = useState<
     string[]
   >([]);
@@ -212,15 +211,12 @@ export function AutopartsTable({
         selectedEngineVolumes.length === 0 ||
         p.engineVolumes.some((ev) => selectedEngineVolumes.includes(ev.name));
 
-      const matchesYearFrom = 
-        !filterYearFrom ||
-        p.year_to == null ||
-        (typeof p.year_to === 'number' && p.year_to >= Number(filterYearFrom));
-
-      const matchesYearTo = 
-        !filterYearTo ||
-        p.year_from == null ||
-        (typeof p.year_from === 'number' && p.year_from <= Number(filterYearTo));
+      const matchesYear = 
+        !filterYear ||
+        (
+          (p.year_from == null || (typeof p.year_from === 'number' && p.year_from <= Number(filterYear))) &&
+          (p.year_to == null || (typeof p.year_to === 'number' && p.year_to >= Number(filterYear)))
+        );
 
       const matchesTextsForSearch =
         selectedTextsForSearch.length === 0 ||
@@ -236,8 +232,7 @@ export function AutopartsTable({
         matchesCategory &&
         matchesAuto &&
         matchesEngineVolume &&
-        matchesYearFrom &&
-        matchesYearTo &&
+        matchesYear &&
         matchesTextsForSearch &&
         isInStock
       );
@@ -284,8 +279,7 @@ export function AutopartsTable({
     setSelectedCategories([]);
     setSelectedAutos([]);
     setSelectedEngineVolumes([]);
-    setFilterYearFrom("");
-    setFilterYearTo("");
+    setFilterYear("");
     setSelectedTextsForSearch([]);
     setCurrentPage(1);
   };
@@ -394,9 +388,9 @@ export function AutopartsTable({
           <Popover>
             <PopoverTrigger asChild>
               <Button variant="outline" className="w-[240px] justify-between">
-                {selectedAutos.length === 0 && selectedEngineVolumes.length === 0 && !filterYearFrom && !filterYearTo
+                {selectedAutos.length === 0 && selectedEngineVolumes.length === 0 && !filterYear
                   ? "Все"
-                  : `Фильтры (${selectedAutos.length + selectedEngineVolumes.length + (filterYearFrom ? 1 : 0) + (filterYearTo ? 1 : 0)})`}
+                  : `Фильтры (${selectedAutos.length + selectedEngineVolumes.length + (filterYear ? 1 : 0)})`}
               </Button>
             </PopoverTrigger>
             <PopoverContent className="w-[320px] p-4">
@@ -506,39 +500,21 @@ export function AutopartsTable({
                   )}
                 </div>
 
-                {/* Диапазон лет */}
+                {/* Год */}
                 <div className="space-y-2">
-                  <Label className="text-sm font-semibold">Годы</Label>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <Input
-                        type="number"
-                        placeholder="От"
-                        value={filterYearFrom}
-                        onChange={(e) => {
-                          setFilterYearFrom(e.target.value);
-                          setCurrentPage(1);
-                        }}
-                        className="h-9"
-                        min="1900"
-                        max="2100"
-                      />
-                    </div>
-                    <div>
-                      <Input
-                        type="number"
-                        placeholder="До"
-                        value={filterYearTo}
-                        onChange={(e) => {
-                          setFilterYearTo(e.target.value);
-                          setCurrentPage(1);
-                        }}
-                        className="h-9"
-                        min="1900"
-                        max="2100"
-                      />
-                    </div>
-                  </div>
+                  <Label className="text-sm font-semibold">Год выпуска</Label>
+                  <Input
+                    type="number"
+                    placeholder="Введите год"
+                    value={filterYear}
+                    onChange={(e) => {
+                      setFilterYear(e.target.value);
+                      setCurrentPage(1);
+                    }}
+                    className="h-9"
+                    min="1900"
+                    max="2100"
+                  />
                 </div>
               </div>
             </PopoverContent>
@@ -756,11 +732,11 @@ export function AutopartsTable({
           <table className="w-full border-collapse text-sm">
             <thead className="bg-muted/50">
               <tr className="border-b">
-              <th className="px-3 py-3.5 text-center text-xs font-semibold tracking-wider whitespace-nowrap border-r">
+              <th className="px-3 py-3.5 text-center text-xs font-semibold tracking-wider border-r">
                 <SortHeader label="Артикул" column="article" />
               </th>
               {!onlyView && (
-                <th className="px-3 py-3.5 text-center text-xs font-semibold tracking-wider whitespace-nowrap border-r">
+                <th className="px-3 py-3.5 text-center text-xs font-semibold tracking-wider border-r">
                   <SortHeader label="Бренд" column="brand" />
                 </th>
               )}
@@ -768,46 +744,46 @@ export function AutopartsTable({
                 <SortHeader label="Описание" column="description" />
               </th>
               {!onlyView && (
-                <th className="px-3 py-3.5 text-center text-xs font-semibold tracking-wider whitespace-nowrap border-r">
+                <th className="px-3 py-3.5 text-center text-xs font-semibold tracking-wider border-r">
                   <SortHeader label="Группа" column="category" />
                 </th>
               )}
               {!onlyView && (
-                <th className="px-3 py-3.5 text-center text-xs font-semibold tracking-wider whitespace-nowrap border-r">
+                <th className="px-3 py-3.5 text-center text-xs font-semibold tracking-wider border-r">
                   <SortHeader label="Авто" column="auto" />
                 </th>
               )}
               {!onlyView && (
-                <th className="px-2 py-3.5 text-center text-xs font-semibold tracking-wider whitespace-nowrap border-r w-24">
+                <th className="px-2 py-3.5 text-center text-xs font-semibold tracking-wider border-r w-24">
                   Объем
                 </th>
               )}
               {!onlyView && (
-                <th className="px-2 py-3.5 text-center text-xs font-semibold tracking-wider whitespace-nowrap border-r w-24">
+                <th className="px-2 py-3.5 text-center text-xs font-semibold tracking-wider border-r w-24">
                   Годы
                 </th>
               )}
-              <th className="px-2 py-3.5 text-center text-xs font-semibold tracking-wider whitespace-nowrap border-r w-20">
+              <th className="px-2 py-3.5 text-center text-xs font-semibold tracking-wider border-r w-20">
                 <SortHeader
                   label={onlyView ? "Кол (общ)" : "Кол-во"}
                   column="totalQuantity"
                 />
               </th>
               {!onlyView && (
-                <th className="px-3 py-3.5 text-center text-xs font-semibold tracking-wider whitespace-nowrap border-r">
+                <th className="px-3 py-3.5 text-center text-xs font-semibold tracking-wider border-r">
                   Базы
                 </th>
               )}
-              <th className="px-3 py-3.5 text-center text-xs font-semibold tracking-wider whitespace-nowrap border-r">
+              <th className="px-3 py-3.5 text-center text-xs font-semibold tracking-wider border-r">
                 Цены
               </th>
               {!onlyView && (
-                <th className="px-2 py-3.5 text-center text-xs font-semibold tracking-wider whitespace-nowrap border-r w-16">
+                <th className="px-2 py-3.5 text-center text-xs font-semibold tracking-wider border-r w-16">
                   Текст
                 </th>
               )}
               {!onlyView && (
-                <th className="px-2 py-3.5 text-center text-xs font-semibold tracking-wider whitespace-nowrap w-[70px]">
+                <th className="px-2 py-3.5 text-center text-xs font-semibold tracking-wider w-[70px]">
                   Действия
                 </th>
               )}
@@ -821,101 +797,35 @@ export function AutopartsTable({
                   index % 2 === 0 ? 'bg-background' : 'bg-muted/50'
                 }`}
               >
-                <td className="px-3 py-4 text-sm font-mono font-medium whitespace-nowrap border-r">
-                  <TooltipProvider delayDuration={300}>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <div className="max-w-[120px] truncate cursor-help">
-                          {p.article}
-                        </div>
-                      </TooltipTrigger>
-                      <TooltipContent side="top" className="max-w-xs">
-                        <p className="font-mono">{p.article}</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
+                <td className="px-3 py-4 text-sm font-mono font-medium border-r">
+                  {p.article}
                 </td>
                 {!onlyView && (
                   <td className="px-3 py-4 text-sm border-r">
-                    <TooltipProvider delayDuration={300}>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <div className="max-w-[100px] truncate cursor-help">
-                            {p.brand?.name || "-"}
-                          </div>
-                        </TooltipTrigger>
-                        <TooltipContent side="top" className="max-w-xs">
-                          <p>{p.brand?.name || "-"}</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
+                    {p.brand?.name || "-"}
                   </td>
                 )}
                 <td className="px-3 py-4 text-sm border-r">
-                  <TooltipProvider delayDuration={300}>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <div className="max-w-[250px] truncate cursor-help">
-                          {p.description}
-                        </div>
-                      </TooltipTrigger>
-                      <TooltipContent side="top" className="max-w-md">
-                        <p>{p.description}</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
+                  {p.description}
                 </td>
                 {!onlyView && (
                   <td className="px-3 py-4 text-sm border-r">
-                    <TooltipProvider delayDuration={300}>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <div className="max-w-[120px] truncate cursor-help">
-                            {p.category?.name || "-"}
-                          </div>
-                        </TooltipTrigger>
-                        <TooltipContent side="top" className="max-w-xs">
-                          <p>{p.category?.name || "-"}</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
+                    {p.category?.name || "-"}
                   </td>
                 )}
                 {!onlyView && (
                   <td className="px-3 py-4 text-sm border-r">
-                    <TooltipProvider delayDuration={300}>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <div className="max-w-[120px] truncate cursor-help">
-                            {p.autos.map((a) => a.name).join(", ") || "-"}
-                          </div>
-                        </TooltipTrigger>
-                        <TooltipContent side="top" className="max-w-xs">
-                          <p>{p.autos.map((a) => a.name).join(", ") || "-"}</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
+                    {p.autos.map((a) => a.name).join(", ") || "-"}
                   </td>
                 )}
                 {!onlyView && (
-                  <td className="px-2 py-4 text-sm border-r">
-                    <TooltipProvider delayDuration={300}>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <div className="max-w-[80px] truncate cursor-help text-xs">
-                            {p.engineVolumes.map((ev) => ev.name).join(", ") || "-"}
-                          </div>
-                        </TooltipTrigger>
-                        <TooltipContent side="top" className="max-w-xs">
-                          <p>{p.engineVolumes.map((ev) => ev.name).join(", ") || "-"}</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
+                  <td className="px-2 py-4 text-xs border-r">
+                    {p.engineVolumes.map((ev) => ev.name).join(", ") || "-"}
                   </td>
                 )}
                 {!onlyView && (
                   <td className="px-2 py-4 text-sm text-center border-r">
-                    <div className="text-xs whitespace-nowrap">
+                    <div className="text-xs">
                       {p.year_from && p.year_to ? (
                         `${p.year_from}-${p.year_to}`
                       ) : p.year_from ? (
@@ -963,7 +873,7 @@ export function AutopartsTable({
                 {!onlyView && (
                   <td className="px-3 py-4 text-sm border-r">
                     <div className="max-h-24 overflow-y-auto pr-2 custom-scrollbar">
-                      <ul className="space-y-1.5">
+                      <ul className="space-y-0.5">
                         {p.warehouses.map(
                           (w) =>
                             w.quantity > 0 && (
@@ -982,7 +892,7 @@ export function AutopartsTable({
                 <td className="px-3 py-4 text-sm border-r">
                   <div className="max-h-24 overflow-y-auto pr-2 custom-scrollbar">
                     {!onlyView && !priceAccessId ? (
-                      <ul className="space-y-1.5">
+                      <ul className="space-y-0.5">
                         {p.prices.map((price) => (
                           <li key={price.priceType.id} className="flex items-center justify-between gap-2 text-xs bg-muted/30 rounded px-2 py-1">
                             <span className="font-medium truncate">
