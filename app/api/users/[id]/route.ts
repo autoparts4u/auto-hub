@@ -14,6 +14,7 @@ export async function PATCH(
     warehouseAccessId?: number | null;
     isConfirmed?: boolean;
     name?: string | null;
+    role?: "user" | "admin";
   } = {};
 
   if ("priceAccessId" in body) {
@@ -32,6 +33,10 @@ export async function PATCH(
 
   if ("name" in body) {
     data.name = body.name;
+  }
+
+  if ("role" in body && (body.role === "user" || body.role === "admin")) {
+    data.role = body.role;
   }
 
   if (!Object.keys(data).length) {

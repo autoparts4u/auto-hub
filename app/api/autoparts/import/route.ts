@@ -134,7 +134,7 @@ export async function POST(req: Request) {
           if (row["ц"]) {
             await db.autopartPrices.create({
               data: {
-                authopart_id: autopart.id,
+                autopart_id: autopart.id,
                 pricesType_id: salePriceType?.id,
                 price: parseFloat(String(row["ц"]).replace(",", ".")) || 0,
               },

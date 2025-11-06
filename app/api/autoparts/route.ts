@@ -1,6 +1,38 @@
 import db from "@/lib/db/db";
 import { NextResponse } from "next/server";
 
+export async function GET() {
+  try {
+    const autoparts = await db.autoparts.findMany({
+      include: {
+        brand: true,
+        category: true,
+        warehouses: {
+          include: {
+            warehouse: true,
+          },
+        },
+        prices: {
+          include: {
+            priceType: true,
+          },
+        },
+      },
+      orderBy: {
+        article: 'asc',
+      },
+    });
+
+    return NextResponse.json(autoparts);
+  } catch (error) {
+    console.error('Error fetching autoparts:', error);
+    return NextResponse.json(
+      { error: 'Ошибка при получении запчастей' },
+      { status: 500 }
+    );
+  }
+}
+
 export async function POST(req: Request) {
   try {
     const {

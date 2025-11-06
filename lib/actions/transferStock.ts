@@ -11,8 +11,8 @@ export async function transferStock(
 ) {
   await db.autopartsWarehouses.update({
     where: {
-      authopart_id_warehouse_id: {
-        authopart_id: partId,
+      autopart_id_warehouse_id: {
+        autopart_id: partId,
         warehouse_id: fromId,
       },
     },
@@ -23,8 +23,8 @@ export async function transferStock(
 
   await db.autopartsWarehouses.upsert({
     where: {
-      authopart_id_warehouse_id: {
-        authopart_id: partId,
+      autopart_id_warehouse_id: {
+        autopart_id: partId,
         warehouse_id: toId,
       },
     },
@@ -32,7 +32,7 @@ export async function transferStock(
       quantity: { increment: quantity },
     },
     create: {
-      authopart_id: partId,
+      autopart_id: partId,
       warehouse_id: toId,
       quantity,
     },

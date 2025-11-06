@@ -7,7 +7,7 @@ export async function GET(_: Request, { params }: { params: Promise<{ id: string
 
   const prices = await db.autopartPrices.findMany({
     where: {
-      authopart_id: id,
+      autopart_id: id,
     },
     include: {
       priceType: true,
@@ -59,8 +59,8 @@ console.log(prices)
     const transactions = validPrices.map((p) =>
       db.autopartPrices.upsert({
         where: {
-          authopart_id_pricesType_id: {
-            authopart_id: id,
+          autopart_id_pricesType_id: {
+            autopart_id: id,
             pricesType_id: p.priceTypeId,
           },
         },
@@ -68,7 +68,7 @@ console.log(prices)
           price: p.price,
         },
         create: {
-          authopart_id: id,
+          autopart_id: id,
           pricesType_id: p.priceTypeId,
           price: p.price,
         },

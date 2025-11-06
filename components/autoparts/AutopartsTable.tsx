@@ -871,47 +871,43 @@ export function AutopartsTable({
                   )}
                 </td>
                 {!onlyView && (
-                  <td className="px-3 py-4 text-sm border-r">
-                    <div className="max-h-24 overflow-y-auto pr-2 custom-scrollbar">
-                      <ul className="space-y-0.5">
-                        {p.warehouses.map(
-                          (w) =>
-                            w.quantity > 0 && (
-                              <li key={w.warehouseId} className="flex items-center justify-between gap-2 text-xs bg-muted/30 rounded px-2 py-1">
-                                <span className="truncate">{w.warehouseName}</span>
-                                <span className="font-semibold whitespace-nowrap text-primary">
-                                  {w.quantity}
-                                </span>
-                              </li>
-                            )
-                        )}
-                      </ul>
-                    </div>
+                  <td className="px-3 py-4 text-sm border-r align-top">
+                    <ul className="space-y-0.5">
+                      {p.warehouses.map(
+                        (w) =>
+                          w.quantity > 0 && (
+                            <li key={w.warehouseId} className="flex items-center justify-between gap-2 text-xs bg-muted/30 rounded px-2 py-1">
+                              <span className="truncate">{w.warehouseName}</span>
+                              <span className="font-semibold whitespace-nowrap text-primary">
+                                {w.quantity}
+                              </span>
+                            </li>
+                          )
+                      )}
+                    </ul>
                   </td>
                 )}
-                <td className="px-3 py-4 text-sm border-r">
-                  <div className="max-h-24 overflow-y-auto pr-2 custom-scrollbar">
-                    {!onlyView && !priceAccessId ? (
-                      <ul className="space-y-0.5">
-                        {p.prices.map((price) => (
-                          <li key={price.priceType.id} className="flex items-center justify-between gap-2 text-xs bg-muted/30 rounded px-2 py-1">
-                            <span className="font-medium truncate">
-                              {price.priceType.name}:
-                            </span>
-                            <span className="font-semibold whitespace-nowrap text-green-600 dark:text-green-500">
-                              {price.price.toFixed(2)}
-                            </span>
-                          </li>
-                        ))}
-                      </ul>
-                    ) : (
-                      <span className="inline-flex items-center justify-center px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
-                        {p.prices
-                          .find((price) => price.priceType.id === priceAccessId)
-                          ?.price.toFixed(2) ?? "-"}
-                      </span>
-                    )}
-                  </div>
+                <td className="px-3 py-4 text-sm border-r align-top">
+                  {!onlyView && !priceAccessId ? (
+                    <ul className="space-y-0.5">
+                      {p.prices.map((price) => (
+                        <li key={price.priceType.id} className="flex items-center justify-between gap-2 text-xs bg-muted/30 rounded px-2 py-1">
+                          <span className="font-medium truncate">
+                            {price.priceType.name}:
+                          </span>
+                          <span className="font-semibold whitespace-nowrap text-green-600 dark:text-green-500">
+                            {price.price.toFixed(2)}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <span className="inline-flex items-center justify-center px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                      {p.prices
+                        .find((price) => price.priceType.id === priceAccessId)
+                        ?.price.toFixed(2) ?? "-"}
+                    </span>
+                  )}
                 </td>
                 {!onlyView && (
                   <td className="px-2 py-4 text-center border-r">

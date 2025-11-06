@@ -10,6 +10,7 @@ async function main() {
   console.log('🗑️  Очистка базы данных...');
   await prisma.autopartLog.deleteMany();
   await prisma.analogues.deleteMany();
+  await prisma.orderStatusHistory.deleteMany();
   await prisma.orderItems.deleteMany();
   await prisma.orders.deleteMany();
   await prisma.orderStatuses.deleteMany();
@@ -465,7 +466,7 @@ async function main() {
 
     for (const warehouse of selectedWarehouses) {
       warehouseData.push({
-        authopart_id: autopart.id,
+        autopart_id: autopart.id,
         warehouse_id: warehouse.id,
         quantity: Math.floor(Math.random() * 50) + 1,
       });
@@ -490,7 +491,7 @@ async function main() {
       const price = Math.round(basePrice * (1 - discount));
 
       pricesData.push({
-        authopart_id: autopart.id,
+        autopart_id: autopart.id,
         pricesType_id: priceTypes[i].id,
         price: price,
       });
@@ -627,6 +628,10 @@ async function main() {
       client_id: clients[0].id,
       deliveryMethod_id: deliveryMethods[0].id,
       orderStatus_id: orderStatuses[0].id,
+      userId: admin.id,
+      totalAmount: 800,
+      discount: 0,
+      notes: 'Срочный заказ, клиент ждет',
       createdAt: new Date(Date.now() - 1000 * 60 * 60 * 2), // 2 часа назад
     },
   });
@@ -638,6 +643,11 @@ async function main() {
       client_id: clients[1].id,
       deliveryMethod_id: deliveryMethods[1].id,
       orderStatus_id: orderStatuses[1].id,
+      userId: users[0].id,
+      totalAmount: 5980,
+      discount: 300,
+      notes: 'Оптовый клиент, предоставлена скидка',
+      deliveryAddress: 'г. Харьков, пр. Автомобилистов, 12, офис 5',
       createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24), // 1 день назад
     },
   });
@@ -649,6 +659,11 @@ async function main() {
       client_id: clients[2].id,
       deliveryMethod_id: deliveryMethods[2].id,
       orderStatus_id: orderStatuses[2].id,
+      userId: admin.id,
+      totalAmount: 4920,
+      discount: 0,
+      trackingNumber: '59000123456789',
+      deliveryAddress: 'г. Одесса, отделение Новой Почты №15',
       createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2), // 2 дня назад
       issuedAt: new Date(Date.now() - 1000 * 60 * 60 * 12), // 12 часов назад
     },
@@ -661,6 +676,11 @@ async function main() {
       client_id: clients[3].id,
       deliveryMethod_id: deliveryMethods[2].id,
       orderStatus_id: orderStatuses[3].id,
+      userId: users[0].id,
+      totalAmount: 8500,
+      discount: 0,
+      trackingNumber: '59000987654321',
+      notes: 'Заказ выдан в отделении Новой Почты',
       createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 5), // 5 дней назад
       issuedAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 3), // 3 дня назад
     },
@@ -673,6 +693,10 @@ async function main() {
       client_id: clients[0].id,
       deliveryMethod_id: deliveryMethods[0].id,
       orderStatus_id: orderStatuses[4].id,
+      userId: admin.id,
+      totalAmount: 1100,
+      discount: 0,
+      notes: 'Самовывоз со склада, оплачено наличными',
       createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 7), // 7 дней назад
       issuedAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 5), // 5 дней назад
       paidAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 4), // 4 дня назад
@@ -686,6 +710,10 @@ async function main() {
       client_id: clients[1].id,
       deliveryMethod_id: deliveryMethods[3].id,
       orderStatus_id: orderStatuses[5].id,
+      userId: users[0].id,
+      totalAmount: 15000,
+      discount: 0,
+      notes: 'Клиент отказался от заказа',
       createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 10), // 10 дней назад
     },
   });
@@ -699,85 +727,107 @@ async function main() {
     // Заказ 1
     {
       order_id: order1.id,
-      authopart_id: autoparts[0].id,
+      autopart_id: autoparts[0].id,
       warehouse_id: warehouses[0].id,
       quantity: 2,
       item_final_price: 450,
+      article: autoparts[0].article,
+      description: autoparts[0].description,
     },
     {
       order_id: order1.id,
-      authopart_id: autoparts[2].id,
+      autopart_id: autoparts[2].id,
       warehouse_id: warehouses[0].id,
       quantity: 1,
       item_final_price: 350,
+      article: autoparts[2].article,
+      description: autoparts[2].description,
     },
     // Заказ 2
     {
       order_id: order2.id,
-      authopart_id: autoparts[3].id,
+      autopart_id: autoparts[3].id,
       warehouse_id: warehouses[1].id,
       quantity: 1,
       item_final_price: 2500,
+      article: autoparts[3].article,
+      description: autoparts[3].description,
     },
     {
       order_id: order2.id,
-      authopart_id: autoparts[4].id,
+      autopart_id: autoparts[4].id,
       warehouse_id: warehouses[1].id,
       quantity: 2,
       item_final_price: 3200,
+      article: autoparts[4].article,
+      description: autoparts[4].description,
     },
     {
       order_id: order2.id,
-      authopart_id: autoparts[8].id,
+      autopart_id: autoparts[8].id,
       warehouse_id: warehouses[1].id,
       quantity: 4,
       item_final_price: 280,
+      article: autoparts[8].article,
+      description: autoparts[8].description,
     },
     // Заказ 3
     {
       order_id: order3.id,
-      authopart_id: autoparts[5].id,
+      autopart_id: autoparts[5].id,
       warehouse_id: warehouses[0].id,
       quantity: 2,
       item_final_price: 4500,
+      article: autoparts[5].article,
+      description: autoparts[5].description,
     },
     {
       order_id: order3.id,
-      authopart_id: autoparts[1].id,
+      autopart_id: autoparts[1].id,
       warehouse_id: warehouses[0].id,
       quantity: 1,
       item_final_price: 420,
+      article: autoparts[1].article,
+      description: autoparts[1].description,
     },
     // Заказ 4
     {
       order_id: order4.id,
-      authopart_id: autoparts[9].id,
+      autopart_id: autoparts[9].id,
       warehouse_id: warehouses[2].id,
       quantity: 1,
       item_final_price: 8500,
+      article: autoparts[9].article,
+      description: autoparts[9].description,
     },
     // Заказ 5
     {
       order_id: order5.id,
-      authopart_id: autoparts[7].id,
+      autopart_id: autoparts[7].id,
       warehouse_id: warehouses[0].id,
       quantity: 1,
       item_final_price: 650,
+      article: autoparts[7].article,
+      description: autoparts[7].description,
     },
     {
       order_id: order5.id,
-      authopart_id: autoparts[0].id,
+      autopart_id: autoparts[0].id,
       warehouse_id: warehouses[0].id,
       quantity: 1,
       item_final_price: 450,
+      article: autoparts[0].article,
+      description: autoparts[0].description,
     },
     // Заказ 6 (отменен)
     {
       order_id: order6.id,
-      authopart_id: autoparts[10].id,
+      autopart_id: autoparts[10].id,
       warehouse_id: warehouses[1].id,
       quantity: 1,
       item_final_price: 15000,
+      article: autoparts[10].article,
+      description: autoparts[10].description,
     },
   ];
 
@@ -786,7 +836,142 @@ async function main() {
   }
   console.log(`✅ Создано ${orderItemsData.length} позиций заказов`);
 
-  // 19. Создание логов изменений
+  // 19. Создание истории статусов заказов
+  console.log('📜 Создание истории статусов заказов...');
+  const statusHistoryData = [
+    // История для заказа 1 (новый)
+    {
+      order_id: order1.id,
+      orderStatus_id: orderStatuses[0].id,
+      userId: admin.id,
+      comment: 'Заказ создан',
+      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 2),
+    },
+    // История для заказа 2 (новый -> в обработке)
+    {
+      order_id: order2.id,
+      orderStatus_id: orderStatuses[0].id,
+      userId: users[0].id,
+      comment: 'Заказ создан',
+      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24),
+    },
+    {
+      order_id: order2.id,
+      orderStatus_id: orderStatuses[1].id,
+      userId: users[0].id,
+      comment: 'Заказ принят в обработку',
+      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 20),
+    },
+    // История для заказа 3 (новый -> в обработке -> готов к выдаче)
+    {
+      order_id: order3.id,
+      orderStatus_id: orderStatuses[0].id,
+      userId: admin.id,
+      comment: 'Заказ создан',
+      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2),
+    },
+    {
+      order_id: order3.id,
+      orderStatus_id: orderStatuses[1].id,
+      userId: admin.id,
+      comment: 'Заказ принят в обработку',
+      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 40),
+    },
+    {
+      order_id: order3.id,
+      orderStatus_id: orderStatuses[2].id,
+      userId: admin.id,
+      comment: 'Заказ отправлен в отделение Новой Почты',
+      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 12),
+    },
+    // История для заказа 4 (полный цикл до выдан)
+    {
+      order_id: order4.id,
+      orderStatus_id: orderStatuses[0].id,
+      userId: users[0].id,
+      comment: 'Заказ создан',
+      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 5),
+    },
+    {
+      order_id: order4.id,
+      orderStatus_id: orderStatuses[1].id,
+      userId: users[0].id,
+      comment: 'Заказ принят в обработку',
+      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 4),
+    },
+    {
+      order_id: order4.id,
+      orderStatus_id: orderStatuses[2].id,
+      userId: admin.id,
+      comment: 'Заказ готов к выдаче',
+      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 3 - 1000 * 60 * 60 * 2),
+    },
+    {
+      order_id: order4.id,
+      orderStatus_id: orderStatuses[3].id,
+      userId: admin.id,
+      comment: 'Заказ выдан клиенту',
+      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 3),
+    },
+    // История для заказа 5 (полный цикл до оплачен)
+    {
+      order_id: order5.id,
+      orderStatus_id: orderStatuses[0].id,
+      userId: admin.id,
+      comment: 'Заказ создан',
+      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 7),
+    },
+    {
+      order_id: order5.id,
+      orderStatus_id: orderStatuses[1].id,
+      userId: admin.id,
+      comment: 'Заказ принят в обработку',
+      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 6),
+    },
+    {
+      order_id: order5.id,
+      orderStatus_id: orderStatuses[2].id,
+      userId: admin.id,
+      comment: 'Заказ готов к выдаче',
+      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 5 - 1000 * 60 * 60 * 2),
+    },
+    {
+      order_id: order5.id,
+      orderStatus_id: orderStatuses[3].id,
+      userId: admin.id,
+      comment: 'Заказ выдан клиенту',
+      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 5),
+    },
+    {
+      order_id: order5.id,
+      orderStatus_id: orderStatuses[4].id,
+      userId: admin.id,
+      comment: 'Заказ оплачен наличными',
+      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 4),
+    },
+    // История для заказа 6 (отменен)
+    {
+      order_id: order6.id,
+      orderStatus_id: orderStatuses[0].id,
+      userId: users[0].id,
+      comment: 'Заказ создан',
+      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 10),
+    },
+    {
+      order_id: order6.id,
+      orderStatus_id: orderStatuses[5].id,
+      userId: users[0].id,
+      comment: 'Заказ отменен по запросу клиента',
+      createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 9),
+    },
+  ];
+
+  for (const data of statusHistoryData) {
+    await prisma.orderStatusHistory.create({ data });
+  }
+  console.log(`✅ Создано ${statusHistoryData.length} записей истории статусов`);
+
+  // 20. Создание логов изменений
   console.log('📜 Создание логов изменений...');
   const logs = [
     {
@@ -838,6 +1023,7 @@ async function main() {
   console.log(`   - Статусов заказов: ${orderStatuses.length}`);
   console.log(`   - Заказов: ${orders.length}`);
   console.log(`   - Позиций заказов: ${orderItemsData.length}`);
+  console.log(`   - Истории статусов: ${statusHistoryData.length}`);
   console.log(`   - Аналогов: ${analogues.length}`);
   console.log(`   - Логов: ${logs.length}`);
   console.log('\n🔑 Тестовые учетные данные:');

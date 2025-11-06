@@ -37,9 +37,12 @@ model User {
     priceAccess     PriceTypes? @relation("PriceAccess", fields: [priceAccessId], references: [id])
     warehouseAccess Warehouses? @relation(fields: [warehouseAccessId], references: [id])
 
-    accounts      Account[]
-    sessions      Session[]
-    Authenticator Authenticator[]
+    accounts           Account[]
+    sessions           Session[]
+    Authenticator      Authenticator[]
+    orders             Orders[]
+    orderStatusHistory OrderStatusHistory[]
+    client             Clients? // Связь один-к-одному с клиентом
 
     createdAt    DateTime    @default(now())
     updatedAt    DateTime    @updatedAt
@@ -102,12 +105,22 @@ model Authenticator {
 }
 
 model Clients {
-    id              String                   @id @default(cuid())
-    name            String
-    fullName        String
-    address         String?
+    id            String  @id @default(cuid())
+    name          String
+    fullName      String
+    email         String? @unique // Для связи с пользователем
+    phone         String? @unique // Для связи с пользователем
+    address       String?
+    priceAccessId Int?
+    userId        String? @unique // Связь с пользователем (опциональная)
+
+    user            User?                    @relation(fields: [userId], references: [id])
+    priceAccess     PriceTypes?              @relation("ClientPriceAccess", fields: [priceAccessId], references: [id])
     orders          Orders[]
     deliveryMethods ClientsDeliveryMethods[]
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @default(now()) @updatedAt
 }
 
 model ClientsDeliveryMethods {
@@ -133,34 +146,60 @@ model Orders {
     deliveryMethod_id Int?
     client_id         String
     orderStatus_id    Int
+    userId            String?
+    totalAmount       Float?
+    discount          Float     @default(0)
+    paidAmount        Float     @default(0)
+    notes             String?
+    deliveryAddress   String?
+    trackingNumber    String?
     createdAt         DateTime  @default(now())
+    updatedAt         DateTime  @updatedAt
     issuedAt          DateTime?
     paidAt            DateTime?
 
-    client         Clients          @relation(fields: [client_id], references: [id])
-    deliveryMethod DeliveryMethods? @relation(fields: [deliveryMethod_id], references: [id])
-    orderStatus    OrderStatuses    @relation(fields: [orderStatus_id], references: [id])
+    user           User?                @relation(fields: [userId], references: [id])
+    client         Clients              @relation(fields: [client_id], references: [id])
+    deliveryMethod DeliveryMethods?     @relation(fields: [deliveryMethod_id], references: [id])
+    orderStatus    OrderStatuses        @relation(fields: [orderStatus_id], references: [id])
     orderItems     OrderItems[]
+    statusHistory  OrderStatusHistory[]
 }
 
 model OrderStatuses {
-    id       Int      @id @default(autoincrement())
-    name     String
-    hexColor String
-    isLast   Boolean
-    orders   Orders[]
+    id            Int                  @id @default(autoincrement())
+    name          String
+    hexColor      String
+    isLast        Boolean
+    orders        Orders[]
+    statusHistory OrderStatusHistory[]
+}
+
+model OrderStatusHistory {
+    id             String   @id @default(cuid())
+    order_id       String
+    orderStatus_id Int
+    userId         String?
+    comment        String?
+    createdAt      DateTime @default(now())
+
+    order       Orders        @relation(fields: [order_id], references: [id], onDelete: Cascade)
+    orderStatus OrderStatuses @relation(fields: [orderStatus_id], references: [id])
+    user        User?         @relation(fields: [userId], references: [id])
 }
 
 model OrderItems {
-    id               Int    @id @default(autoincrement())
+    id               Int     @id @default(autoincrement())
     order_id         String
-    authopart_id     String
+    autopart_id      String?
     warehouse_id     Int
     quantity         Int
     item_final_price Float
+    article          String
+    description      String
 
-    order     Orders     @relation(fields: [order_id], references: [id])
-    authopart Autoparts  @relation(fields: [authopart_id], references: [id], onDelete: Cascade)
+    order     Orders     @relation(fields: [order_id], references: [id], onDelete: Cascade)
+    autopart  Autoparts? @relation(fields: [autopart_id], references: [id], onDelete: SetNull)
     warehouse Warehouses @relation(fields: [warehouse_id], references: [id])
 }
 
@@ -185,14 +224,14 @@ model Autoparts {
     year_from          Int?
     year_to            Int?
 
-    brand          Brands?                      @relation(fields: [brand_id], references: [id])
-    category       Categories?                  @relation(fields: [category_id], references: [id])
-    textForSearch  TextForAuthopartsSearch?     @relation(fields: [text_for_search_id], references: [id])
-    prices         AutopartPrices[]
-    warehouses     AutopartsWarehouses[]
-    orderItems     OrderItems[]
-    autos          AutopartsAutos[]
-    engineVolumes  AutopartsEngineVolumes[]
+    brand         Brands?                  @relation(fields: [brand_id], references: [id])
+    category      Categories?              @relation(fields: [category_id], references: [id])
+    textForSearch TextForAuthopartsSearch? @relation(fields: [text_for_search_id], references: [id])
+    prices        AutopartPrices[]
+    warehouses    AutopartsWarehouses[]
+    orderItems    OrderItems[]
+    autos         AutopartsAutos[]
+    engineVolumes AutopartsEngineVolumes[]
 
     analoguesA  Analogues[]   @relation("PartA")
     analoguesB  Analogues[]   @relation("PartB")
@@ -213,33 +252,34 @@ model AutopartLog {
 }
 
 model AutopartsWarehouses {
-    authopart_id String
+    autopart_id  String
     warehouse_id Int
     quantity     Int
 
-    authopart Autoparts  @relation(fields: [authopart_id], references: [id], onDelete: Cascade)
+    autopart  Autoparts  @relation(fields: [autopart_id], references: [id], onDelete: Cascade)
     warehouse Warehouses @relation(fields: [warehouse_id], references: [id])
 
-    @@id([authopart_id, warehouse_id])
+    @@id([autopart_id, warehouse_id])
 }
 
 model AutopartPrices {
-    authopart_id  String
+    autopart_id   String
     pricesType_id Int
     price         Float
 
-    authopart Autoparts  @relation(fields: [authopart_id], references: [id], onDelete: Cascade)
+    autopart  Autoparts  @relation(fields: [autopart_id], references: [id], onDelete: Cascade)
     priceType PriceTypes @relation(fields: [pricesType_id], references: [id])
 
-    @@id([authopart_id, pricesType_id])
+    @@id([autopart_id, pricesType_id])
 }
 
 model PriceTypes {
-    id     Int              @id @default(autoincrement())
-    name   String
-    prices AutopartPrices[]
-    users  User[]           @relation("PriceAccess")
-    User   User[]
+    id      Int              @id @default(autoincrement())
+    name    String
+    prices  AutopartPrices[]
+    users   User[]           @relation("PriceAccess")
+    User    User[]
+    clients Clients[]        @relation("ClientPriceAccess")
 }
 
 model Brands {
@@ -271,8 +311,8 @@ model AutopartsAutos {
 }
 
 model EngineVolume {
-    id    Int                        @id @default(autoincrement())
-    name  String                     @unique
+    id    Int                      @id @default(autoincrement())
+    name  String                   @unique
     parts AutopartsEngineVolumes[]
 }
 

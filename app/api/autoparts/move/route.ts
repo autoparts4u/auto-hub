@@ -25,8 +25,8 @@ export async function POST(req: Request) {
 
     const fromEntry = await db.autopartsWarehouses.findUnique({
       where: {
-        authopart_id_warehouse_id: {
-          authopart_id: autopartId,
+        autopart_id_warehouse_id: {
+          autopart_id: autopartId,
           warehouse_id: fromWarehouseId,
         },
       },
@@ -42,8 +42,8 @@ export async function POST(req: Request) {
     const [updatedFrom, updatedTo] = await db.$transaction([
       db.autopartsWarehouses.update({
         where: {
-          authopart_id_warehouse_id: {
-            authopart_id: autopartId,
+          autopart_id_warehouse_id: {
+            autopart_id: autopartId,
             warehouse_id: fromWarehouseId,
           },
         },
@@ -54,13 +54,13 @@ export async function POST(req: Request) {
 
       db.autopartsWarehouses.upsert({
         where: {
-          authopart_id_warehouse_id: {
-            authopart_id: autopartId,
+          autopart_id_warehouse_id: {
+            autopart_id: autopartId,
             warehouse_id: toWarehouseId,
           },
         },
         create: {
-          authopart_id: autopartId,
+          autopart_id: autopartId,
           warehouse_id: toWarehouseId,
           quantity,
         },
