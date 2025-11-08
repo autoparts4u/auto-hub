@@ -29,7 +29,10 @@ export async function GET(
             name: true,
             email: true,
             phone: true,
+            address: true,
             role: true,
+            priceAccessId: true,
+            warehouseAccessId: true,
             isConfirmed: true,
           },
         },
@@ -59,7 +62,7 @@ export async function GET(
   }
 }
 
-// PUT /api/clients/[id] - Обновить клиента
+// PUT/PATCH /api/clients/[id] - Обновить клиента
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -129,7 +132,10 @@ export async function PUT(
             name: true,
             email: true,
             phone: true,
+            address: true,
             role: true,
+            priceAccessId: true,
+            warehouseAccessId: true,
             isConfirmed: true,
           },
         },
@@ -144,6 +150,14 @@ export async function PUT(
       { status: 500 }
     );
   }
+}
+
+// PATCH /api/clients/[id] - Обновить клиента (alias для PUT)
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  return PUT(request, { params });
 }
 
 // DELETE /api/clients/[id] - Удалить клиента

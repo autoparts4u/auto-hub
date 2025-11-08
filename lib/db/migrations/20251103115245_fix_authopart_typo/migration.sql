@@ -9,3 +9,4 @@ ALTER TABLE "AutopartsWarehouses" RENAME COLUMN "authopart_id" TO "autopart_id";
 ALTER TABLE "AutopartPrices" RENAME COLUMN "authopart_id" TO "autopart_id";
 
 
+

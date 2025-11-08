@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { PriceType } from '@/app/types/orders';
+import { useState, useEffect } from 'react';
+import { PriceType, Client } from '@/app/types/orders';
 import {
   Dialog,
   DialogContent,
@@ -27,14 +27,17 @@ interface ClientModalProps {
   open: boolean;
   onClose: () => void;
   priceTypes: PriceType[];
+  client?: Client | null;
 }
 
 export default function ClientModal({
   open,
   onClose,
   priceTypes,
+  client,
 }: ClientModalProps) {
   const [loading, setLoading] = useState(false);
+  const isEditMode = !!client;
   
   // Поля формы
   const [name, setName] = useState('');
@@ -43,6 +46,26 @@ export default function ClientModal({
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
   const [priceAccessId, setPriceAccessId] = useState<string>('');
+
+  // Заполнение формы при редактировании
+  useEffect(() => {
+    if (client && open) {
+      setName(client.name || '');
+      setFullName(client.fullName || '');
+      setEmail(client.email || '');
+      setPhone(client.phone || '');
+      setAddress(client.address || '');
+      setPriceAccessId(client.priceAccessId?.toString() || '');
+    } else if (!open) {
+      // Очистка формы при закрытии
+      setName('');
+      setFullName('');
+      setEmail('');
+      setPhone('');
+      setAddress('');
+      setPriceAccessId('');
+    }
+  }, [client, open]);
 
   const handleClose = () => {
     // Очистка формы
@@ -79,10 +102,17 @@ export default function ClientModal({
       if (email.trim()) payload.email = email.trim();
       if (phone.trim()) payload.phone = phone.trim();
       if (address.trim()) payload.address = address.trim();
-      if (priceAccessId) payload.priceAccessId = parseInt(priceAccessId);
+      if (priceAccessId && priceAccessId !== 'none') {
+        payload.priceAccessId = parseInt(priceAccessId);
+      } else {
+        payload.priceAccessId = null;
+      }
 
-      const response = await fetch('/api/clients', {
-        method: 'POST',
+      const url = isEditMode ? `/api/clients/${client!.id}` : '/api/clients';
+      const method = isEditMode ? 'PATCH' : 'POST';
+
+      const response = await fetch(url, {
+        method,
         headers: {
           'Content-Type': 'application/json',
         },
@@ -91,17 +121,17 @@ export default function ClientModal({
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || 'Failed to create client');
+        throw new Error(error.error || `Failed to ${isEditMode ? 'update' : 'create'} client`);
       }
 
-      toast.success('Клиент успешно создан');
+      toast.success(isEditMode ? 'Клиент успешно обновлен' : 'Клиент успешно создан');
       handleClose();
     } catch (error) {
-      console.error('Error creating client:', error);
+      console.error(`Error ${isEditMode ? 'updating' : 'creating'} client:`, error);
       toast.error(
         error instanceof Error
           ? error.message
-          : 'Ошибка при создании клиента'
+          : `Ошибка при ${isEditMode ? 'обновлении' : 'создании'} клиента`
       );
     } finally {
       setLoading(false);
@@ -112,10 +142,14 @@ export default function ClientModal({
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Добавить нового клиента</DialogTitle>
+          <DialogTitle>
+            {isEditMode ? 'Редактировать клиента' : 'Добавить нового клиента'}
+          </DialogTitle>
           <DialogDescription>
-            Создайте нового клиента. Позже его можно будет связать с
-            зарегистрированным пользователем.
+            {isEditMode 
+              ? 'Измените информацию о клиенте'
+              : 'Создайте нового клиента. Позже его можно будет связать с зарегистрированным пользователем.'
+            }
           </DialogDescription>
         </DialogHeader>
 
@@ -245,16 +279,18 @@ export default function ClientModal({
             </div>
           </div>
 
-          {/* Информационное сообщение */}
-          <div className="bg-muted/50 rounded-lg p-4 space-y-2">
-            <h4 className="font-semibold text-sm">ℹ️ Что дальше?</h4>
-            <ul className="text-sm text-muted-foreground space-y-1">
-              <li>• Клиент создан без авторизации (может работать по телефону)</li>
-              <li>• Вы можете создавать заказы для этого клиента</li>
-              <li>• Когда клиент зарегистрируется, его можно будет связать с пользователем</li>
-              <li>• После связывания клиент сможет видеть свои заказы в системе</li>
-            </ul>
-          </div>
+          {/* Информационное сообщение (только для создания) */}
+          {!isEditMode && (
+            <div className="bg-muted/50 rounded-lg p-4 space-y-2">
+              <h4 className="font-semibold text-sm">ℹ️ Что дальше?</h4>
+              <ul className="text-sm text-muted-foreground space-y-1">
+                <li>• Клиент создан без авторизации (может работать по телефону)</li>
+                <li>• Вы можете создавать заказы для этого клиента</li>
+                <li>• Когда клиент зарегистрируется, его можно будет связать с пользователем</li>
+                <li>• После связывания клиент сможет видеть свои заказы в системе</li>
+              </ul>
+            </div>
+          )}
         </div>
 
         <DialogFooter>
@@ -262,7 +298,10 @@ export default function ClientModal({
             Отмена
           </Button>
           <Button onClick={handleSubmit} disabled={loading}>
-            {loading ? 'Создание...' : 'Создать клиента'}
+            {loading 
+              ? (isEditMode ? 'Сохранение...' : 'Создание...') 
+              : (isEditMode ? 'Сохранить изменения' : 'Создать клиента')
+            }
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -4,7 +4,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 export default function OrdersPage() {
   return (
-    <div className="flex-1 space-y-4 p-8 pt-6">
+    <div className="flex-1 space-y-4 p-4 md:p-8 md:pt-6">
       <Suspense fallback={<OrdersTableSkeleton />}>
         <OrdersTable />
       </Suspense>

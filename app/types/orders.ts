@@ -92,6 +92,11 @@ export interface Client {
     name: string | null;
     email: string;
     phone: string | null;
+    address: string | null;
+    role: string;
+    priceAccessId: number | null;
+    warehouseAccessId: number | null;
+    isConfirmed: boolean;
   };
   createdAt: Date | string;
   updatedAt: Date | string;

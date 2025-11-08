@@ -9,6 +9,7 @@ export async function GET() {
       name: true,
       email: true,
       phone: true,
+      address: true,
       role: true,
       priceAccessId: true,
       warehouseAccessId: true,

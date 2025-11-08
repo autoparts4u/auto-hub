@@ -126,8 +126,8 @@ export function OrderStatusesPanel({ orderStatuses }: OrderStatusesPanelProps) {
 
   return (
     <div className="space-y-4">
-      <div className="flex gap-2 items-center">
-        <div className="relative w-full max-w-sm">
+      <div className="flex gap-2 items-center flex-wrap">
+        <div className="relative w-full md:max-w-sm">
           <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
             value={newName}
@@ -135,7 +135,7 @@ export function OrderStatusesPanel({ orderStatuses }: OrderStatusesPanelProps) {
               setNewName(e.target.value);
               setSearch(e.target.value);
             }}
-            placeholder="Поиск или добавление статуса"
+            placeholder="Поиск или добавление"
             className="pl-8"
           />
         </div>
@@ -143,10 +143,10 @@ export function OrderStatusesPanel({ orderStatuses }: OrderStatusesPanelProps) {
           type="color"
           value={newColor}
           onChange={(e) => setNewColor(e.target.value)}
-          className="w-20 h-10 cursor-pointer"
+          className="w-16 md:w-20 h-10 cursor-pointer flex-shrink-0"
           title="Выберите цвет"
         />
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-shrink-0">
           <Checkbox
             id="new-is-last"
             checked={newIsLast}
@@ -156,20 +156,21 @@ export function OrderStatusesPanel({ orderStatuses }: OrderStatusesPanelProps) {
             Финальный
           </label>
         </div>
-        <Button onClick={handleCreate}>
-          <Plus className="w-4 h-4 mr-1" /> Добавить
+        <Button onClick={handleCreate} className="flex-shrink-0">
+          <Plus className="w-4 h-4 md:mr-1" />
+          <span className="hidden md:inline">Добавить</span>
         </Button>
         <Button
           onClick={() => setSortAsc((prev) => !prev)}
           variant="outline"
-          className="shrink-0"
+          className="flex-shrink-0"
         >
           {sortAsc ? (
-            <ArrowDownAZ className="w-4 h-4 mr-1" />
+            <ArrowDownAZ className="w-4 h-4 md:mr-1" />
           ) : (
-            <ArrowUpAZ className="w-4 h-4 mr-1" />
+            <ArrowUpAZ className="w-4 h-4 md:mr-1" />
           )}
-          Сортировка
+          <span className="hidden md:inline">Сортировка</span>
         </Button>
       </div>
 
