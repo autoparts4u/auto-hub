@@ -3,7 +3,6 @@
 export interface Order {
   id: string;
   client_id: string;
-  userId: string | null;
   deliveryMethod_id: number | null;
   orderStatus_id: number;
   totalAmount: number | null;
@@ -19,11 +18,6 @@ export interface Order {
   
   // Связанные данные
   client?: Client;
-  user?: {
-    id: string;
-    name: string | null;
-    email: string;
-  };
   deliveryMethod?: DeliveryMethod;
   orderStatus?: OrderStatus;
   orderItems?: OrderItem[];
@@ -71,8 +65,11 @@ export interface OrderStatusHistoryItem {
   orderStatus?: OrderStatus;
   user?: {
     id: string;
-    name: string | null;
     email: string;
+    client?: {
+      name: string;
+      fullName: string;
+    };
   };
 }
 
@@ -80,26 +77,27 @@ export interface Client {
   id: string;
   name: string;
   fullName: string;
-  email: string | null;
   phone: string | null;
   address: string | null;
   priceAccessId: number | null;
-  userId: string | null;
+  warehouseAccessId: number | null;
   deliveryMethods?: ClientDeliveryMethod[];
   priceAccess?: PriceType;
+  warehouseAccess?: Warehouse;
   user?: {
     id: string;
-    name: string | null;
     email: string;
-    phone: string | null;
-    address: string | null;
     role: string;
-    priceAccessId: number | null;
-    warehouseAccessId: number | null;
     isConfirmed: boolean;
   };
   createdAt: Date | string;
   updatedAt: Date | string;
+}
+
+export interface Warehouse {
+  id: number;
+  name: string;
+  address: string;
 }
 
 export interface PriceType {

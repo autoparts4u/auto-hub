@@ -57,17 +57,12 @@ async function main() {
   ]);
   console.log(`✅ Создано ${warehouses.length} складов`);
 
-  // 3. Создание пользователей
-  console.log('👥 Создание пользователей...');
-  const hashedPassword = await bcrypt.hash('password123', 10);
-  
-  const admin = await prisma.user.create({
+  // 3. Создание клиентов
+  console.log('👥 Создание клиентов...');
+  const adminClient = await prisma.clients.create({
     data: {
       name: 'Администратор',
-      email: 'admin@autohub.com',
-      password: hashedPassword,
-      role: Role.admin,
-      isConfirmed: true,
+      fullName: 'Администратор системы',
       phone: '+380501234567',
       address: 'г. Киев, ул. Центральная, 1',
       priceAccessId: priceTypes[0].id,
@@ -75,48 +70,87 @@ async function main() {
     },
   });
 
+  const clientIvan = await prisma.clients.create({
+    data: {
+      name: 'Иван Петров',
+      fullName: 'Иван Петров',
+      phone: '+380501234568',
+      address: 'г. Киев, ул. Садовая, 12',
+      priceAccessId: priceTypes[0].id,
+      warehouseAccessId: warehouses[0].id,
+    },
+  });
+
+  const clientMaria = await prisma.clients.create({
+    data: {
+      name: 'Мария Сидорова',
+      fullName: 'Мария Сидорова',
+      phone: '+380501234569',
+      address: 'г. Харьков, пр. Победы, 33',
+      priceAccessId: priceTypes[1].id,
+      warehouseAccessId: warehouses[1].id,
+    },
+  });
+
+  const clientAlex = await prisma.clients.create({
+    data: {
+      name: 'Алексей Козлов',
+      fullName: 'Алексей Козлов',
+      phone: '+380501234570',
+      address: 'г. Одесса, ул. Морская, 88',
+      priceAccessId: priceTypes[2].id,
+      warehouseAccessId: warehouses[2].id,
+    },
+  });
+
+  console.log(`✅ Создано 4 клиента`);
+
+  // 4. Создание пользователей (связанных с клиентами)
+  console.log('🔐 Создание пользователей...');
+  const hashedPassword = await bcrypt.hash('password123', 10);
+
+  const admin = await prisma.user.create({
+    data: {
+      email: 'admin@autohub.com',
+      password: hashedPassword,
+      role: Role.admin,
+      isConfirmed: true,
+      clientId: adminClient.id,
+    },
+  });
+
   const users = await Promise.all([
     prisma.user.create({
       data: {
-        name: 'Иван Петров',
         email: 'ivan@example.com',
         password: hashedPassword,
         role: Role.user,
         isConfirmed: true,
-        phone: '+380501234568',
-        address: 'г. Киев, ул. Садовая, 12',
-        priceAccessId: priceTypes[0].id,
-        warehouseAccessId: warehouses[0].id,
+        clientId: clientIvan.id,
       },
     }),
     prisma.user.create({
       data: {
-        name: 'Мария Сидорова',
         email: 'maria@example.com',
         password: hashedPassword,
         role: Role.user,
         isConfirmed: true,
-        phone: '+380501234569',
-        address: 'г. Харьков, пр. Победы, 33',
-        priceAccessId: priceTypes[1].id,
-        warehouseAccessId: warehouses[1].id,
+        clientId: clientMaria.id,
       },
     }),
     prisma.user.create({
       data: {
-        name: 'Алексей Козлов',
         email: 'alex@example.com',
         password: hashedPassword,
         role: Role.user,
         isConfirmed: true,
-        phone: '+380501234570',
-        priceAccessId: priceTypes[2].id,
+        clientId: clientAlex.id,
       },
     }),
   ]);
   console.log(`✅ Создано ${users.length + 1} пользователей (включая администратора)`);
 
-  // 4. Создание брендов
+  // 5. Создание брендов
   console.log('🏷️ Создание брендов...');
   const brands = await Promise.all([
     prisma.brands.create({ data: { name: 'Bosch' } }),
@@ -628,7 +662,6 @@ async function main() {
       client_id: clients[0].id,
       deliveryMethod_id: deliveryMethods[0].id,
       orderStatus_id: orderStatuses[0].id,
-      userId: admin.id,
       totalAmount: 800,
       discount: 0,
       notes: 'Срочный заказ, клиент ждет',
@@ -643,7 +676,6 @@ async function main() {
       client_id: clients[1].id,
       deliveryMethod_id: deliveryMethods[1].id,
       orderStatus_id: orderStatuses[1].id,
-      userId: users[0].id,
       totalAmount: 5980,
       discount: 300,
       notes: 'Оптовый клиент, предоставлена скидка',
@@ -659,7 +691,6 @@ async function main() {
       client_id: clients[2].id,
       deliveryMethod_id: deliveryMethods[2].id,
       orderStatus_id: orderStatuses[2].id,
-      userId: admin.id,
       totalAmount: 4920,
       discount: 0,
       trackingNumber: '59000123456789',
@@ -676,7 +707,6 @@ async function main() {
       client_id: clients[3].id,
       deliveryMethod_id: deliveryMethods[2].id,
       orderStatus_id: orderStatuses[3].id,
-      userId: users[0].id,
       totalAmount: 8500,
       discount: 0,
       trackingNumber: '59000987654321',
@@ -693,7 +723,6 @@ async function main() {
       client_id: clients[0].id,
       deliveryMethod_id: deliveryMethods[0].id,
       orderStatus_id: orderStatuses[4].id,
-      userId: admin.id,
       totalAmount: 1100,
       discount: 0,
       notes: 'Самовывоз со склада, оплачено наличными',
@@ -710,7 +739,6 @@ async function main() {
       client_id: clients[1].id,
       deliveryMethod_id: deliveryMethods[3].id,
       orderStatus_id: orderStatuses[5].id,
-      userId: users[0].id,
       totalAmount: 15000,
       discount: 0,
       notes: 'Клиент отказался от заказа',

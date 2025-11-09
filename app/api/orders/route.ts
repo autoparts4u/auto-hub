@@ -60,13 +60,6 @@ export async function GET(request: NextRequest) {
       where,
       include: {
         client: true,
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          },
-        },
         deliveryMethod: true,
         orderStatus: true,
         orderItems: {
@@ -184,7 +177,6 @@ export async function POST(request: NextRequest) {
       const newOrder = await tx.orders.create({
         data: {
           client_id: body.client_id,
-          userId: session.user.id,
           deliveryMethod_id: body.deliveryMethod_id,
           orderStatus_id: body.orderStatus_id,
           totalAmount,
@@ -194,9 +186,6 @@ export async function POST(request: NextRequest) {
         },
         include: {
           client: true,
-          user: {
-            select: { id: true, name: true, email: true },
-          },
           deliveryMethod: true,
           orderStatus: true,
         },
@@ -255,7 +244,6 @@ export async function POST(request: NextRequest) {
       where: { id: order.id },
       include: {
         client: true,
-        user: { select: { id: true, name: true, email: true } },
         deliveryMethod: true,
         orderStatus: true,
         orderItems: {

@@ -32,8 +32,13 @@ export async function GET(
         user: {
           select: {
             id: true,
-            name: true,
             email: true,
+            client: {
+              select: {
+                name: true,
+                fullName: true,
+              },
+            },
           },
         },
       },

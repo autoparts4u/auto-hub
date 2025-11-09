@@ -222,11 +222,6 @@ export default function OrderDetailsModal({
                 <div>
                   <div className="text-sm font-medium">Создан</div>
                   <div className="text-sm">{formatDate(order.createdAt)}</div>
-                  {order.user && (
-                    <div className="text-xs text-muted-foreground">
-                      Менеджер: {order.user.name || order.user.email}
-                    </div>
-                  )}
                 </div>
               </div>
 
@@ -443,7 +438,7 @@ export default function OrderDetailsModal({
                     </div>
                     {item.user && (
                       <div className="text-xs text-muted-foreground mt-1">
-                        {item.user.name || item.user.email}
+                        {item.user.client?.name || item.user.email}
                       </div>
                     )}
                     {item.comment && (

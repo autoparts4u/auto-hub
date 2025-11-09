@@ -3,8 +3,13 @@ import { DefaultUser } from "next-auth";
 declare module "next-auth" {
   interface User extends DefaultUser {
     role: "admin" | "user";
-    phone: string | null;
     isConfirmed: boolean;
+    clientId: string;
+    client?: {
+      id: string;
+      name: string;
+      phone: string | null;
+    };
   }
 
   interface Session {
@@ -12,12 +17,19 @@ declare module "next-auth" {
       id: string;
       email: string;
       role: "admin" | "user";
-      phone: string | null;
       isConfirmed: boolean;
+      clientId: string;
+      client: {
+        id: string;
+        name: string;
+        phone: string | null;
+      };
     };
   }
 
   interface JWT {
     role?: "admin" | "user";
+    isConfirmed?: boolean;
+    clientId?: string;
   }
 }

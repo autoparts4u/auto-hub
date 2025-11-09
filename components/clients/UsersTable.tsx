@@ -11,22 +11,27 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { PriceTypes, User, Warehouses } from "@prisma/client";
+import { PriceTypes, Warehouses } from "@prisma/client";
 
-type ShortUser = Pick<
-    User,
-    | "id"
-    | "name"
-    | "email"
-    | "phone"
-    | "priceAccessId"
-    | "warehouseAccessId"
-    | "role"
-    | "isConfirmed" 
-  >
+type UserWithClient = {
+  id: string;
+  email: string;
+  role: string;
+  isConfirmed: boolean;
+  clientId: string;
+  client: {
+    id: string;
+    name: string;
+    fullName: string;
+    phone: string | null;
+    address: string | null;
+    priceAccessId: number | null;
+    warehouseAccessId: number | null;
+  };
+}
 
 type Props = {
-  initialUsers: ShortUser[];
+  initialUsers: UserWithClient[];
   priceTypes: PriceTypes[];
   warehouses: Warehouses[];
 };
@@ -36,12 +41,25 @@ export function UsersTable({ initialUsers, priceTypes, warehouses }: Props) {
 
   const handleChange = async (
     userId: string,
-    field: keyof ShortUser,
+    field: string,
     value: string | number | null | boolean
   ) => {
-    const prev = users.find((u) => u.id === userId)?.[field];
+    // Сохраняем предыдущее значение для отката
+    const user = users.find((u) => u.id === userId);
+    if (!user) return;
+
+    const isClientField = ['name', 'phone', 'address', 'priceAccessId', 'warehouseAccessId'].includes(field);
+    const prev = isClientField ? user.client[field as keyof typeof user.client] : user[field as keyof typeof user];
+    
+    // Оптимистичное обновление UI
     setUsers((prevUsers) =>
-      prevUsers.map((u) => (u.id === userId ? { ...u, [field]: value } : u))
+      prevUsers.map((u) => {
+        if (u.id !== userId) return u;
+        if (isClientField) {
+          return { ...u, client: { ...u.client, [field]: value } };
+        }
+        return { ...u, [field]: value };
+      })
     );
 
     const res = await fetch(`/api/users/${userId}`, {
@@ -52,10 +70,15 @@ export function UsersTable({ initialUsers, priceTypes, warehouses }: Props) {
 
     if (!res.ok) {
       toast.error("Ошибка при обновлении");
+      // Откат изменений
       setUsers((prevUsers) =>
-        prevUsers.map((u) =>
-          u.id === userId ? { ...u, [field]: prev } : u
-        )
+        prevUsers.map((u) => {
+          if (u.id !== userId) return u;
+          if (isClientField) {
+            return { ...u, client: { ...u.client, [field]: prev } };
+          }
+          return { ...u, [field]: prev };
+        })
       );
       return;
     }
@@ -85,12 +108,12 @@ export function UsersTable({ initialUsers, priceTypes, warehouses }: Props) {
                 {/* редактируемое имя */}
                 <td className="p-3">
                   <Input
-                    value={user.name ?? ""}
+                    value={user.client.name ?? ""}
                     onChange={(e) =>
                       setUsers((prev) =>
                         prev.map((u) =>
                           u.id === user.id
-                            ? { ...u, name: e.target.value }
+                            ? { ...u, client: { ...u.client, name: e.target.value } }
                             : u
                         )
                       )
@@ -103,11 +126,11 @@ export function UsersTable({ initialUsers, priceTypes, warehouses }: Props) {
                   />
                 </td>
                 <td className="p-3">{user.email}</td>
-                <td className="p-3">{user.phone ?? "-"}</td>
+                <td className="p-3">{user.client.phone ?? "-"}</td>
                 <td className="p-3">{user.role}</td>
                 <td className="p-3">
                   <Select
-                    value={user.priceAccessId?.toString() ?? "none"}
+                    value={user.client.priceAccessId?.toString() ?? "none"}
                     onValueChange={(val) =>
                       handleChange(
                         user.id,
@@ -131,7 +154,7 @@ export function UsersTable({ initialUsers, priceTypes, warehouses }: Props) {
                 </td>
                 <td className="p-3">
                   <Select
-                    value={user.warehouseAccessId?.toString() ?? "none"}
+                    value={user.client.warehouseAccessId?.toString() ?? "none"}
                     onValueChange={(val) =>
                       handleChange(
                         user.id,

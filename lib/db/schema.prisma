@@ -21,33 +21,24 @@ enum Role {
 
 model User {
     id            String    @id @default(cuid())
-    name          String?
     email         String    @unique
     password      String?
     emailVerified DateTime?
     image         String?
 
-    role              Role    @default(user)
-    phone             String?
-    isConfirmed       Boolean @default(false)
-    address           String?
-    priceAccessId     Int?
-    warehouseAccessId Int?
+    role        Role    @default(user)
+    isConfirmed Boolean @default(false)
 
-    priceAccess     PriceTypes? @relation("PriceAccess", fields: [priceAccessId], references: [id])
-    warehouseAccess Warehouses? @relation(fields: [warehouseAccessId], references: [id])
+    clientId String  @unique // Обязательная связь с клиентом
+    client   Clients @relation(fields: [clientId], references: [id], onDelete: Cascade)
 
     accounts           Account[]
     sessions           Session[]
     Authenticator      Authenticator[]
-    orders             Orders[]
     orderStatusHistory OrderStatusHistory[]
-    client             Clients? // Связь один-к-одному с клиентом
 
-    createdAt    DateTime    @default(now())
-    updatedAt    DateTime    @updatedAt
-    PriceTypes   PriceTypes? @relation(fields: [priceTypesId], references: [id])
-    priceTypesId Int?
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
 }
 
 model Account {
@@ -105,22 +96,22 @@ model Authenticator {
 }
 
 model Clients {
-    id            String  @id @default(cuid())
-    name          String
-    fullName      String
-    email         String? @unique // Для связи с пользователем
-    phone         String? @unique // Для связи с пользователем
-    address       String?
-    priceAccessId Int?
-    userId        String? @unique // Связь с пользователем (опциональная)
+    id                String  @id @default(cuid())
+    name              String
+    fullName          String
+    phone             String? @unique
+    address           String?
+    priceAccessId     Int?
+    warehouseAccessId Int?
 
-    user            User?                    @relation(fields: [userId], references: [id])
+    user            User? // Опциональная обратная связь
     priceAccess     PriceTypes?              @relation("ClientPriceAccess", fields: [priceAccessId], references: [id])
+    warehouseAccess Warehouses?              @relation("ClientWarehouseAccess", fields: [warehouseAccessId], references: [id])
     orders          Orders[]
     deliveryMethods ClientsDeliveryMethods[]
 
     createdAt DateTime @default(now())
-    updatedAt DateTime @default(now()) @updatedAt
+    updatedAt DateTime @updatedAt
 }
 
 model ClientsDeliveryMethods {
@@ -146,7 +137,6 @@ model Orders {
     deliveryMethod_id Int?
     client_id         String
     orderStatus_id    Int
-    userId            String?
     totalAmount       Float?
     discount          Float     @default(0)
     paidAmount        Float     @default(0)
@@ -158,7 +148,6 @@ model Orders {
     issuedAt          DateTime?
     paidAt            DateTime?
 
-    user           User?                @relation(fields: [userId], references: [id])
     client         Clients              @relation(fields: [client_id], references: [id])
     deliveryMethod DeliveryMethods?     @relation(fields: [deliveryMethod_id], references: [id])
     orderStatus    OrderStatuses        @relation(fields: [orderStatus_id], references: [id])
@@ -208,9 +197,9 @@ model Warehouses {
     name    String
     address String
 
-    parts       AutopartsWarehouses[]
-    orderItems  OrderItems[]
-    usersAccess User[]
+    parts         AutopartsWarehouses[]
+    orderItems    OrderItems[]
+    clientsAccess Clients[]             @relation("ClientWarehouseAccess")
 }
 
 model Autoparts {
@@ -277,8 +266,6 @@ model PriceTypes {
     id      Int              @id @default(autoincrement())
     name    String
     prices  AutopartPrices[]
-    users   User[]           @relation("PriceAccess")
-    User    User[]
     clients Clients[]        @relation("ClientPriceAccess")
 }
 

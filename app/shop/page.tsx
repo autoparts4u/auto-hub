@@ -14,8 +14,22 @@ const ShopPage = async () => {
     redirect("/sign-in");
   }
 
+  // Загружаем актуальные данные пользователя с клиентом
+  const currentUser = await db.user.findUnique({
+    where: { id: session.user.id },
+    include: {
+      client: {
+        select: {
+          id: true,
+          phone: true,
+          name: true,
+        },
+      },
+    },
+  });
+
   // если нет телефона → редиректим на ввод
-  if (!session.user.phone) {
+  if (!currentUser?.client?.phone) {
     redirect("/add-phone");
   }
 
@@ -26,7 +40,14 @@ const ShopPage = async () => {
 
   const user = await db.user.findUnique({
     where: { id: session.user.id },
-    select: { priceAccessId: true, warehouseAccessId: true },
+    include: {
+      client: {
+        select: {
+          priceAccessId: true,
+          warehouseAccessId: true,
+        },
+      },
+    },
   });
 
   const autoparts = await db.autoparts.findMany({
@@ -147,8 +168,8 @@ const ShopPage = async () => {
         engineVolumes={engineVolumes}
         textsForSearch={textsForSearch}
         onlyView={true}
-        priceAccessId={user?.priceAccessId}
-        warehouseAccessId={user?.warehouseAccessId}
+        priceAccessId={user?.client?.priceAccessId ?? null}
+        warehouseAccessId={user?.client?.warehouseAccessId ?? null}
       />
     </div>
   );

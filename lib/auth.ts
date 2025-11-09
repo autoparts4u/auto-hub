@@ -27,6 +27,15 @@ export const authOptions: NextAuthConfig = {
           where: {
             email: validatedCredentials.email,
           },
+          include: {
+            client: {
+              select: {
+                id: true,
+                name: true,
+                phone: true,
+              },
+            },
+          },
         });
 
         if (!user) {
@@ -53,7 +62,15 @@ export const authOptions: NextAuthConfig = {
       }
 
       if (user?.role) {
-        token.role = user.role; // 👈 вставляем в токен
+        token.role = user.role;
+      }
+
+      if (user?.isConfirmed !== undefined) {
+        token.isConfirmed = user.isConfirmed;
+      }
+
+      if (user?.clientId) {
+        token.clientId = user.clientId;
       }
 
       return token;
@@ -62,9 +79,31 @@ export const authOptions: NextAuthConfig = {
       if (token?.role === "admin" || token?.role === "user") {
         session.user.role = token.role;
       }
-      // } else {
-      //   session.user.role = "user"; // 👈 fallback значение (или выбросить ошибку)
-      // }
+
+      if (token?.isConfirmed !== undefined) {
+        session.user.isConfirmed = Boolean(token.isConfirmed);
+      }
+
+      if (token?.sub && token?.clientId) {
+        // Загружаем актуальные данные клиента из базы
+        const user = await db.user.findUnique({
+          where: { id: token.sub },
+          include: {
+            client: {
+              select: {
+                id: true,
+                name: true,
+                phone: true,
+              },
+            },
+          },
+        });
+
+        if (user?.client) {
+          session.user.clientId = user.clientId;
+          session.user.client = user.client;
+        }
+      }
 
       return session;
     },

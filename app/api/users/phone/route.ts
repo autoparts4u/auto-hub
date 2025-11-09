@@ -8,8 +8,18 @@ export async function PATCH(req: Request) {
 
   const { phone } = await req.json();
 
-  await db.user.update({
+  // Обновляем phone в Client, а не в User
+  const user = await db.user.findUnique({
     where: { id: session.user.id },
+    select: { clientId: true },
+  });
+
+  if (!user) {
+    return NextResponse.json({ error: "User not found" }, { status: 404 });
+  }
+
+  await db.clients.update({
+    where: { id: user.clientId },
     data: { phone },
   });
 

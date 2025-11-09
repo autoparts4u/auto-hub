@@ -20,13 +20,6 @@ export async function GET(
       where: { id },
       include: {
         client: true,
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          },
-        },
         deliveryMethod: true,
         orderStatus: true,
         orderItems: {
@@ -55,8 +48,13 @@ export async function GET(
             user: {
               select: {
                 id: true,
-                name: true,
                 email: true,
+                client: {
+                  select: {
+                    name: true,
+                    fullName: true,
+                  },
+                },
               },
             },
           },
@@ -122,7 +120,6 @@ export async function PUT(
       },
       include: {
         client: true,
-        user: { select: { id: true, name: true, email: true } },
         deliveryMethod: true,
         orderStatus: true,
         orderItems: {

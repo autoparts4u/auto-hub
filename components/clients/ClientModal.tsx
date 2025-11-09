@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { PriceType, Client } from '@/app/types/orders';
+import { PriceType, Client, Warehouse } from '@/app/types/orders';
 import {
   Dialog,
   DialogContent,
@@ -27,6 +27,7 @@ interface ClientModalProps {
   open: boolean;
   onClose: () => void;
   priceTypes: PriceType[];
+  warehouses: Warehouse[];
   client?: Client | null;
 }
 
@@ -34,6 +35,7 @@ export default function ClientModal({
   open,
   onClose,
   priceTypes,
+  warehouses,
   client,
 }: ClientModalProps) {
   const [loading, setLoading] = useState(false);
@@ -42,28 +44,28 @@ export default function ClientModal({
   // Поля формы
   const [name, setName] = useState('');
   const [fullName, setFullName] = useState('');
-  const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [address, setAddress] = useState('');
   const [priceAccessId, setPriceAccessId] = useState<string>('');
+  const [warehouseAccessId, setWarehouseAccessId] = useState<string>('');
 
   // Заполнение формы при редактировании
   useEffect(() => {
     if (client && open) {
       setName(client.name || '');
       setFullName(client.fullName || '');
-      setEmail(client.email || '');
       setPhone(client.phone || '');
       setAddress(client.address || '');
       setPriceAccessId(client.priceAccessId?.toString() || '');
+      setWarehouseAccessId(client.warehouseAccessId?.toString() || '');
     } else if (!open) {
       // Очистка формы при закрытии
       setName('');
       setFullName('');
-      setEmail('');
       setPhone('');
       setAddress('');
       setPriceAccessId('');
+      setWarehouseAccessId('');
     }
   }, [client, open]);
 
@@ -71,10 +73,10 @@ export default function ClientModal({
     // Очистка формы
     setName('');
     setFullName('');
-    setEmail('');
     setPhone('');
     setAddress('');
     setPriceAccessId('');
+    setWarehouseAccessId('');
     onClose();
   };
 
@@ -99,13 +101,17 @@ export default function ClientModal({
       };
 
       // Добавляем опциональные поля только если они заполнены
-      if (email.trim()) payload.email = email.trim();
       if (phone.trim()) payload.phone = phone.trim();
       if (address.trim()) payload.address = address.trim();
       if (priceAccessId && priceAccessId !== 'none') {
         payload.priceAccessId = parseInt(priceAccessId);
       } else {
         payload.priceAccessId = null;
+      }
+      if (warehouseAccessId && warehouseAccessId !== 'none') {
+        payload.warehouseAccessId = parseInt(warehouseAccessId);
+      } else {
+        payload.warehouseAccessId = null;
       }
 
       const url = isEditMode ? `/api/clients/${client!.id}` : '/api/clients';
@@ -201,34 +207,18 @@ export default function ClientModal({
               КОНТАКТНАЯ ИНФОРМАЦИЯ
             </h3>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="info@example.com"
-                />
-                <p className="text-xs text-muted-foreground">
-                  📧 Используется для связи с пользователем
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="phone">Телефон</Label>
-                <Input
-                  id="phone"
-                  type="tel"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  placeholder="+380501234567"
-                />
-                <p className="text-xs text-muted-foreground">
-                  📱 Используется для связи с пользователем
-                </p>
-              </div>
+            <div className="space-y-2">
+              <Label htmlFor="phone">Телефон</Label>
+              <Input
+                id="phone"
+                type="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="+380501234567"
+              />
+              <p className="text-xs text-muted-foreground">
+                📱 Основной контактный номер
+              </p>
             </div>
 
             <div className="space-y-2">
@@ -246,36 +236,64 @@ export default function ClientModal({
             </div>
           </div>
 
-          {/* Настройки цен */}
+          {/* Настройки доступа */}
           <div className="space-y-4">
             <h3 className="font-semibold text-sm text-muted-foreground">
-              НАСТРОЙКИ ЦЕН
+              НАСТРОЙКИ ДОСТУПА
             </h3>
 
-            <div className="space-y-2">
-              <Label htmlFor="priceType">Тип цены</Label>
-              <Select
-                value={priceAccessId}
-                onValueChange={setPriceAccessId}
-              >
-                <SelectTrigger id="priceType">
-                  <SelectValue placeholder="Выберите тип цены" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Не указан</SelectItem>
-                  {priceTypes.map((priceType) => (
-                    <SelectItem
-                      key={priceType.id}
-                      value={priceType.id.toString()}
-                    >
-                      {priceType.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground">
-                💰 При создании заказа цены будут подбираться автоматически
-              </p>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="priceType">Тип цены</Label>
+                <Select
+                  value={priceAccessId}
+                  onValueChange={setPriceAccessId}
+                >
+                  <SelectTrigger id="priceType">
+                    <SelectValue placeholder="Выберите тип цены" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Не указан</SelectItem>
+                    {priceTypes.map((priceType) => (
+                      <SelectItem
+                        key={priceType.id}
+                        value={priceType.id.toString()}
+                      >
+                        {priceType.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  💰 Цены для этого клиента
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="warehouse">Склад</Label>
+                <Select
+                  value={warehouseAccessId}
+                  onValueChange={setWarehouseAccessId}
+                >
+                  <SelectTrigger id="warehouse">
+                    <SelectValue placeholder="Выберите склад" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Не указан</SelectItem>
+                    {warehouses.map((warehouse) => (
+                      <SelectItem
+                        key={warehouse.id}
+                        value={warehouse.id.toString()}
+                      >
+                        {warehouse.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  🏪 Доступный склад
+                </p>
+              </div>
             </div>
           </div>
 

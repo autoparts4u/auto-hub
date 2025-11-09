@@ -23,16 +23,12 @@ export async function GET(
           },
         },
         priceAccess: true,
+        warehouseAccess: true,
         user: {
           select: {
             id: true,
-            name: true,
             email: true,
-            phone: true,
-            address: true,
             role: true,
-            priceAccessId: true,
-            warehouseAccessId: true,
             isConfirmed: true,
           },
         },
@@ -76,22 +72,7 @@ export async function PUT(
     const { id } = await params;
     const body = await request.json();
 
-    // Проверка на уникальность email/phone если обновляются
-    if (body.email) {
-      const existingClient = await prisma.clients.findFirst({
-        where: { 
-          email: body.email,
-          NOT: { id }
-        },
-      });
-      if (existingClient) {
-        return NextResponse.json(
-          { error: 'Client with this email already exists' },
-          { status: 400 }
-        );
-      }
-    }
-
+    // Проверка на уникальность phone если обновляется
     if (body.phone) {
       const existingClient = await prisma.clients.findFirst({
         where: { 
@@ -110,11 +91,10 @@ export async function PUT(
     const updateData: Record<string, unknown> = {};
     if (body.name !== undefined) updateData.name = body.name;
     if (body.fullName !== undefined) updateData.fullName = body.fullName;
-    if (body.email !== undefined) updateData.email = body.email || null;
     if (body.phone !== undefined) updateData.phone = body.phone || null;
     if (body.address !== undefined) updateData.address = body.address || null;
     if (body.priceAccessId !== undefined) updateData.priceAccessId = body.priceAccessId || null;
-    if (body.userId !== undefined) updateData.userId = body.userId || null;
+    if (body.warehouseAccessId !== undefined) updateData.warehouseAccessId = body.warehouseAccessId || null;
 
     const client = await prisma.clients.update({
       where: { id },
@@ -126,16 +106,12 @@ export async function PUT(
           },
         },
         priceAccess: true,
+        warehouseAccess: true,
         user: {
           select: {
             id: true,
-            name: true,
             email: true,
-            phone: true,
-            address: true,
             role: true,
-            priceAccessId: true,
-            warehouseAccessId: true,
             isConfirmed: true,
           },
         },

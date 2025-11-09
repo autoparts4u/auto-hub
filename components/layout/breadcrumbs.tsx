@@ -8,8 +8,6 @@ export function Breadcrumbs() {
   const segments = pathname.split("/").filter(Boolean);
   segments.shift();
 
-  console.log(segments)
-
   return (
     <nav className="text-sm text-muted-foreground mb-6">
       <ol className="flex items-center space-x-2">

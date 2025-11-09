@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Client, PriceType } from '@/app/types/orders';
+import { Client, PriceType, Warehouse } from '@/app/types/orders';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
@@ -59,11 +59,6 @@ interface UserItem {
   priceAccessId?: number | null;
   warehouseAccessId?: number | null;
   isConfirmed: boolean;
-}
-
-interface Warehouse {
-  id: number;
-  name: string;
 }
 
 export default function ClientsTable({ priceTypes }: ClientsTableProps) {
@@ -147,17 +142,42 @@ export default function ClientsTable({ priceTypes }: ClientsTableProps) {
     try {
       setLoading(true);
       
-      // Загружаем клиентов
+      // Загружаем клиентов (теперь они содержат всю необходимую информацию, включая user)
       const clientsResponse = await fetch('/api/clients');
       if (!clientsResponse.ok) throw new Error('Failed to fetch clients');
       const clientsData = await clientsResponse.json();
       setClients(clientsData);
 
-      // Загружаем пользователей
+      // Загружаем пользователей (для вкладки "Пользователи")
       const usersResponse = await fetch('/api/users');
       if (!usersResponse.ok) throw new Error('Failed to fetch users');
       const usersData = await usersResponse.json();
-      setUsers(usersData);
+      
+      // Преобразуем пользователей в формат UserItem
+      const transformedUsers: UserItem[] = usersData.map((user: {
+        id: string;
+        email: string;
+        role: string;
+        isConfirmed: boolean;
+        client?: {
+          name?: string;
+          phone?: string;
+          address?: string;
+          priceAccessId?: number | null;
+          warehouseAccessId?: number | null;
+        };
+      }) => ({
+        id: user.id,
+        name: user.client?.name ?? null,
+        email: user.email,
+        phone: user.client?.phone ?? null,
+        address: user.client?.address ?? null,
+        role: user.role,
+        priceAccessId: user.client?.priceAccessId ?? null,
+        warehouseAccessId: user.client?.warehouseAccessId ?? null,
+        isConfirmed: user.isConfirmed,
+      }));
+      setUsers(transformedUsers);
 
       // Загружаем склады
       const warehousesResponse = await fetch('/api/warehouses');
@@ -173,49 +193,20 @@ export default function ClientsTable({ priceTypes }: ClientsTableProps) {
     }
   };
 
-  // Объединяем клиентов и пользователей без клиента
+  // После рефакторинга все пользователи должны иметь клиента (clientId обязателен)
+  // Клиенты уже содержат информацию о связанном пользователе через поле user
   const allItems = React.useMemo(() => {
-    // Получаем userId всех клиентов
-    const clientUserIds = new Set(clients.filter(c => c.userId).map(c => c.userId));
-    
-    // Находим пользователей без клиента
-    const usersWithoutClient = users.filter(user => !clientUserIds.has(user.id));
-    
-    // Преобразуем пользователей в формат клиентов для отображения
-    const userAsClients: Client[] = usersWithoutClient.map(user => ({
-      id: `user_${user.id}`, // Префикс для различения
-      name: user.name || user.email,
-      fullName: user.name || user.email,
-      email: user.email,
-      phone: user.phone || null,
-      address: null,
-      priceAccessId: user.priceAccessId || null,
-      userId: user.id,
-      user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        phone: user.phone || null,
-        address: user.address || null,
-        role: user.role,
-        priceAccessId: user.priceAccessId || null,
-        warehouseAccessId: user.warehouseAccessId || null,
-        isConfirmed: user.isConfirmed,
-      },
-      priceAccess: priceTypes.find(pt => pt.id === user.priceAccessId),
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    }));
-    
-    return [...clients, ...userAsClients];
-  }, [clients, users, priceTypes]);
+    // Возвращаем только клиентов, так как теперь каждый User связан с Client
+    // и все данные хранятся в Client
+    return clients;
+  }, [clients]);
 
   const filteredClients = allItems.filter((client) => {
     const searchLower = searchTerm.toLowerCase();
     return (
       client.name.toLowerCase().includes(searchLower) ||
       client.fullName.toLowerCase().includes(searchLower) ||
-      client.email?.toLowerCase().includes(searchLower) ||
+      client.user?.email?.toLowerCase().includes(searchLower) ||
       client.phone?.toLowerCase().includes(searchLower)
     );
   });
@@ -234,46 +225,45 @@ export default function ClientsTable({ priceTypes }: ClientsTableProps) {
     value: string | number | null | boolean
   ) => {
     const prev = users.find((u) => u.id === userId)?.[field];
+    
+    // Оптимистично обновляем UI
     setUsers((prevUsers) =>
       prevUsers.map((u) => (u.id === userId ? { ...u, [field]: value } : u))
     );
 
-    const res = await fetch(`/api/users/${userId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ [field]: value }),
-    });
+    try {
+      // Отправляем обновление на сервер
+      const res = await fetch(`/api/users/${userId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ [field]: value }),
+      });
 
-    if (!res.ok) {
+      if (!res.ok) {
+        throw new Error('Failed to update user');
+      }
+
+      toast.success("Данные обновлены");
+      
+      // Перезагружаем данные, чтобы синхронизировать users и clients
+      await fetchData();
+    } catch {
+      // При ошибке откатываем изменения
       toast.error("Ошибка при обновлении");
       setUsers((prevUsers) =>
         prevUsers.map((u) =>
           u.id === userId ? { ...u, [field]: prev } : u
         )
       );
-      return;
     }
-
-    toast.success("Данные обновлены");
   };
 
   const handleEditClient = (client: Client) => {
-    // Проверяем, что это реальный клиент, а не пользователь без клиента
-    if (client.id.startsWith('user_')) {
-      toast.error('Нельзя редактировать пользователей без клиента');
-      return;
-    }
     setSelectedClient(client);
     setIsEditModalOpen(true);
   };
 
   const handleDeleteClient = async (client: Client) => {
-    // Проверяем, что это реальный клиент, а не пользователь без клиента
-    if (client.id.startsWith('user_')) {
-      toast.error('Нельзя удалить пользователей без клиента');
-      return;
-    }
-
     if (!confirm(`Вы уверены, что хотите удалить клиента "${client.name}"?`)) {
       return;
     }
@@ -298,11 +288,6 @@ export default function ClientsTable({ priceTypes }: ClientsTableProps) {
   };
 
   const handleEditUser = (user: UserItem | { id: string; name: string | null; email: string; phone?: string | null; address?: string | null; role: string; priceAccessId?: number | null; warehouseAccessId?: number | null; isConfirmed: boolean }) => {
-    // Преобразуем объект в формат UserItem
-    console.log('ClientsTable handleEditUser - входящий объект user:', user);
-    console.log('ClientsTable handleEditUser - user.priceAccessId:', user.priceAccessId, 'type:', typeof user.priceAccessId);
-    console.log('ClientsTable handleEditUser - user.warehouseAccessId:', user.warehouseAccessId, 'type:', typeof user.warehouseAccessId);
-    
     const userItem: UserItem = {
       id: user.id,
       name: user.name,
@@ -314,7 +299,6 @@ export default function ClientsTable({ priceTypes }: ClientsTableProps) {
       warehouseAccessId: user.warehouseAccessId ?? null,
       isConfirmed: user.isConfirmed,
     };
-    console.log('ClientsTable handleEditUser - преобразованный userItem:', userItem);
     setSelectedUser(userItem);
     setIsEditUserModalOpen(true);
   };
@@ -691,19 +675,19 @@ export default function ClientsTable({ priceTypes }: ClientsTableProps) {
             <div className="border rounded-lg p-4">
               <div className="text-sm text-muted-foreground">Пользователи (авторизованы)</div>
               <div className="text-2xl font-bold text-green-600">
-                {allItems.filter((c) => c.userId).length}
+                {allItems.filter((c) => c.user).length}
               </div>
             </div>
             <div className="border rounded-lg p-4">
               <div className="text-sm text-muted-foreground">Только клиенты</div>
               <div className="text-2xl font-bold text-orange-600">
-                {allItems.filter((c) => !c.userId).length}
+                {allItems.filter((c) => !c.user).length}
               </div>
             </div>
             <div className="border rounded-lg p-4">
               <div className="text-sm text-muted-foreground">С email</div>
               <div className="text-2xl font-bold">
-                {allItems.filter((c) => c.email).length}
+                {allItems.filter((c) => c.user?.email).length}
               </div>
             </div>
           </div>
@@ -773,10 +757,10 @@ export default function ClientsTable({ priceTypes }: ClientsTableProps) {
                       </TableCell>
                       <TableCell>
                         <div className="space-y-1">
-                          {client.email && (
+                          {client.user?.email && (
                             <div className="flex items-center gap-1 text-sm">
                               <Mail className="h-3 w-3 text-muted-foreground" />
-                              <span>{client.email}</span>
+                              <span>{client.user.email}</span>
                             </div>
                           )}
                           {client.phone && (
@@ -785,7 +769,7 @@ export default function ClientsTable({ priceTypes }: ClientsTableProps) {
                               <span>{client.phone}</span>
                             </div>
                           )}
-                          {!client.email && !client.phone && (
+                          {!client.user?.email && !client.phone && (
                             <span className="text-muted-foreground text-sm">—</span>
                           )}
                         </div>
@@ -837,7 +821,17 @@ export default function ClientsTable({ priceTypes }: ClientsTableProps) {
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                onClick={() => handleEditUser(client.user!)}
+                                onClick={() => handleEditUser({
+                                  id: client.user!.id,
+                                  name: client.name,
+                                  email: client.user!.email,
+                                  phone: client.phone,
+                                  address: client.address,
+                                  role: client.user!.role,
+                                  priceAccessId: client.priceAccessId,
+                                  warehouseAccessId: client.warehouseAccessId,
+                                  isConfirmed: client.user!.isConfirmed,
+                                })}
                                 title="Редактировать"
                               >
                                 <Pencil className="h-4 w-4" />
@@ -845,7 +839,11 @@ export default function ClientsTable({ priceTypes }: ClientsTableProps) {
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                onClick={() => handleDeleteUser(client.user!)}
+                                onClick={() => handleDeleteUser({
+                                  id: client.user!.id,
+                                  name: client.name,
+                                  email: client.user!.email,
+                                })}
                                 title="Удалить"
                               >
                                 <Trash2 className="h-4 w-4 text-destructive" />
@@ -914,10 +912,10 @@ export default function ClientsTable({ priceTypes }: ClientsTableProps) {
 
                     {/* Контакты */}
                     <div className="space-y-2">
-                      {client.email && (
+                      {client.user?.email && (
                         <div className="flex items-center gap-2 text-sm">
                           <Mail className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-                          <span className="truncate">{client.email}</span>
+                          <span className="truncate">{client.user.email}</span>
                         </div>
                       )}
                       {client.phone && (
@@ -968,7 +966,17 @@ export default function ClientsTable({ priceTypes }: ClientsTableProps) {
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                onClick={() => handleEditUser(client.user!)}
+                                onClick={() => handleEditUser({
+                                  id: client.user!.id,
+                                  name: client.name,
+                                  email: client.user!.email,
+                                  phone: client.phone,
+                                  address: client.address,
+                                  role: client.user!.role,
+                                  priceAccessId: client.priceAccessId,
+                                  warehouseAccessId: client.warehouseAccessId,
+                                  isConfirmed: client.user!.isConfirmed,
+                                })}
                                 title="Редактировать"
                                 className="h-8 w-8"
                               >
@@ -977,7 +985,11 @@ export default function ClientsTable({ priceTypes }: ClientsTableProps) {
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                onClick={() => handleDeleteUser(client.user!)}
+                                onClick={() => handleDeleteUser({
+                                  id: client.user!.id,
+                                  name: client.name,
+                                  email: client.user!.email,
+                                })}
                                 title="Удалить"
                                 className="h-8 w-8"
                               >
@@ -1117,6 +1129,7 @@ export default function ClientsTable({ priceTypes }: ClientsTableProps) {
           fetchData();
         }}
         priceTypes={priceTypes}
+        warehouses={warehouses}
       />
 
       {/* Модальное окно редактирования клиента */}
@@ -1128,6 +1141,7 @@ export default function ClientsTable({ priceTypes }: ClientsTableProps) {
           fetchData();
         }}
         priceTypes={priceTypes}
+        warehouses={warehouses}
         client={selectedClient}
       />
 

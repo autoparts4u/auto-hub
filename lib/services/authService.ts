@@ -25,15 +25,51 @@ export class AuthService {
     // 2. Хэшируем пароль
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    // 3. Создаём нового пользователя
+    // 3. Ищем существующего клиента по phone (созданного админом)
+    const existingClient = await prisma.clients.findFirst({
+      where: {
+        phone: phone,
+        user: null, // Клиент еще не связан с пользователем
+      },
+    });
+
+    let client;
+
+    if (existingClient) {
+      // 5a. Используем существующего клиента, созданного админом
+      // Оставляем name и fullName клиента как есть (это бизнес-название)
+      // Дополняем только недостающие данные
+      client = await prisma.clients.update({
+        where: { id: existingClient.id },
+        data: {
+          address: address || existingClient.address,
+          // name и fullName НЕ обновляем - оставляем то, что указал админ
+        },
+      });
+      console.log(`✅ Пользователь ${email} связан с существующим клиентом ${client.name}`);
+    } else {
+      // 5b. Создаём нового клиента
+      client = await prisma.clients.create({
+        data: {
+          name: name,
+          fullName: name,
+          phone: phone,
+          address: address,
+        },
+      });
+      console.log(`✨ Создан новый клиент ${name} для пользователя ${email}`);
+    }
+
+    // 6. Создаём пользователя, связанного с клиентом
     const user = await prisma.user.create({
       data: {
         email,
         password: hashedPassword,
-        name,
-        phone,
-        address,
-        isConfirmed: false, // например: подтверждение email в будущем
+        isConfirmed: false,
+        clientId: client.id, // Связываем с клиентом
+      },
+      include: {
+        client: true, // Включаем данные клиента в ответ
       },
     });
 

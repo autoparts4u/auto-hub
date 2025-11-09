@@ -16,58 +16,86 @@ export async function PATCH(
     const { id } = await params;
     const body = await req.json();
 
-    const data: {
-      priceAccessId?: number | null;
-      warehouseAccessId?: number | null;
+    const userData: {
       isConfirmed?: boolean;
-      name?: string | null;
-      phone?: string | null;
-      address?: string | null;
       email?: string;
       role?: "user" | "admin";
     } = {};
 
+    const clientData: {
+      priceAccessId?: number | null;
+      warehouseAccessId?: number | null;
+      name?: string;
+      phone?: string | null;
+      address?: string | null;
+    } = {};
+
+    // Поля для User (только auth данные)
+    if ("isConfirmed" in body) {
+      userData.isConfirmed = Boolean(body.isConfirmed);
+    }
+
+    if ("email" in body) {
+      userData.email = body.email;
+    }
+
+    if ("role" in body && (body.role === "user" || body.role === "admin")) {
+      userData.role = body.role;
+    }
+
+    // Поля для Client (бизнес данные)
     if ("priceAccessId" in body) {
-      data.priceAccessId = body.priceAccessId ? Number(body.priceAccessId) : null;
+      clientData.priceAccessId = body.priceAccessId ? Number(body.priceAccessId) : null;
     }
 
     if ("warehouseAccessId" in body) {
-      data.warehouseAccessId = body.warehouseAccessId
+      clientData.warehouseAccessId = body.warehouseAccessId
         ? Number(body.warehouseAccessId)
         : null;
     }
 
-    if ("isConfirmed" in body) {
-      data.isConfirmed = Boolean(body.isConfirmed);
-    }
-
     if ("name" in body) {
-      data.name = body.name;
+      clientData.name = body.name;
     }
 
     if ("phone" in body) {
-      data.phone = body.phone || null;
+      clientData.phone = body.phone || null;
     }
 
     if ("address" in body) {
-      data.address = body.address || null;
+      clientData.address = body.address || null;
     }
 
-    if ("email" in body) {
-      data.email = body.email;
-    }
-
-    if ("role" in body && (body.role === "user" || body.role === "admin")) {
-      data.role = body.role;
-    }
-
-    if (!Object.keys(data).length) {
+    if (!Object.keys(userData).length && !Object.keys(clientData).length) {
       return NextResponse.json({ error: "No valid fields" }, { status: 400 });
     }
 
+    // Обновляем User и/или Client
     const updated = await db.user.update({
       where: { id },
-      data,
+      data: {
+        ...userData,
+        ...(Object.keys(clientData).length > 0 && {
+          client: {
+            update: clientData,
+          },
+        }),
+      },
+      include: {
+        client: {
+          select: {
+            id: true,
+            name: true,
+            fullName: true,
+            phone: true,
+            address: true,
+            priceAccessId: true,
+            warehouseAccessId: true,
+            priceAccess: true,
+            warehouseAccess: true,
+          },
+        },
+      },
     });
 
     return NextResponse.json(updated);
@@ -100,12 +128,20 @@ export async function DELETE(
       );
     }
 
-    // Проверяем, есть ли у пользователя связанные заказы
+    // Получаем пользователя с clientId
+    const user = await db.user.findUnique({
+      where: { id },
+      select: { clientId: true },
+    });
+
+    if (!user) {
+      return NextResponse.json({ error: 'User not found' }, { status: 404 });
+    }
+
+    // Проверяем, есть ли у клиента связанные заказы
     const ordersCount = await db.orders.count({
       where: { 
-        client: {
-          userId: id
-        }
+        client_id: user.clientId
       },
     });
 
@@ -116,7 +152,7 @@ export async function DELETE(
       );
     }
 
-    // Удаляем пользователя
+    // Удаляем пользователя (Client удалится автоматически из-за onDelete: Cascade)
     await db.user.delete({
       where: { id },
     });

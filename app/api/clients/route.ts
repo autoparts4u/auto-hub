@@ -31,16 +31,12 @@ export async function GET(request: NextRequest) {
           },
         },
         priceAccess: true,
+        warehouseAccess: true,
         user: {
           select: {
             id: true,
-            name: true,
             email: true,
-            phone: true,
-            address: true,
             role: true,
-            priceAccessId: true,
-            warehouseAccessId: true,
             isConfirmed: true,
           },
         },
@@ -82,19 +78,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Проверка на уникальность email/phone если указаны
-    if (body.email) {
-      const existingClient = await prisma.clients.findUnique({
-        where: { email: body.email },
-      });
-      if (existingClient) {
-        return NextResponse.json(
-          { error: 'Client with this email already exists' },
-          { status: 400 }
-        );
-      }
-    }
-
+    // Проверка на уникальность phone если указан
     if (body.phone) {
       const existingClient = await prisma.clients.findUnique({
         where: { phone: body.phone },
@@ -111,10 +95,10 @@ export async function POST(request: NextRequest) {
       data: {
         name: body.name,
         fullName: body.fullName,
-        email: body.email || null,
         phone: body.phone || null,
         address: body.address || null,
         priceAccessId: body.priceAccessId || null,
+        warehouseAccessId: body.warehouseAccessId || null,
       },
       include: {
         deliveryMethods: {
@@ -123,16 +107,12 @@ export async function POST(request: NextRequest) {
           },
         },
         priceAccess: true,
+        warehouseAccess: true,
         user: {
           select: {
             id: true,
-            name: true,
             email: true,
-            phone: true,
-            address: true,
             role: true,
-            priceAccessId: true,
-            warehouseAccessId: true,
             isConfirmed: true,
           },
         },

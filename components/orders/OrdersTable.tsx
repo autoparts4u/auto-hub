@@ -39,15 +39,6 @@ import OrderModal from './OrderModal';
 import OrderDetailsModal from './OrderDetailsModal';
 import OrderPaymentModal from './OrderPaymentModal';
 
-interface UserItem {
-  id: string;
-  name: string;
-  email: string;
-  phone?: string;
-  role: string;
-  priceAccessId?: number;
-}
-
 export default function OrdersTable() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [statuses, setStatuses] = useState<OrderStatus[]>([]);
@@ -140,49 +131,24 @@ export default function OrdersTable() {
       if (searchTerm) params.append('search', searchTerm);
       if (unpaidIssuedFilter) params.append('unpaidIssued', 'true');
 
-      const [ordersRes, statusesRes, clientsRes, usersRes] = await Promise.all([
+      const [ordersRes, statusesRes, clientsRes] = await Promise.all([
         fetch(`/api/orders?${params.toString()}`),
         fetch('/api/order-statuses'),
         fetch('/api/clients'),
-        fetch('/api/users'),
       ]);
 
-      if (ordersRes.ok && statusesRes.ok && clientsRes.ok && usersRes.ok) {
-        const [ordersData, statusesData, clientsData, usersData] = await Promise.all([
+      if (ordersRes.ok && statusesRes.ok && clientsRes.ok) {
+        const [ordersData, statusesData, clientsData] = await Promise.all([
           ordersRes.json(),
           statusesRes.json(),
           clientsRes.json(),
-          usersRes.json(),
         ]);
 
         setOrders(ordersData);
         setStatuses(statusesData);
-
-        // Объединяем клиентов и пользователей
-        const clientUserIds = new Set(clientsData.filter((c: Client) => c.userId).map((c: Client) => c.userId));
-        const usersWithoutClient = usersData.filter((user: UserItem) => !clientUserIds.has(user.id));
         
-        // Преобразуем пользователей в формат клиентов
-        const userAsClients: Client[] = usersWithoutClient.map((user: UserItem) => ({
-          id: `user_${user.id}`,
-          name: user.name || user.email,
-          fullName: user.name || user.email,
-          email: user.email,
-          phone: user.phone || null,
-          address: null,
-          priceAccessId: user.priceAccessId || null,
-          userId: user.id,
-          user: {
-            id: user.id,
-            name: user.name,
-            email: user.email,
-            phone: user.phone || null,
-          },
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        }));
-        
-        setAllClients([...clientsData, ...userAsClients]);
+        // Используем только клиентов, так как теперь каждый User связан с Client
+        setAllClients(clientsData);
       }
     } catch (error) {
       console.error('Error fetching data:', error);

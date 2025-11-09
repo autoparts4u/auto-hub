@@ -6,14 +6,23 @@ export async function GET() {
   const users = await db.user.findMany({
     select: {
       id: true,
-      name: true,
       email: true,
-      phone: true,
-      address: true,
       role: true,
-      priceAccessId: true,
-      warehouseAccessId: true,
       isConfirmed: true,
+      clientId: true,
+      client: {
+        select: {
+          id: true,
+          name: true,
+          fullName: true,
+          phone: true,
+          address: true,
+          priceAccessId: true,
+          warehouseAccessId: true,
+          priceAccess: true,
+          warehouseAccess: true,
+        },
+      },
     },
     orderBy: {
       createdAt: 'desc',

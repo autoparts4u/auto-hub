@@ -29,8 +29,16 @@ const navItems = [
 export function Sidebar() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
-  const [collapsed, setCollapsed] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  
+  // Инициализируем collapsed из localStorage или false по умолчанию
+  const [collapsed, setCollapsed] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('sidebar-collapsed');
+      return saved === 'true';
+    }
+    return false;
+  });
 
   // Detect screen size
   useEffect(() => {
@@ -39,6 +47,11 @@ export function Sidebar() {
     window.addEventListener("resize", checkMobile);
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
+
+  // Сохраняем состояние collapsed в localStorage
+  useEffect(() => {
+    localStorage.setItem('sidebar-collapsed', collapsed.toString());
+  }, [collapsed]);
 
   // Prevent body scroll when menu is open on mobile
   useEffect(() => {
@@ -84,11 +97,11 @@ export function Sidebar() {
       {/* Sidebar */}
       <aside
         className={clsx(
-          "bg-white z-50 border-r transition-all duration-300 flex flex-col",
+          "bg-white z-50 border-r transition-all duration-300 flex flex-col shrink-0",
           // мобилка: фиксированное выезжающее меню
           "fixed inset-y-0 left-0 h-dvh md:sticky md:top-0 md:h-screen",
           open ? "translate-x-0" : "-translate-x-full",
-          collapsed ? "w-16" : "w-64",
+          collapsed ? "w-10 min-w-10 max-w-10" : "w-40 min-w-40 max-w-40",
           "md:translate-x-0 md:static"
         )}
       >

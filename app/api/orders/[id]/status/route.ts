@@ -72,7 +72,6 @@ export async function PUT(
         },
         include: {
           client: true,
-          user: { select: { id: true, name: true, email: true } },
           deliveryMethod: true,
           orderStatus: true,
           orderItems: {
