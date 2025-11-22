@@ -8,6 +8,7 @@ export default async function PartsPage() {
     include: {
       category: true,
       brand: true,
+      fuelType: true,
       autos: {
         include: {
           auto: true,
@@ -95,6 +96,12 @@ export default async function PartsPage() {
     }
   });
 
+  const fuelTypes = await db.fuelType.findMany({
+    orderBy: {
+      name: "asc"
+    }
+  });
+
   const formatted: AutopartWithStock[] = autoparts.map((part) => {
     const analoguesFromA = part.analoguesA.map((a) => a.partB);
     const analoguesFromB = part.analoguesB.map((a) => a.partA);
@@ -111,6 +118,7 @@ export default async function PartsPage() {
       year_to: partWithYears.year_to,
       category: partWithYears.category,
       brand: partWithYears.brand,
+      fuelType: partWithYears.fuelType,
       autos: partWithYears.autos.map((a) => a.auto),
       engineVolumes: partWithYears.engineVolumes.map((ev) => ev.engineVolume),
       textForSearch: partWithYears.textForSearch,
@@ -143,6 +151,7 @@ export default async function PartsPage() {
       engineVolumes={engineVolumes}
       warehouses={warehouses}
       textsForSearch={textsForSearch}
+      fuelTypes={fuelTypes}
     />
   );
 }

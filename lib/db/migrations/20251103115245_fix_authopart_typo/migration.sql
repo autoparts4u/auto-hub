@@ -10,3 +10,5 @@ ALTER TABLE "AutopartPrices" RENAME COLUMN "authopart_id" TO "autopart_id";
 
 
 
+
+

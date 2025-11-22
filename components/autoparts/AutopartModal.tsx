@@ -22,6 +22,7 @@ import {
   Brands,
   Categories,
   EngineVolume,
+  FuelType,
   TextForAuthopartsSearch,
   Warehouses,
 } from "@prisma/client";
@@ -65,6 +66,9 @@ export const AutopartModal = forwardRef<AutopartModalRef, AutopartModalProps>(
   const [textForSearchId, setTextForSearchId] = useState<string>(
     part?.textForSearch?.id.toString() ?? ""
   );
+  const [fuelTypeId, setFuelTypeId] = useState<string>(
+    part?.fuelType?.id.toString() ?? ""
+  );
   const [brands, setBrands] = useState<Brands[]>([]);
   const [categories, setCategories] = useState<Categories[]>([]);
   const [autos, setAutos] = useState<Auto[]>([]);
@@ -72,6 +76,7 @@ export const AutopartModal = forwardRef<AutopartModalRef, AutopartModalProps>(
   const [textsForSearch, setTextsForSearch] = useState<
     TextForAuthopartsSearch[]
   >([]);
+  const [fuelTypes, setFuelTypes] = useState<FuelType[]>([]);
   const [warehouses, setWarehouses] = useState<Warehouses[]>([]);
   const [stockByWarehouse, setStockByWarehouse] = useState<
     Record<string, number>
@@ -112,6 +117,7 @@ export const AutopartModal = forwardRef<AutopartModalRef, AutopartModalProps>(
         autosRes,
         engineVolumesRes,
         textsForSearchRes,
+        fuelTypesRes,
       ] = await Promise.all([
         fetch("/api/brands"),
         fetch("/api/categories"),
@@ -119,6 +125,7 @@ export const AutopartModal = forwardRef<AutopartModalRef, AutopartModalProps>(
         fetch("/api/autos"),
         fetch("/api/engine-volumes"),
         fetch("/api/texts-for-search"),
+        fetch("/api/fuel-types"),
       ]);
       const [
         brandsData,
@@ -127,6 +134,7 @@ export const AutopartModal = forwardRef<AutopartModalRef, AutopartModalProps>(
         autosData,
         engineVolumesData,
         textsForSearchData,
+        fuelTypesData,
       ] = await Promise.all([
         brandsRes.json(),
         categoriesRes.json(),
@@ -134,6 +142,7 @@ export const AutopartModal = forwardRef<AutopartModalRef, AutopartModalProps>(
         autosRes.json(),
         engineVolumesRes.json(),
         textsForSearchRes.json(),
+        fuelTypesRes.json(),
       ]);
       setBrands(brandsData);
       setCategories(categoriesData);
@@ -141,6 +150,7 @@ export const AutopartModal = forwardRef<AutopartModalRef, AutopartModalProps>(
       setAutos(autosData);
       setEngineVolumes(engineVolumesData);
       setTextsForSearch(textsForSearchData);
+      setFuelTypes(fuelTypesData);
 
       if (part) {
         const initialStock: Record<string, number> = {};
@@ -218,6 +228,7 @@ export const AutopartModal = forwardRef<AutopartModalRef, AutopartModalProps>(
       yearFrom: yearFrom ? Number(yearFrom) : undefined,
       yearTo: yearTo ? Number(yearTo) : undefined,
       textForSearchId: textForSearchId ? Number(textForSearchId) : undefined,
+      fuelTypeId: fuelTypeId ? Number(fuelTypeId) : undefined,
       stock,
       analogueIds,
     };
@@ -582,6 +593,48 @@ export const AutopartModal = forwardRef<AutopartModalRef, AutopartModalProps>(
                       }}
                     >
                       {t.text}
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              </CommandList>
+            </Command>
+          </PopoverContent>
+        </Popover>
+      </div>
+      <div className="space-y-1">
+        <label className="text-sm font-medium">Вид топлива</label>
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              className="w-full justify-between"
+            >
+              {fuelTypeId
+                ? fuelTypes.find((ft) => ft.id.toString() === fuelTypeId)?.name
+                : "Выберите вид топлива"}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-[300px] p-0">
+            <Command>
+              <CommandInput placeholder="Поиск вида топлива..." />
+              <CommandList>
+                <CommandEmpty>Вид топлива не найден</CommandEmpty>
+                <CommandGroup>
+                  <CommandItem
+                    onSelect={() => {
+                      setFuelTypeId("");
+                    }}
+                  >
+                    Не выбрано
+                  </CommandItem>
+                  {fuelTypes.map((ft) => (
+                    <CommandItem
+                      key={ft.id}
+                      onSelect={() => {
+                        setFuelTypeId(ft.id.toString());
+                      }}
+                    >
+                      {ft.name}
                     </CommandItem>
                   ))}
                 </CommandGroup>

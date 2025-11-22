@@ -209,6 +209,7 @@ model Autoparts {
     brand_id           Int?
     category_id        Int?
     text_for_search_id Int?
+    fuel_type_id       Int?
     maxNumberShown     Int    @default(5)
     year_from          Int?
     year_to            Int?
@@ -216,6 +217,7 @@ model Autoparts {
     brand         Brands?                  @relation(fields: [brand_id], references: [id])
     category      Categories?              @relation(fields: [category_id], references: [id])
     textForSearch TextForAuthopartsSearch? @relation(fields: [text_for_search_id], references: [id])
+    fuelType      FuelType?               @relation(fields: [fuel_type_id], references: [id])
     prices        AutopartPrices[]
     warehouses    AutopartsWarehouses[]
     orderItems    OrderItems[]
@@ -327,5 +329,11 @@ model Analogues {
 model TextForAuthopartsSearch {
     id    Int         @id @default(autoincrement())
     text  String
+    parts Autoparts[]
+}
+
+model FuelType {
+    id    Int         @id @default(autoincrement())
+    name  String      @unique
     parts Autoparts[]
 }

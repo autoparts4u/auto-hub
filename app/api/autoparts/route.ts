@@ -46,6 +46,7 @@ export async function POST(req: Request) {
       yearFrom,
       yearTo,
       textForSearchId,
+      fuelTypeId,
       stock,
       analogueIds,
     } = await req.json();
@@ -60,6 +61,7 @@ export async function POST(req: Request) {
         year_from: yearFrom || null,
         year_to: yearTo || null,
         text_for_search_id: textForSearchId || null,
+        fuel_type_id: fuelTypeId || null,
         warehouses: {
           create: stock.map((s: { warehouseId: number; quantity: number }) => ({
             warehouseId: s.warehouseId,

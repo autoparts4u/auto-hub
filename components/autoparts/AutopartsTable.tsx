@@ -49,7 +49,7 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { PriceEditModal } from "./PriceEditModal";
-import { Auto, Categories, TextForAuthopartsSearch, EngineVolume } from "@prisma/client";
+import { Auto, Categories, TextForAuthopartsSearch, EngineVolume, FuelType } from "@prisma/client";
 import ImportAutopartsButton from "./ImportAutopartsButton";
 
 interface Props {
@@ -60,6 +60,7 @@ interface Props {
   autos: Auto[];
   engineVolumes: EngineVolume[];
   textsForSearch: TextForAuthopartsSearch[];
+  fuelTypes?: FuelType[];
   onlyView?: boolean;
   priceAccessId?: number | null;
   warehouseAccessId?: number | null;
@@ -81,6 +82,7 @@ export function AutopartsTable({
   autos,
   engineVolumes,
   textsForSearch,
+  fuelTypes = [],
   onlyView,
   priceAccessId,
   warehouseAccessId,
@@ -97,6 +99,7 @@ export function AutopartsTable({
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [selectedAutos, setSelectedAutos] = useState<string[]>([]);
   const [selectedEngineVolumes, setSelectedEngineVolumes] = useState<string[]>([]);
+  const [selectedFuelTypes, setSelectedFuelTypes] = useState<string[]>([]);
   const [filterYear, setFilterYear] = useState<string>("");
   const [selectedTextsForSearch, setSelectedTextsForSearch] = useState<
     string[]
@@ -281,6 +284,10 @@ export function AutopartsTable({
         selectedEngineVolumes.length === 0 ||
         p.engineVolumes.some((ev) => selectedEngineVolumes.includes(ev.name));
 
+      const matchesFuelType =
+        selectedFuelTypes.length === 0 ||
+        (p.fuelType && selectedFuelTypes.includes(p.fuelType.name));
+
       const matchesYear = 
         !filterYear ||
         (
@@ -302,6 +309,7 @@ export function AutopartsTable({
         matchesCategory &&
         matchesAuto &&
         matchesEngineVolume &&
+        matchesFuelType &&
         matchesYear &&
         matchesTextsForSearch &&
         isInStock
@@ -349,6 +357,7 @@ export function AutopartsTable({
     setSelectedCategories([]);
     setSelectedAutos([]);
     setSelectedEngineVolumes([]);
+    setSelectedFuelTypes([]);
     setFilterYear("");
     setSelectedTextsForSearch([]);
     setCurrentPage(1);
@@ -419,6 +428,7 @@ export function AutopartsTable({
     if (selectedCategories.length > 0) count++;
     if (selectedAutos.length > 0) count++;
     if (selectedEngineVolumes.length > 0) count++;
+    if (selectedFuelTypes.length > 0) count++;
     if (filterYear) count++;
     if (selectedTextsForSearch.length > 0) count++;
     if (!onlyInStock) count++; // Считаем если фильтр "только в наличии" выключен
@@ -495,12 +505,23 @@ export function AutopartsTable({
           <Popover>
             <PopoverTrigger asChild>
               <Button variant="outline" className="w-full sm:w-[240px] justify-between">
-                {selectedAutos.length === 0 && selectedEngineVolumes.length === 0 && !filterYear
+                {selectedAutos.length === 0 && selectedEngineVolumes.length === 0 && selectedFuelTypes.length === 0 && !filterYear
                   ? "Все"
-                  : `Фильтры (${selectedAutos.length + selectedEngineVolumes.length + (filterYear ? 1 : 0)})`}
+                  : `Фильтры (${selectedAutos.length + selectedEngineVolumes.length + selectedFuelTypes.length + (filterYear ? 1 : 0)})`}
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-[320px] p-4">
+            <PopoverContent 
+              className="w-[320px] p-4 overflow-y-auto"
+              align="start"
+              side="bottom"
+              sideOffset={8}
+              avoidCollisions={true}
+              collisionPadding={20}
+              style={{ 
+                maxHeight: 'min(600px, calc(100vh - 120px))',
+                maxWidth: 'calc(100vw - 40px)'
+              }}
+            >
               <div className="space-y-4">
                 {/* Марки авто */}
                 <div className="space-y-2">
@@ -553,6 +574,61 @@ export function AutopartsTable({
                     </div>
                   )}
                 </div>
+
+                {/* Виды топлива */}
+                {fuelTypes.length > 0 && (
+                  <div className="space-y-2">
+                    <Label className="text-sm font-semibold">Виды топлива</Label>
+                    <Command className="border rounded-md">
+                      <CommandInput placeholder="Поиск вида топлива..." />
+                      <CommandList className="max-h-[150px]">
+                        <CommandEmpty>Вид топлива не найден</CommandEmpty>
+                        <CommandGroup>
+                          {fuelTypes.map((ft) => {
+                            const fuelTypeName = ft.name;
+                            if (!fuelTypeName) return null;
+                            const isSelected = selectedFuelTypes.includes(fuelTypeName);
+                            return (
+                              <CommandItem
+                                key={ft.id}
+                                onSelect={() => {
+                                  const newFuelTypes = isSelected
+                                    ? selectedFuelTypes.filter((name) => name !== fuelTypeName)
+                                    : [...selectedFuelTypes, fuelTypeName];
+                                  setSelectedFuelTypes(newFuelTypes);
+                                  setCurrentPage(1);
+                                }}
+                              >
+                                <div className="flex items-center gap-2">
+                                  <Check
+                                    className={`h-4 w-4 ${
+                                      isSelected ? "opacity-100" : "opacity-0"
+                                    }`}
+                                  />
+                                  {fuelTypeName}
+                                </div>
+                              </CommandItem>
+                            );
+                          })}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                    {selectedFuelTypes.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {selectedFuelTypes.map((fuelType) => (
+                          <span
+                            key={fuelType}
+                            className="inline-flex items-center gap-1 bg-primary/10 text-primary text-xs px-2 py-0.5 rounded-md cursor-pointer hover:bg-primary/20"
+                            onClick={() => setSelectedFuelTypes(selectedFuelTypes.filter((ft) => ft !== fuelType))}
+                          >
+                            {fuelType}
+                            <span className="text-xs">×</span>
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* Объемы двигателя */}
                 <div className="space-y-2">
@@ -951,7 +1027,18 @@ export function AutopartsTable({
                 )}
                 {!onlyView && (
                   <td className="px-2 py-4 text-xs border-r">
-                    {p.engineVolumes.map((ev) => ev.name).join(", ") || "-"}
+                    {(() => {
+                      const volumes = p.engineVolumes.map((ev) => ev.name).join(", ");
+                      const fuelType = p.fuelType?.name;
+                      if (volumes && fuelType) {
+                        return `${volumes} / ${fuelType}`;
+                      } else if (volumes) {
+                        return volumes;
+                      } else if (fuelType) {
+                        return `- / ${fuelType}`;
+                      }
+                      return "-";
+                    })()}
                   </td>
                 )}
                 {!onlyView && (
@@ -1200,11 +1287,35 @@ export function AutopartsTable({
                     </div>
                   </div>
                 )}
-                {!onlyView && p.engineVolumes.length > 0 && (
+                {!onlyView && (p.engineVolumes.length > 0 || p.fuelType) && (
                   <div className="space-y-1">
                     <span className="text-muted-foreground font-medium">Объем</span>
-                    <div className="font-semibold truncate" title={p.engineVolumes.map((ev) => ev.name).join(", ")}>
-                      {p.engineVolumes.map((ev) => ev.name).join(", ")}
+                    <div className="font-semibold truncate" title={
+                      (() => {
+                        const volumes = p.engineVolumes.map((ev) => ev.name).join(", ");
+                        const fuelType = p.fuelType?.name;
+                        if (volumes && fuelType) {
+                          return `${volumes} / ${fuelType}`;
+                        } else if (volumes) {
+                          return volumes;
+                        } else if (fuelType) {
+                          return `- / ${fuelType}`;
+                        }
+                        return "-";
+                      })()
+                    }>
+                      {(() => {
+                        const volumes = p.engineVolumes.map((ev) => ev.name).join(", ");
+                        const fuelType = p.fuelType?.name;
+                        if (volumes && fuelType) {
+                          return `${volumes} / ${fuelType}`;
+                        } else if (volumes) {
+                          return volumes;
+                        } else if (fuelType) {
+                          return `- / ${fuelType}`;
+                        }
+                        return "-";
+                      })()}
                     </div>
                   </div>
                 )}
@@ -1464,11 +1575,11 @@ export function AutopartsTable({
           setCreating(false);
         }}
       >
-        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogTitle>
-            {creating ? "Добавить деталь" : "Редактировать деталь"}
-          </DialogTitle>
-          <div className="absolute top-4 right-12">
+        <DialogContent className="sm:max-w-2xl max-h-[90vh] p-0 flex flex-col overflow-hidden">
+          <div className="sticky top-0 z-10 bg-background border-b px-6 py-4 flex-shrink-0 flex items-center justify-between">
+            <DialogTitle>
+              {creating ? "Добавить деталь" : "Редактировать деталь"}
+            </DialogTitle>
             <Button 
               onClick={() => autopartModalRef.current?.handleSubmit()} 
               disabled={submitting}
@@ -1477,17 +1588,19 @@ export function AutopartsTable({
               {submitting ? "Сохранение..." : creating ? "Добавить" : "Сохранить"}
             </Button>
           </div>
-          <AutopartModal
-            ref={autopartModalRef}
-            part={selected}
-            onClose={() => {
-              setSelected(null);
-              setCreating(false);
-            }}
-            onSubmit={handleSubmitForm}
-            submitting={submitting}
-            isNew={creating}
-          />
+          <div className="overflow-y-auto flex-1 px-6 py-4">
+            <AutopartModal
+              ref={autopartModalRef}
+              part={selected}
+              onClose={() => {
+                setSelected(null);
+                setCreating(false);
+              }}
+              onSubmit={handleSubmitForm}
+              submitting={submitting}
+              isNew={creating}
+            />
+          </div>
         </DialogContent>
       </Dialog>
 
@@ -1544,6 +1657,7 @@ export function AutopartsTable({
         <DialogContent 
           key={String(showFiltersModal)}
           className="max-w-[95vw] w-full max-h-[90vh] p-0 flex flex-col rounded-2xl overflow-hidden"
+          style={{ height: '90vh', maxHeight: '90vh' }}
           onOpenAutoFocus={(e) => {
             e.preventDefault();
           }}
@@ -1578,7 +1692,7 @@ export function AutopartsTable({
                 el.scrollTop = 0;
               }
             }}
-            className="overflow-y-auto flex-1"
+            className="overflow-y-auto flex-1 min-h-0"
           >
           <div className="px-6 py-4 space-y-4">
             {/* Поиск */}
@@ -1646,13 +1760,123 @@ export function AutopartsTable({
                         <X className="w-3 h-3" />
                       </span>
                     ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Виды топлива */}
+                {fuelTypes.length > 0 && (
+                  <div className="space-y-2">
+                    <Label className="text-sm font-semibold">Виды топлива</Label>
+                    <Command className="border rounded-md">
+                      <CommandInput placeholder="Поиск вида топлива..." />
+                      <CommandList className="max-h-[150px]">
+                        <CommandEmpty>Вид топлива не найден</CommandEmpty>
+                        <CommandGroup>
+                          {fuelTypes.map((ft) => {
+                            const fuelTypeName = ft.name;
+                            if (!fuelTypeName) return null;
+                            const isSelected = selectedFuelTypes.includes(fuelTypeName);
+                            return (
+                              <CommandItem
+                                key={ft.id}
+                                onSelect={() => {
+                                  const newFuelTypes = isSelected
+                                    ? selectedFuelTypes.filter((name) => name !== fuelTypeName)
+                                    : [...selectedFuelTypes, fuelTypeName];
+                                  setSelectedFuelTypes(newFuelTypes);
+                                  setCurrentPage(1);
+                                }}
+                              >
+                                <div className="flex items-center gap-2">
+                                  <Check
+                                    className={`h-4 w-4 ${
+                                      isSelected ? "opacity-100" : "opacity-0"
+                                    }`}
+                                  />
+                                  {fuelTypeName}
+                                </div>
+                              </CommandItem>
+                            );
+                          })}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                    {selectedFuelTypes.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {selectedFuelTypes.map((fuelType) => (
+                          <span
+                            key={fuelType}
+                            className="inline-flex items-center gap-1 bg-primary/10 text-primary text-xs px-2 py-0.5 rounded-md cursor-pointer hover:bg-primary/20"
+                            onClick={() => setSelectedFuelTypes(selectedFuelTypes.filter((ft) => ft !== fuelType))}
+                          >
+                            {fuelType}
+                            <span className="text-xs">×</span>
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
-              </div>
 
-              {/* Объемы двигателя */}
-              <div className="space-y-2">
-                <Label className="text-xs text-muted-foreground">Объемы двигателя</Label>
+                {/* Виды топлива */}
+                {fuelTypes.length > 0 && (
+                  <div className="space-y-2">
+                    <Label className="text-xs text-muted-foreground">Виды топлива</Label>
+                    <Command className="border rounded-md">
+                      <CommandInput placeholder="Поиск вида топлива..." />
+                      <CommandList className="max-h-[150px]">
+                        <CommandEmpty>Вид топлива не найден</CommandEmpty>
+                        <CommandGroup>
+                          {fuelTypes.map((ft) => {
+                            const fuelTypeName = ft.name;
+                            if (!fuelTypeName) return null;
+                            const isSelected = selectedFuelTypes.includes(fuelTypeName);
+                            return (
+                              <CommandItem
+                                key={ft.id}
+                                onSelect={() => {
+                                  const newFuelTypes = isSelected
+                                    ? selectedFuelTypes.filter((name) => name !== fuelTypeName)
+                                    : [...selectedFuelTypes, fuelTypeName];
+                                  setSelectedFuelTypes(newFuelTypes);
+                                  setCurrentPage(1);
+                                }}
+                              >
+                                <div className="flex items-center gap-2">
+                                  <Check
+                                    className={`h-4 w-4 ${
+                                      isSelected ? "opacity-100" : "opacity-0"
+                                    }`}
+                                  />
+                                  {fuelTypeName}
+                                </div>
+                              </CommandItem>
+                            );
+                          })}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                    {selectedFuelTypes.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {selectedFuelTypes.map((fuelType) => (
+                          <span
+                            key={fuelType}
+                            className="inline-flex items-center gap-1 bg-primary/10 text-primary text-xs px-2 py-0.5 rounded-md cursor-pointer hover:bg-primary/20"
+                            onClick={() => setSelectedFuelTypes(selectedFuelTypes.filter((ft) => ft !== fuelType))}
+                          >
+                            {fuelType}
+                            <span className="text-xs">×</span>
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Объемы двигателя */}
+                <div className="space-y-2">
+                  <Label className="text-xs text-muted-foreground">Объемы двигателя</Label>
                 <Command className="border rounded-md">
                   <CommandInput placeholder="Поиск объема..." />
                   <CommandList className="max-h-[150px]">

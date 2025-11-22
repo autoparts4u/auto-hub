@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { Brands } from "@prisma/client";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -21,6 +21,11 @@ interface BrandsPanelProps {
 
 export function BrandsPanel({ brands }: BrandsPanelProps) {
   const [localBrands, setLocalBrands] = useState(brands);
+  
+  // Sync props to state after hydration to prevent hydration mismatches
+  useEffect(() => {
+    setLocalBrands(brands);
+  }, [brands]);
   const [newName, setNewName] = useState("");
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editingValue, setEditingValue] = useState("");

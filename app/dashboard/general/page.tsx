@@ -10,6 +10,7 @@ import { EngineVolumesPanel } from "@/components/general/EngineVolumesPanel";
 import { TextsForSearchPanel } from "@/components/general/TextsForSearchPanel";
 import { OrderStatusesPanel } from "@/components/general/OrderStatusesPanel";
 import { DeliveryMethodsPanel } from "@/components/general/DeliveryMethodsPanel";
+import { FuelTypesPanel } from "@/components/general/FuelTypesPanel";
 
 export default async function GeneralPage() {
   const [
@@ -21,17 +22,19 @@ export default async function GeneralPage() {
     engineVolumes,
     textsForSearch,
     orderStatuses,
-    deliveryMethods
+    deliveryMethods,
+    fuelTypes
   ] = await Promise.all([
-    db.brands.findMany(),
-    db.categories.findMany(),
-    db.warehouses.findMany(),
-    db.priceTypes.findMany(),
-    db.auto.findMany(),
-    db.engineVolume.findMany(),
-    db.textForAuthopartsSearch.findMany(),
+    db.brands.findMany({ orderBy: { name: 'asc' } }),
+    db.categories.findMany({ orderBy: { name: 'asc' } }),
+    db.warehouses.findMany({ orderBy: { name: 'asc' } }),
+    db.priceTypes.findMany({ orderBy: { name: 'asc' } }),
+    db.auto.findMany({ orderBy: { name: 'asc' } }),
+    db.engineVolume.findMany({ orderBy: { name: 'asc' } }),
+    db.textForAuthopartsSearch.findMany({ orderBy: { text: 'asc' } }),
     db.orderStatuses.findMany({ orderBy: { id: 'asc' } }),
-    db.deliveryMethods.findMany({ orderBy: { id: 'asc' } })
+    db.deliveryMethods.findMany({ orderBy: { id: 'asc' } }),
+    db.fuelType.findMany({ orderBy: { name: 'asc' } })
   ]);
 
   return (
@@ -50,6 +53,7 @@ export default async function GeneralPage() {
               <TabsTrigger value="price-types" className="whitespace-nowrap">типЦ</TabsTrigger>
               <TabsTrigger value="order-statuses" className="whitespace-nowrap">Статусы заказов</TabsTrigger>
               <TabsTrigger value="delivery-methods" className="whitespace-nowrap">Методы доставки</TabsTrigger>
+              <TabsTrigger value="fuel-types" className="whitespace-nowrap">Виды топлива</TabsTrigger>
             </TabsList>
           </div>
         </div>
@@ -80,6 +84,9 @@ export default async function GeneralPage() {
         </TabsContent>
         <TabsContent value="delivery-methods">
           <DeliveryMethodsPanel deliveryMethods={deliveryMethods} />
+        </TabsContent>
+        <TabsContent value="fuel-types">
+          <FuelTypesPanel fuelTypes={fuelTypes} />
         </TabsContent>
       </Tabs>
     </div>

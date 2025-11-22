@@ -1,4 +1,4 @@
-import { Auto, Autoparts, Brands, Categories, EngineVolume, TextForAuthopartsSearch } from "@prisma/client";
+import { Auto, Autoparts, Brands, Categories, EngineVolume, FuelType, TextForAuthopartsSearch } from "@prisma/client";
 
 export type WarehouseStock = {
   warehouseId: number;
@@ -12,6 +12,7 @@ export type AutopartWithStock = Pick<
 > & {
   category: Categories | null;
   brand: Brands | null;
+  fuelType: FuelType | null;
   autos: Auto[];
   engineVolumes: EngineVolume[];
   textForSearch: TextForAuthopartsSearch | null;
@@ -44,6 +45,7 @@ export type AutopartFormData = {
   yearFrom?: number;
   yearTo?: number;
   textForSearchId?: number;
+  fuelTypeId?: number;
   stock: {
     warehouseId: number;
     quantity: number;

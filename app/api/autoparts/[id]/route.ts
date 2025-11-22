@@ -37,6 +37,7 @@ export async function PATCH(
       yearFrom,
       yearTo,
       textForSearchId,
+      fuelTypeId,
       stock,
       analogueIds,
     } = await req.json();
@@ -54,6 +55,7 @@ export async function PATCH(
         year_from: yearFrom || null,
         year_to: yearTo || null,
         text_for_search_id: textForSearchId || null,
+        fuel_type_id: fuelTypeId || null,
         warehouses: {
           deleteMany: {},
           create: stock.map((s: { warehouseId: number; quantity: number }) => ({
