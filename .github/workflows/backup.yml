@@ -1,0 +1,76 @@
+name: Neon Database Backup
+
+on:
+  schedule:
+    - cron: '0 */6 * * *' # каждые 6 часов
+  workflow_dispatch:
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install PostgreSQL client and rclone
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y wget ca-certificates gnupg lsb-release unzip
+          # Remove default postgresql-client if installed
+          sudo apt-get remove -y postgresql-client postgresql-client-16 2>/dev/null || true
+          # Install PostgreSQL 17 client
+          wget --quiet -O - https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo gpg --dearmor -o /usr/share/keyrings/postgresql-keyring.gpg
+          sudo sh -c 'echo "deb [signed-by=/usr/share/keyrings/postgresql-keyring.gpg] http://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" > /etc/apt/sources.list.d/pgdg.list'
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client-17
+          sudo ln -sf /usr/lib/postgresql/17/bin/pg_dump /usr/local/bin/pg_dump
+          curl https://rclone.org/install.sh | sudo bash
+          pg_dump --version
+          which pg_dump
+          rclone version
+
+      - name: Configure rclone with OAuth token
+        env:
+          # ВАЖНО: НЕ используйте имя RCLONE_CONFIG - это зарезервированное имя для пути к файлу!
+          RCLONE_CONFIG_CONTENT: ${{ secrets.RCLONE_CONFIG }}
+        run: |
+          mkdir -p ~/.config/rclone
+          # Используем printf для корректной записи многострочного текста
+          printf '%s\n' "${RCLONE_CONFIG_CONTENT}" > ~/.config/rclone/rclone.conf
+          chmod 600 ~/.config/rclone/rclone.conf
+          
+          # Отладка: показать доступные remotes
+          echo "Available remotes:"
+          rclone listremotes
+          
+          # Отладка: показать структуру конфига (без секретных данных)
+          echo "Config sections:"
+          grep '^\[' ~/.config/rclone/rclone.conf || echo "No sections found!"
+
+      - name: Create backup file with date
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          BACKUP_NAME="backup_$(date +'%Y-%m-%d_%H-%M-%S').sql"
+          echo "Backup name: $BACKUP_NAME"
+          CLEAN_DB_URL=$(echo "$DATABASE_URL" | sed 's/?.*$//')
+          /usr/lib/postgresql/17/bin/pg_dump "$CLEAN_DB_URL" > "$BACKUP_NAME"
+          echo "BACKUP_NAME=$BACKUP_NAME" >> $GITHUB_ENV
+          ls -lh "$BACKUP_NAME"
+
+      - name: Upload backup to Google Drive via rclone
+        run: |
+          # Получаем имя первого доступного remote из конфига
+          REMOTE_NAME=$(rclone listremotes | head -1 | tr -d ':')
+          
+          if [ -z "$REMOTE_NAME" ]; then
+            echo "ERROR: No remotes found in rclone config!"
+            exit 1
+          fi
+          
+          echo "Using remote: $REMOTE_NAME"
+          echo "Uploading $BACKUP_NAME to Google Drive..."
+          
+          rclone copy "$BACKUP_NAME" "${REMOTE_NAME}:/db-backups" \
+            --drive-use-trash=false \
+            --verbose \
+            --progress
+          
+          echo "Backup uploaded successfully: $BACKUP_NAME"
