@@ -105,7 +105,7 @@ export function AutopartsTable({
     string[]
   >([]);
   const [onlyInStock, setOnlyInStock] = useState<boolean | "indeterminate">(
-    true
+    false
   );
   const [sortKey, setSortKey] = useState<SortKey>("description");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
