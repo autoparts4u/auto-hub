@@ -431,9 +431,23 @@ export function AutopartsTable({
     if (selectedFuelTypes.length > 0) count++;
     if (filterYear) count++;
     if (selectedTextsForSearch.length > 0) count++;
-    if (!onlyInStock) count++; // Считаем если фильтр "только в наличии" выключен
+    if (onlyInStock) count++; // Считаем если фильтр "только в наличии" выключен
     return count;
   };
+
+  const hasNoAutoParamsFilters =
+    selectedAutos.length === 0 &&
+    selectedEngineVolumes.length === 0 &&
+    selectedFuelTypes.length === 0 &&
+    !filterYear;
+  const autoParamsFiltersCount =
+    selectedAutos.length +
+    selectedEngineVolumes.length +
+    selectedFuelTypes.length +
+    (filterYear ? 1 : 0);
+
+  const getFilterHighlightClass = (hasActive: boolean) =>
+    hasActive ? "bg-green-200" : "bg-blue-200";
 
   const SortHeader = ({
     label,
@@ -504,10 +518,11 @@ export function AutopartsTable({
           <Label>Параметры авто</Label>
           <Popover>
             <PopoverTrigger asChild>
-              <Button variant="outline" className="w-full sm:w-[240px] justify-between">
-                {selectedAutos.length === 0 && selectedEngineVolumes.length === 0 && selectedFuelTypes.length === 0 && !filterYear
-                  ? "Все"
-                  : `Фильтры (${selectedAutos.length + selectedEngineVolumes.length + selectedFuelTypes.length + (filterYear ? 1 : 0)})`}
+              <Button
+                variant="outline"
+                className={`w-full sm:w-[240px] justify-between ${getFilterHighlightClass(!hasNoAutoParamsFilters)}`}
+              >
+                {hasNoAutoParamsFilters ? "Все" : `Фильтры (${autoParamsFiltersCount})`}
               </Button>
             </PopoverTrigger>
             <PopoverContent 
@@ -707,7 +722,7 @@ export function AutopartsTable({
           <Label>Группы</Label>
           <Popover>
             <PopoverTrigger asChild>
-              <Button variant="outline" className="w-full sm:w-[240px] justify-between">
+              <Button variant="outline" className={`w-full sm:w-[240px] justify-between ${getFilterHighlightClass(selectedCategories.length > 0)}`}>
                 {selectedCategories.length === 0
                   ? "Все"
                   : `${selectedCategories.length} выбрано`}
@@ -754,7 +769,7 @@ export function AutopartsTable({
           <Label>Бренды</Label>
           <Popover>
             <PopoverTrigger asChild>
-              <Button variant="outline" className="w-full sm:w-[240px] justify-between">
+              <Button variant="outline" className={`w-full sm:w-[240px] justify-between ${getFilterHighlightClass(selectedBrands.length > 0)}`}>
                 {selectedBrands.length === 0
                   ? "Все"
                   : `${selectedBrands.length} выбрано`}
@@ -800,7 +815,7 @@ export function AutopartsTable({
             <Label>Базы</Label>
             <Popover>
               <PopoverTrigger asChild>
-                <Button variant="outline" className="w-full sm:w-[240px] justify-between">
+                <Button variant="outline" className={`w-full sm:w-[240px] justify-between ${getFilterHighlightClass(selectedWarehouses.length > 0)}`}>
                   {selectedWarehouses.length === 0
                     ? "Все"
                     : `${selectedWarehouses.length} выбрано`}
@@ -847,7 +862,7 @@ export function AutopartsTable({
             <Label>Текст для поиска</Label>
             <Popover>
               <PopoverTrigger asChild>
-                <Button variant="outline" className="w-full sm:w-[240px] justify-between">
+                <Button variant="outline" className={`w-full sm:w-[240px] justify-between ${getFilterHighlightClass(selectedTextsForSearch.length > 0)}`}>
                   {selectedTextsForSearch.length === 0
                     ? "Все"
                     : `${selectedTextsForSearch.length} выбрано`}
@@ -1001,7 +1016,7 @@ export function AutopartsTable({
               <tr
                 key={p.id}
                 className={`border-b hover:bg-accent transition-colors ${
-                  index % 2 === 0 ? 'bg-background' : 'bg-muted/50'
+                  index % 2 === 0 ? 'bg-background' : 'bg-muted/80'
                 }`}
               >
                 <td className="px-3 py-4 text-sm font-mono font-medium border-r">
