@@ -486,7 +486,7 @@ export function AutopartsTable({
       )}
 
       {/* Панель фильтров */}
-      <div className={`md:sticky z-10 bg-background border-b mb-4 transition-all duration-300 ${!onlyView ? 'mt-4 md:mt-0 md:top-[40px]' : 'md:top-0'} ${showFilters ? 'p-4' : 'p-0 h-0 overflow-hidden border-0'}`}>
+      <div className={`md:sticky z-10 bg-[#FFD966] border-b mb-4 transition-all duration-300 ${!onlyView ? 'mt-4 md:mt-0 md:top-[40px]' : 'md:top-0'} ${showFilters ? 'p-4' : 'p-0 h-0 overflow-hidden border-0'}`}>
         <div className="flex items-center justify-between mb-3 pb-2 border-b md:border-0">
           <h3 className="text-base md:text-sm font-semibold flex items-center gap-2 text-foreground">
             <Filter className="w-5 h-5 md:w-4 md:h-4 text-primary" />
@@ -512,7 +512,7 @@ export function AutopartsTable({
           placeholder="Поиск по описанию или артикулу"
           value={search}
           onChange={(e) => handleSearchChange(e.target.value)}
-          className="w-full sm:max-w-xs"
+          className="w-full sm:max-w-xs bg-background"
         />
         <div className="space-y-1 w-full sm:w-auto">
           <Label>Параметры авто</Label>
@@ -913,7 +913,7 @@ export function AutopartsTable({
           <Button onClick={() => resetFilters()} className="flex-shrink-0" title="Сбросить фильтры">
             <RotateCcw className="w-4 h-4" />
           </Button>
-          <Label className="hover:bg-accent/50 flex items-center gap-3 rounded-lg border px-3 py-2 flex-1 sm:flex-initial has-[[aria-checked=true]]:border-blue-600 has-[[aria-checked=true]]:bg-blue-50 dark:has-[[aria-checked=true]]:border-blue-900 dark:has-[[aria-checked=true]]:bg-blue-950">
+          <Label className="hover:bg-accent/50 flex items-center gap-3 rounded-lg border px-3 py-2 flex-1 sm:flex-initial bg-background has-[[aria-checked=true]]:border-blue-600 has-[[aria-checked=true]]:bg-blue-50 dark:has-[[aria-checked=true]]:border-blue-900 dark:has-[[aria-checked=true]]:bg-blue-950">
           <Checkbox
             id="inStock"
             checked={onlyInStock}
