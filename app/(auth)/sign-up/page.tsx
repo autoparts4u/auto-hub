@@ -62,16 +62,13 @@ const Page = async () => {
             required
             autoComplete="new-password"
           />
-          <Button className="w-full" type="submit">
+          <Button className="w-full bg-green-500 hover:bg-green-400 cursor-pointer" type="submit">
             Зарегистрироваться
           </Button>
         </form>
-
-        <div className="text-center">
-          <Button asChild variant="link">
-            <Link href="/sign-in">Уже есть аккаунт? Войти</Link>
-          </Button>
-        </div>
+        <Button asChild className="w-full bg-blue-500 text-white hover:bg-blue-400 hover:text-white cursor-pointer" variant="outline">
+          <Link href="/sign-in">Уже есть аккаунт? Войти</Link>
+        </Button>
       </div>
     </div>
   );
