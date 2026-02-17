@@ -13,8 +13,12 @@ const adapter = PrismaAdapter(db);
 
 export const authOptions: NextAuthConfig = {
   adapter,
+  debug: process.env.NODE_ENV === 'development',
   providers: [
-    Google,
+    Google({
+      clientId: process.env.AUTH_GOOGLE_ID!,
+      clientSecret: process.env.AUTH_GOOGLE_SECRET!,
+    }),
     Credentials({
       credentials: {
         email: {},
