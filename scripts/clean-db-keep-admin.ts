@@ -23,7 +23,7 @@ async function main() {
       }
 
       console.log(`✅ Найден администратор: ${admin.email}`);
-      console.log(`   Клиент: ${admin.client.name}\n`);
+      console.log(`   Клиент: ${admin.client?.name || 'нет'}\n`);
 
       // Удаляем данные (в правильном порядке из-за зависимостей)
       console.log('🗑️  Удаление данных...');
@@ -51,9 +51,9 @@ async function main() {
 
       // Удаляем всех клиентов кроме клиента администратора
       const deletedClients = await tx.clients.deleteMany({
-        where: {
+        where: admin.clientId ? {
           id: { not: admin.clientId },
-        },
+        } : undefined,
       });
       console.log(`   ✓ Удалено клиентов: ${deletedClients.count}`);
 

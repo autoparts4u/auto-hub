@@ -53,7 +53,7 @@ const signUp = async (formData: FormData) => {
         },
       });
 
-      console.log(`User created: ${res.email}, linked to client: ${res.client.name}`)
+      console.log(`User created: ${res.email}, linked to client: ${res.client?.name || 'N/A'}`)
     },
     successMessage: "Signed up successfully",
   });

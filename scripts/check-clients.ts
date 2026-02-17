@@ -20,10 +20,10 @@ async function main() {
 
   for (const user of users) {
     console.log(`User: ${user.email}`);
-    console.log(`  Client ID: ${user.clientId}`);
-    console.log(`  Client Name: ${user.client.name}`);
-    console.log(`  Client FullName: ${user.client.fullName}`);
-    console.log(`  Client Phone: ${user.client.phone || 'нет'}`);
+    console.log(`  Client ID: ${user.clientId || 'нет'}`);
+    console.log(`  Client Name: ${user.client?.name || 'нет'}`);
+    console.log(`  Client FullName: ${user.client?.fullName || 'нет'}`);
+    console.log(`  Client Phone: ${user.client?.phone || 'нет'}`);
     console.log('');
   }
 

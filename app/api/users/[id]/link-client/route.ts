@@ -66,7 +66,7 @@ export async function POST(
     }
 
     // Если у пользователя уже есть клиент, нужно решить что с ним делать
-    if (currentUser.client) {
+    if (currentUser.client && currentUser.clientId) {
       // Проверяем, есть ли заказы у старого клиента
       const oldClientOrders = await db.orders.count({
         where: { client_id: currentUser.clientId },
@@ -141,6 +141,14 @@ export async function DELETE(
       return NextResponse.json(
         { error: 'User not found' },
         { status: 404 }
+      );
+    }
+
+    // Проверяем, есть ли clientId у пользователя
+    if (!user.clientId) {
+      return NextResponse.json(
+        { error: 'User has no client to unlink' },
+        { status: 400 }
       );
     }
 

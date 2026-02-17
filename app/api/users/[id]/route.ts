@@ -139,11 +139,11 @@ export async function DELETE(
     }
 
     // Проверяем, есть ли у клиента связанные заказы
-    const ordersCount = await db.orders.count({
+    const ordersCount = user.clientId ? await db.orders.count({
       where: { 
         client_id: user.clientId
       },
-    });
+    }) : 0;
 
     if (ordersCount > 0) {
       return NextResponse.json(

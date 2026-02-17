@@ -18,6 +18,10 @@ async function main() {
     throw new Error('Администратор не найден!');
   }
 
+  if (!admin.clientId) {
+    throw new Error('У администратора нет клиента!');
+  }
+
   // Обновляем данные клиента администратора
   const updatedClient = await prisma.clients.update({
     where: { id: admin.clientId },

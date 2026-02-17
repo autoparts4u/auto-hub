@@ -18,7 +18,7 @@ type UserWithClient = {
   email: string;
   role: string;
   isConfirmed: boolean;
-  clientId: string;
+  clientId: string | null;
   client: {
     id: string;
     name: string;
@@ -27,7 +27,7 @@ type UserWithClient = {
     address: string | null;
     priceAccessId: number | null;
     warehouseAccessId: number | null;
-  };
+  } | null;
 }
 
 type Props = {
@@ -49,13 +49,13 @@ export function UsersTable({ initialUsers, priceTypes, warehouses }: Props) {
     if (!user) return;
 
     const isClientField = ['name', 'phone', 'address', 'priceAccessId', 'warehouseAccessId'].includes(field);
-    const prev = isClientField ? user.client[field as keyof typeof user.client] : user[field as keyof typeof user];
+    const prev = isClientField && user.client ? user.client[field as keyof typeof user.client] : user[field as keyof typeof user];
     
     // Оптимистичное обновление UI
     setUsers((prevUsers) =>
       prevUsers.map((u) => {
         if (u.id !== userId) return u;
-        if (isClientField) {
+        if (isClientField && u.client) {
           return { ...u, client: { ...u.client, [field]: value } };
         }
         return { ...u, [field]: value };
@@ -74,7 +74,7 @@ export function UsersTable({ initialUsers, priceTypes, warehouses }: Props) {
       setUsers((prevUsers) =>
         prevUsers.map((u) => {
           if (u.id !== userId) return u;
-          if (isClientField) {
+          if (isClientField && u.client) {
             return { ...u, client: { ...u.client, [field]: prev } };
           }
           return { ...u, [field]: prev };
@@ -108,11 +108,11 @@ export function UsersTable({ initialUsers, priceTypes, warehouses }: Props) {
                 {/* редактируемое имя */}
                 <td className="p-3">
                   <Input
-                    value={user.client.name ?? ""}
+                    value={user.client?.name ?? ""}
                     onChange={(e) =>
                       setUsers((prev) =>
                         prev.map((u) =>
-                          u.id === user.id
+                          u.id === user.id && u.client
                             ? { ...u, client: { ...u.client, name: e.target.value } }
                             : u
                         )
@@ -126,11 +126,11 @@ export function UsersTable({ initialUsers, priceTypes, warehouses }: Props) {
                   />
                 </td>
                 <td className="p-3">{user.email}</td>
-                <td className="p-3">{user.client.phone ?? "-"}</td>
+                <td className="p-3">{user.client?.phone ?? "-"}</td>
                 <td className="p-3">{user.role}</td>
                 <td className="p-3">
                   <Select
-                    value={user.client.priceAccessId?.toString() ?? "none"}
+                    value={user.client?.priceAccessId?.toString() ?? "none"}
                     onValueChange={(val) =>
                       handleChange(
                         user.id,
@@ -154,7 +154,7 @@ export function UsersTable({ initialUsers, priceTypes, warehouses }: Props) {
                 </td>
                 <td className="p-3">
                   <Select
-                    value={user.client.warehouseAccessId?.toString() ?? "none"}
+                    value={user.client?.warehouseAccessId?.toString() ?? "none"}
                     onValueChange={(val) =>
                       handleChange(
                         user.id,

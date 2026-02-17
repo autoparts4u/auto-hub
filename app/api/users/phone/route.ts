@@ -18,6 +18,10 @@ export async function PATCH(req: Request) {
     return NextResponse.json({ error: "User not found" }, { status: 404 });
   }
 
+  if (!user.clientId) {
+    return NextResponse.json({ error: "User has no client" }, { status: 400 });
+  }
+
   await db.clients.update({
     where: { id: user.clientId },
     data: { phone },

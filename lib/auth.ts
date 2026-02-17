@@ -61,7 +61,7 @@ export const authOptions: NextAuthConfig = {
     }),
   ],
   callbacks: {
-    async signIn({ user, account, profile }) {
+    async signIn({ user, account }) {
       // Если вход через OAuth провайдер (Google и т.д.) - проверяем наличие клиента
       if (account?.provider !== "credentials" && user.id && user.email) {
         const existingUser = await db.user.findUnique({

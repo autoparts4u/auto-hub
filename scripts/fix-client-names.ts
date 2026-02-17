@@ -51,6 +51,11 @@ async function main() {
       continue;
     }
 
+    if (!user.clientId) {
+      console.log(`⚠️  У пользователя ${update.email} нет клиента`);
+      continue;
+    }
+
     const updatedClient = await prisma.clients.update({
       where: { id: user.clientId },
       data: {
