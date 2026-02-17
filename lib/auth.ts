@@ -56,6 +56,31 @@ export const authOptions: NextAuthConfig = {
     }),
   ],
   callbacks: {
+    async signIn({ user, account, profile }) {
+      // Если вход через OAuth провайдер (Google и т.д.) - проверяем наличие клиента
+      if (account?.provider !== "credentials" && user.id && user.email) {
+        const existingUser = await db.user.findUnique({
+          where: { id: user.id },
+          include: { client: true },
+        });
+
+        // Если пользователь есть, но без клиента - создаем клиента
+        if (existingUser && !existingUser.client) {
+          await db.clients.create({
+            data: {
+              name: user.name || user.email.split("@")[0],
+              fullName: user.name || user.email.split("@")[0],
+              phone: null,
+              user: {
+                connect: { id: existingUser.id },
+              },
+            },
+          });
+        }
+      }
+
+      return true;
+    },
     async jwt({ token, user, account }) {
       if (account?.provider === "credentials") {
         token.credentials = true;
@@ -106,6 +131,31 @@ export const authOptions: NextAuthConfig = {
       }
 
       return session;
+    },
+  },
+  events: {
+    async createUser({ user }) {
+      // Создаем клиента для нового пользователя, если его еще нет
+      const existingClient = await db.clients.findFirst({
+        where: {
+          user: {
+            id: user.id,
+          },
+        },
+      });
+
+      if (!existingClient) {
+        await db.clients.create({
+          data: {
+            name: user.name || user.email?.split("@")[0] || "Новый клиент",
+            fullName: user.name || user.email?.split("@")[0] || "Новый клиент",
+            phone: null,
+            user: {
+              connect: { id: user.id },
+            },
+          },
+        });
+      }
     },
   },
   jwt: {

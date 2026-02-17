@@ -29,8 +29,8 @@ model User {
     role        Role    @default(user)
     isConfirmed Boolean @default(false)
 
-    clientId String  @unique // Обязательная связь с клиентом
-    client   Clients @relation(fields: [clientId], references: [id], onDelete: Cascade)
+    clientId String?  @unique // Опциональная связь с клиентом (создается при регистрации)
+    client   Clients? @relation(fields: [clientId], references: [id], onDelete: Cascade)
 
     accounts           Account[]
     sessions           Session[]
