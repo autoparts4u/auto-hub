@@ -4,7 +4,7 @@ declare module "next-auth" {
   interface User extends DefaultUser {
     role: "admin" | "user";
     isConfirmed: boolean;
-    clientId: string;
+    clientId?: string | null;
     client?: {
       id: string;
       name: string;
@@ -18,8 +18,8 @@ declare module "next-auth" {
       email: string;
       role: "admin" | "user";
       isConfirmed: boolean;
-      clientId: string;
-      client: {
+      clientId?: string | null;
+      client?: {
         id: string;
         name: string;
         phone: string | null;

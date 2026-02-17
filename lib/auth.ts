@@ -51,7 +51,12 @@ export const authOptions: NextAuthConfig = {
           throw new Error("Invalid credentials.");
         }
 
-        return user;
+        // Convert null to undefined for TypeScript compatibility
+        return {
+          ...user,
+          clientId: user.clientId ?? undefined,
+          client: user.client ?? undefined,
+        };
       },
     }),
   ],
