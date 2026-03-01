@@ -1077,7 +1077,7 @@ export function AutopartsTable({
                       {p.totalQuantity}
                     </span>
                   ) : warehouseAccessId ? (
-                    <div className="flex flex-col items-center gap-1">
+                    <div className="flex items-center gap-1">
                       <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
                         {(() => {
                           const quantity = p.warehouses.find(
@@ -1086,7 +1086,7 @@ export function AutopartsTable({
                           )?.quantity;
                           return quantity
                             ? quantity > p.maxNumberShown
-                              ? `${p.maxNumberShown}>`
+                              ? `${p.maxNumberShown}+`
                               : quantity
                             : "0";
                         })()}
@@ -1094,7 +1094,7 @@ export function AutopartsTable({
                       <span className="text-xs text-muted-foreground">
                         (
                         {p.totalQuantity > p.maxNumberShown
-                          ? `${p.maxNumberShown}>`
+                          ? `${p.maxNumberShown}+`
                           : p.totalQuantity}
                         )
                       </span>
