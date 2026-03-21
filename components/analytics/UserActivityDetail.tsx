@@ -9,7 +9,7 @@ import Link from "next/link";
 interface ActivityEvent {
   id: string;
   type: string;
-  payload: Record<string, unknown> | null;
+  payload: Record<string, unknown> | string | number | boolean | unknown[] | null;
   createdAt: Date | string;
 }
 
@@ -70,14 +70,15 @@ function getEventIcon(type: string) {
 
 function formatEventPayload(event: ActivityEvent): string {
   const p = event.payload;
-  if (!p) return "";
-  if (event.type === "search") return `"${p.query}"`;
+  if (!p || typeof p !== "object" || Array.isArray(p)) return p ? JSON.stringify(p) : "";
+  const obj = p as Record<string, unknown>;
+  if (event.type === "search") return `"${obj.query}"`;
   if (event.type === "filter") {
-    const values = Array.isArray(p.values) ? (p.values as string[]).join(", ") : String(p.value ?? "");
-    return `${p.type}: ${values || "—"}`;
+    const values = Array.isArray(obj.values) ? (obj.values as string[]).join(", ") : String(obj.value ?? "");
+    return `${obj.type}: ${values || "—"}`;
   }
-  if (event.type === "page_view") return String(p.path ?? "");
-  return JSON.stringify(p);
+  if (event.type === "page_view") return String(obj.path ?? "");
+  return JSON.stringify(obj);
 }
 
 function parseUserAgent(ua: string | null): string {
@@ -186,8 +187,8 @@ export function UserActivityDetail({
   const totalSearches = sessions.flatMap((s) => s.events).filter((e) => e.type === "search").length;
   const topSearches = sessions
     .flatMap((s) => s.events)
-    .filter((e) => e.type === "search" && e.payload?.query)
-    .map((e) => String(e.payload!.query))
+    .filter((e) => e.type === "search" && e.payload && typeof e.payload === "object" && !Array.isArray(e.payload) && (e.payload as Record<string, unknown>).query)
+    .map((e) => String((e.payload as Record<string, unknown>).query))
     .reduce<Record<string, number>>((acc, q) => ({ ...acc, [q]: (acc[q] ?? 0) + 1 }), {});
 
   const topSearchList = Object.entries(topSearches)

@@ -335,7 +335,7 @@ function PurchaseDetailsModal({ purchase, statuses, onClose, onStatusChange, onE
   formatCurrency: (v: number) => string;
 }) {
   const [selectedStatusId, setSelectedStatusId] = useState(purchase.purchaseStatus_id.toString());
-  const availableStatuses = statuses.filter((s) => !purchase.purchaseStatus.isLast);
+  const availableStatuses = statuses.filter(() => !purchase.purchaseStatus.isLast);
 
   return (
     <Dialog open onOpenChange={onClose}>
