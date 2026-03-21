@@ -22,22 +22,30 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { 
-  Eye, 
-  Trash2, 
-  Plus, 
+import {
+  Pencil,
+  Trash2,
+  Plus,
   Search,
   Package,
   Truck,
   Calendar,
   DollarSign,
   Filter,
-  X
+  X,
+  LayoutGrid,
+  List,
+  BarChart2,
+  Ban,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { getContrastTextColor } from '@/lib/utils';
 import OrderModal from './OrderModal';
+import OrdersKanban from './OrdersKanban';
+import OrderEditModal from './OrderEditModal';
 import OrderDetailsModal from './OrderDetailsModal';
 import OrderPaymentModal from './OrderPaymentModal';
+import OrdersReport from './OrdersReport';
 
 export default function OrdersTable() {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -51,11 +59,17 @@ export default function OrdersTable() {
 
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   
+  const [cancelingId, setCancelingId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [ordersTab, setOrdersTab] = useState<'active' | 'cancelled'>('active');
   const [showFilters, setShowFilters] = useState(true);
   const [showFiltersModal, setShowFiltersModal] = useState(false);
+  const [viewMode, setViewMode] = useState<'table' | 'kanban'>('table');
+  const [showReport, setShowReport] = useState(false);
   
   const lastScrollY = useRef(0);
   const filtersModalContentRef = useRef<HTMLDivElement>(null);
@@ -63,7 +77,7 @@ export default function OrdersTable() {
   useEffect(() => {
     fetchData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [statusFilter, clientFilter, unpaidIssuedFilter]);
+  }, [statusFilter, clientFilter, unpaidIssuedFilter, ordersTab]);
 
   // Автоматическое скрытие фильтров при скролле вниз на мобильных
   useEffect(() => {
@@ -120,11 +134,10 @@ export default function OrdersTable() {
     }
   }, [showFiltersModal]);
 
-  const fetchData = async () => {
+  const fetchData = async (silent = false) => {
     try {
-      setLoading(true);
-      
-      // Формируем параметры запроса
+      if (!silent) setLoading(true);
+
       const params = new URLSearchParams();
       if (statusFilter && statusFilter !== 'all') params.append('status', statusFilter);
       if (clientFilter && clientFilter !== 'all') params.append('client', clientFilter);
@@ -146,15 +159,13 @@ export default function OrdersTable() {
 
         setOrders(ordersData);
         setStatuses(statusesData);
-        
-        // Используем только клиентов, так как теперь каждый User связан с Client
         setAllClients(clientsData);
       }
     } catch (error) {
       console.error('Error fetching data:', error);
-      toast.error('Ошибка загрузки данных');
+      if (!silent) toast.error('Ошибка загрузки данных');
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
@@ -162,19 +173,28 @@ export default function OrdersTable() {
     fetchData();
   };
 
-  const handleDelete = async (orderId: string) => {
-    if (!confirm('Вы уверены, что хотите удалить этот заказ?')) {
-      return;
-    }
-
+  const handleSoftCancel = async (orderId: string) => {
     try {
-      const res = await fetch(`/api/orders/${orderId}`, {
-        method: 'DELETE',
-      });
-
+      const res = await fetch(`/api/orders/${orderId}/cancel`, { method: 'POST' });
       if (res.ok) {
-        toast.success('Заказ успешно удален');
-        fetchData();
+        toast.success('Заказ отменён');
+        setOrders((prev) => prev.map((o) => o.id === orderId ? { ...o, cancelledAt: new Date().toISOString() } : o));
+      } else {
+        const error = await res.json();
+        toast.error(error.error || 'Ошибка отмены заказа');
+      }
+    } catch (error) {
+      console.error('Error cancelling order:', error);
+      toast.error('Ошибка отмены заказа');
+    }
+  };
+
+  const handleHardDelete = async (orderId: string) => {
+    try {
+      const res = await fetch(`/api/orders/${orderId}`, { method: 'DELETE' });
+      if (res.ok) {
+        toast.success('Заказ удалён');
+        setOrders((prev) => prev.filter((o) => o.id !== orderId));
       } else {
         const error = await res.json();
         toast.error(error.error || 'Ошибка удаления заказа');
@@ -188,6 +208,14 @@ export default function OrdersTable() {
   const handleViewDetails = (order: Order) => {
     setSelectedOrder(order);
     setIsDetailsModalOpen(true);
+  };
+
+  const handleOrderStatusChange = (orderId: string, newStatusId: number) => {
+    setOrders(prev => prev.map(o =>
+      o.id === orderId
+        ? { ...o, orderStatus_id: newStatusId, orderStatus: statuses.find(s => s.id === newStatusId) || o.orderStatus }
+        : o
+    ));
   };
 
   const handleOpenPayment = (order: Order) => {
@@ -218,7 +246,7 @@ export default function OrdersTable() {
       <Badge
         style={{
           backgroundColor: status.hexColor,
-          color: '#fff',
+          color: getContrastTextColor(status.hexColor),
         }}
       >
         {status.name}
@@ -237,13 +265,22 @@ export default function OrdersTable() {
   };
 
   const filteredOrders = orders.filter((order) => {
+    // Фильтр по вкладке: активные / отменённые
+    if (ordersTab === 'cancelled' ? !order.cancelledAt : !!order.cancelledAt) return false;
+
     if (!searchTerm) return true;
     const search = searchTerm.toLowerCase();
     return (
       order.id.toLowerCase().includes(search) ||
       order.client?.name.toLowerCase().includes(search) ||
+      order.client?.fullName?.toLowerCase().includes(search) ||
       order.notes?.toLowerCase().includes(search) ||
-      order.trackingNumber?.toLowerCase().includes(search)
+      order.trackingNumber?.toLowerCase().includes(search) ||
+      order.orderItems?.some(item =>
+        item.article?.toLowerCase().includes(search) ||
+        item.description?.toLowerCase().includes(search) ||
+        item.autopart?.brand?.name?.toLowerCase().includes(search)
+      )
     );
   });
 
@@ -257,11 +294,65 @@ export default function OrdersTable() {
             Управление заказами клиентов
           </p>
         </div>
-        <Button onClick={() => setIsCreateModalOpen(true)} className="flex-shrink-0">
-          <Plus className="h-4 w-4 md:mr-2" />
-          <span className="hidden md:inline">Создать заказ</span>
-        </Button>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <Button
+            variant={showReport ? 'default' : 'outline'}
+            size="sm"
+            className="hidden md:flex items-center gap-1.5"
+            onClick={() => setShowReport((v) => !v)}
+            title="Отчёты"
+          >
+            <BarChart2 className="h-4 w-4" />
+            Отчёты
+          </Button>
+          <div className="hidden md:flex items-center gap-1 border rounded-md p-1">
+            <Button
+              variant={viewMode === 'table' ? 'default' : 'ghost'}
+              size="icon"
+              className="h-7 w-7"
+              onClick={() => setViewMode('table')}
+              title="Таблица"
+            >
+              <List className="h-4 w-4" />
+            </Button>
+            <Button
+              variant={viewMode === 'kanban' ? 'default' : 'ghost'}
+              size="icon"
+              className="h-7 w-7"
+              onClick={() => setViewMode('kanban')}
+              title="Канбан"
+            >
+              <LayoutGrid className="h-4 w-4" />
+            </Button>
+          </div>
+          <Button onClick={() => setIsCreateModalOpen(true)}>
+            <Plus className="h-4 w-4 md:mr-2" />
+            <span className="hidden md:inline">Создать заказ</span>
+          </Button>
+        </div>
       </div>
+
+      {/* Табы: Активные / Отменённые */}
+      <div className="flex gap-1 border rounded-lg p-1 bg-muted/30 w-fit">
+        {([['active', 'Активные'], ['cancelled', 'Отменённые']] as const).map(([key, label]) => (
+          <button
+            key={key}
+            onClick={() => { setOrdersTab(key); setStatusFilter('all'); setClientFilter('all'); setUnpaidIssuedFilter(false); }}
+            className={`px-4 py-1.5 text-sm font-medium rounded-md transition-colors ${
+              ordersTab === key ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {/* Отчёты - только десктоп */}
+      {showReport && (
+        <div className="border rounded-xl p-6 bg-background shadow-sm">
+          <OrdersReport onClose={() => setShowReport(false)} />
+        </div>
+      )}
 
       {/* Фильтры - только десктоп */}
       <div className={`hidden md:flex gap-4 transition-all duration-300 ${showFilters ? '' : 'hidden'}`}>
@@ -316,8 +407,29 @@ export default function OrdersTable() {
         </Button>
       </div>
 
+      {/* Канбан - десктоп */}
+      {viewMode === 'kanban' && (
+        <div className="hidden md:block">
+          {loading ? (
+            <div className="text-center py-8">Загрузка...</div>
+          ) : (
+            <OrdersKanban
+              orders={filteredOrders}
+              statuses={statuses}
+              onViewDetails={handleViewDetails}
+              onOpenPayment={handleOpenPayment}
+              onOpenEdit={(order) => { setSelectedOrder(order); setIsEditModalOpen(true); }}
+              onDelete={handleHardDelete}
+              formatCurrency={formatCurrency}
+              formatDate={formatDate}
+              onOrderStatusChange={handleOrderStatusChange}
+            />
+          )}
+        </div>
+      )}
+
       {/* Таблица - только десктоп */}
-      <div className="hidden md:block border rounded-lg">
+      <div className={`${viewMode === 'table' ? 'hidden md:block' : 'hidden'} border rounded-lg`}>
         <Table>
           <TableHeader>
             <TableRow>
@@ -345,7 +457,7 @@ export default function OrdersTable() {
               <TableHead>
                 <div className="flex items-center gap-1">
                   <Calendar className="h-4 w-4" />
-                  Создан
+                  {ordersTab === 'cancelled' ? 'Отменён' : 'Создан'}
                 </div>
               </TableHead>
               <TableHead className="text-right">Действия</TableHead>
@@ -366,7 +478,11 @@ export default function OrdersTable() {
               </TableRow>
             ) : (
               filteredOrders.map((order) => (
-                <TableRow key={order.id}>
+                <TableRow
+                  key={order.id}
+                  className="cursor-pointer"
+                  onClick={() => handleViewDetails(order)}
+                >
                   <TableCell className="font-mono text-sm">
                     {order.id.substring(0, 8)}...
                   </TableCell>
@@ -423,18 +539,22 @@ export default function OrdersTable() {
                     )}
                   </TableCell>
                   <TableCell className="text-sm">
-                    {formatDate(order.createdAt)}
+                    {ordersTab === 'cancelled' && order.cancelledAt
+                      ? formatDate(order.cancelledAt)
+                      : formatDate(order.createdAt)}
                   </TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                     <div className="flex justify-end gap-2">
+                      {ordersTab === 'active' && (
                       <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => handleViewDetails(order)}
-                        title="Просмотр деталей"
+                        onClick={() => { setSelectedOrder(order); setIsEditModalOpen(true); }}
+                        title="Редактировать"
                       >
-                        <Eye className="h-4 w-4" />
+                        <Pencil className="h-4 w-4" />
                       </Button>
+                      )}
                       <Button
                         variant="ghost"
                         size="icon"
@@ -443,16 +563,26 @@ export default function OrdersTable() {
                       >
                         <DollarSign className="h-4 w-4" />
                       </Button>
-                      {!order.orderStatus?.isLast && (
+                      {!order.orderStatus?.isLast && ordersTab === 'active' && (
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => handleDelete(order.id)}
-                          title="Удалить"
+                          onClick={() => setCancelingId(order.id)}
+                          title="Отменить заказ"
+                          className="text-destructive hover:text-destructive hover:bg-destructive/10"
                         >
-                          <Trash2 className="h-4 w-4" />
+                          <Ban className="h-4 w-4" />
                         </Button>
                       )}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setDeletingId(order.id)}
+                        title="Удалить заказ"
+                        className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -545,21 +675,27 @@ export default function OrdersTable() {
                   )}
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
                     <Calendar className="h-3.5 w-3.5" />
-                    <span>{formatDate(order.createdAt)}</span>
+                    <span>
+                      {ordersTab === 'cancelled' && order.cancelledAt
+                        ? `Отменён: ${formatDate(order.cancelledAt)}`
+                        : formatDate(order.createdAt)}
+                    </span>
                   </div>
                 </div>
               </div>
 
               {/* Действия */}
               <div className="flex items-center justify-end gap-2 px-4 py-3 bg-muted/30 rounded-b-lg border-t">
+                {ordersTab === 'active' && (
+                <>
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => handleViewDetails(order)}
-                  title="Просмотр деталей"
+                  onClick={() => { setSelectedOrder(order); setIsEditModalOpen(true); }}
+                  title="Редактировать"
                 >
-                  <Eye className="h-4 w-4 mr-1.5" />
-                  Детали
+                  <Pencil className="h-4 w-4 mr-1.5" />
+                  Редактировать
                 </Button>
                 <Button
                   variant="ghost"
@@ -570,16 +706,29 @@ export default function OrdersTable() {
                   <DollarSign className="h-4 w-4 mr-1.5" />
                   Оплата
                 </Button>
-                {!order.orderStatus?.isLast && (
+                </>
+                )}
+                {!order.orderStatus?.isLast && ordersTab === 'active' && (
                   <Button
                     variant="ghost"
                     size="sm"
-                    onClick={() => handleDelete(order.id)}
-                    title="Удалить"
+                    onClick={() => setCancelingId(order.id)}
+                    title="Отменить заказ"
+                    className="text-destructive hover:text-destructive hover:bg-destructive/10"
                   >
-                    <Trash2 className="h-4 w-4 text-destructive" />
+                    <Ban className="h-4 w-4 mr-1.5" />
+                    Отменить
                   </Button>
                 )}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setDeletingId(order.id)}
+                  title="Удалить заказ"
+                  className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
               </div>
             </div>
           ))
@@ -741,9 +890,9 @@ export default function OrdersTable() {
                   <div className="flex-1">
                     <p className="text-sm font-medium leading-none flex items-center gap-2">
                       <DollarSign className="h-4 w-4" />
-                      Неоплаченные выданные
+                      Неоплаченные
                     </p>
-                    <p className="text-xs text-muted-foreground mt-1">Показать только неоплаченные выданные заказы</p>
+                    <p className="text-xs text-muted-foreground mt-1">Показать только неоплаченные заказы</p>
                   </div>
                 </Label>
               </div>
@@ -782,23 +931,88 @@ export default function OrdersTable() {
         open={isCreateModalOpen}
         onClose={() => {
           setIsCreateModalOpen(false);
-          fetchData();
+          fetchData(true);
         }}
         clients={allClients}
         statuses={statuses}
       />
 
+      <Dialog open={!!cancelingId} onOpenChange={() => setCancelingId(null)}>
+        <DialogContent className="max-w-sm text-center">
+          <DialogTitle>Отменить заказ?</DialogTitle>
+          <p className="text-sm text-muted-foreground">
+            Заказ будет помечен как отменённый. Вы сможете найти его во вкладке «Отменённые».
+          </p>
+          <div className="flex justify-end gap-2 mt-4">
+            <Button variant="outline" onClick={() => setCancelingId(null)}>
+              Назад
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                if (cancelingId) {
+                  handleSoftCancel(cancelingId);
+                  setCancelingId(null);
+                }
+              }}
+            >
+              Отменить заказ
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!deletingId} onOpenChange={() => setDeletingId(null)}>
+        <DialogContent className="max-w-sm text-center">
+          <DialogTitle>Удалить заказ?</DialogTitle>
+          <p className="text-sm text-muted-foreground">
+            Заказ будет удалён безвозвратно. Если заказ завершён, товары будут возвращены на склад.
+          </p>
+          <div className="flex justify-end gap-2 mt-4">
+            <Button variant="outline" onClick={() => setDeletingId(null)}>
+              Назад
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                if (deletingId) {
+                  handleHardDelete(deletingId);
+                  setDeletingId(null);
+                }
+              }}
+            >
+              Удалить
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {selectedOrder && (
         <>
+          <OrderEditModal
+            open={isEditModalOpen}
+            onClose={() => {
+              setIsEditModalOpen(false);
+              setSelectedOrder(null);
+              fetchData(true);
+            }}
+            orderId={selectedOrder.id}
+            clients={allClients}
+            statuses={statuses}
+          />
           <OrderDetailsModal
             open={isDetailsModalOpen}
             onClose={() => {
               setIsDetailsModalOpen(false);
               setSelectedOrder(null);
-              fetchData();
+              fetchData(true);
             }}
             orderId={selectedOrder.id}
             statuses={statuses}
+            onEdit={() => {
+              setIsDetailsModalOpen(false);
+              setIsEditModalOpen(true);
+            }}
           />
           <OrderPaymentModal
             open={isPaymentModalOpen}
@@ -807,7 +1021,7 @@ export default function OrdersTable() {
               setSelectedOrder(null);
             }}
             orderId={selectedOrder.id}
-            onPaymentUpdate={fetchData}
+            onPaymentUpdate={() => fetchData(true)}
           />
         </>
       )}

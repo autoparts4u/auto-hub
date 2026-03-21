@@ -40,10 +40,12 @@ import {
   X,
   Pencil,
   Trash2,
+  Truck,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import ClientModal from './ClientModal';
 import UserModal from './UserModal';
+import SuppliersTable from './SuppliersTable';
 
 interface ClientsTableProps {
   priceTypes: PriceType[];
@@ -138,9 +140,9 @@ export default function ClientsTable({ priceTypes }: ClientsTableProps) {
     }
   }, [showFiltersModal]);
 
-  const fetchData = async () => {
+  const fetchData = async (silent = false) => {
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       
       // Загружаем клиентов (теперь они содержат всю необходимую информацию, включая user)
       const clientsResponse = await fetch('/api/clients');
@@ -187,9 +189,9 @@ export default function ClientsTable({ priceTypes }: ClientsTableProps) {
       
     } catch (error) {
       console.error('Error fetching data:', error);
-      toast.error('Ошибка загрузки данных');
+      if (!silent) toast.error('Ошибка загрузки данных');
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
@@ -245,8 +247,8 @@ export default function ClientsTable({ priceTypes }: ClientsTableProps) {
 
       toast.success("Данные обновлены");
       
-      // Перезагружаем данные, чтобы синхронизировать users и clients
-      await fetchData();
+      // Тихо синхронизируем данные в фоне
+      fetchData(true);
     } catch {
       // При ошибке откатываем изменения
       toast.error("Ошибка при обновлении");
@@ -264,25 +266,23 @@ export default function ClientsTable({ priceTypes }: ClientsTableProps) {
   };
 
   const handleDeleteClient = async (client: Client) => {
-    if (!confirm(`Вы уверены, что хотите удалить клиента "${client.name}"?`)) {
-      return;
-    }
+    if (!confirm(`Вы уверены, что хотите удалить клиента "${client.name}"?`)) return;
+
+    // Оптимистичное удаление
+    setClients((prev) => prev.filter((c) => c.id !== client.id));
 
     try {
-      const res = await fetch(`/api/clients/${client.id}`, {
-        method: 'DELETE',
-      });
-
+      const res = await fetch(`/api/clients/${client.id}`, { method: 'DELETE' });
       if (!res.ok) {
+        setClients((prev) => [...prev, client]); // откат
         const error = await res.json();
         toast.error(error.error || 'Ошибка удаления клиента');
         return;
       }
-
       toast.success('Клиент успешно удален');
-      fetchData();
     } catch (error) {
       console.error('Error deleting client:', error);
+      setClients((prev) => [...prev, client]); // откат
       toast.error('Ошибка удаления клиента');
     }
   };
@@ -304,25 +304,23 @@ export default function ClientsTable({ priceTypes }: ClientsTableProps) {
   };
 
   const handleDeleteUser = async (user: UserItem | { id: string; name: string | null; email: string }) => {
-    if (!confirm(`Вы уверены, что хотите удалить пользователя "${user.name || user.email}"?`)) {
-      return;
-    }
+    if (!confirm(`Вы уверены, что хотите удалить пользователя "${user.name || user.email}"?`)) return;
+
+    // Оптимистичное удаление
+    setUsers((prev) => prev.filter((u) => u.id !== user.id));
 
     try {
-      const res = await fetch(`/api/users/${user.id}`, {
-        method: 'DELETE',
-      });
-
+      const res = await fetch(`/api/users/${user.id}`, { method: 'DELETE' });
       if (!res.ok) {
+        fetchData(true); // откат через рефетч
         const error = await res.json();
         toast.error(error.error || 'Ошибка удаления пользователя');
         return;
       }
-
       toast.success('Пользователь успешно удален');
-      fetchData();
     } catch (error) {
       console.error('Error deleting user:', error);
+      fetchData(true); // откат
       toast.error('Ошибка удаления пользователя');
     }
   };
@@ -352,6 +350,10 @@ export default function ClientsTable({ priceTypes }: ClientsTableProps) {
           <TabsTrigger value="clients">
             <User className="mr-2 h-4 w-4" />
             Все клиенты ({allItems.length})
+          </TabsTrigger>
+          <TabsTrigger value="suppliers">
+            <Truck className="mr-2 h-4 w-4" />
+            Поставщики
           </TabsTrigger>
         </TabsList>
 
@@ -1031,6 +1033,10 @@ export default function ClientsTable({ priceTypes }: ClientsTableProps) {
             )}
           </div>
         </TabsContent>
+
+        <TabsContent value="suppliers" className="space-y-4">
+          <SuppliersTable />
+        </TabsContent>
       </Tabs>
 
       {/* Плавающая кнопка поиска (только мобильные) */}
@@ -1126,7 +1132,7 @@ export default function ClientsTable({ priceTypes }: ClientsTableProps) {
         open={isCreateModalOpen}
         onClose={() => {
           setIsCreateModalOpen(false);
-          fetchData();
+          fetchData(true);
         }}
         priceTypes={priceTypes}
         warehouses={warehouses}
@@ -1138,7 +1144,7 @@ export default function ClientsTable({ priceTypes }: ClientsTableProps) {
         onClose={() => {
           setIsEditModalOpen(false);
           setSelectedClient(null);
-          fetchData();
+          fetchData(true);
         }}
         priceTypes={priceTypes}
         warehouses={warehouses}
@@ -1151,7 +1157,7 @@ export default function ClientsTable({ priceTypes }: ClientsTableProps) {
         onClose={() => {
           setIsEditUserModalOpen(false);
           setSelectedUser(null);
-          fetchData();
+          fetchData(true);
         }}
         priceTypes={priceTypes}
         warehouses={warehouses}

@@ -11,6 +11,8 @@ import { TextsForSearchPanel } from "@/components/general/TextsForSearchPanel";
 import { OrderStatusesPanel } from "@/components/general/OrderStatusesPanel";
 import { DeliveryMethodsPanel } from "@/components/general/DeliveryMethodsPanel";
 import { FuelTypesPanel } from "@/components/general/FuelTypesPanel";
+import { OrderDefaultsPanel } from "@/components/general/OrderDefaultsPanel";
+import PurchaseStatusesPanel from "@/components/purchases/PurchaseStatusesPanel";
 
 export default async function GeneralPage() {
   const [
@@ -41,19 +43,27 @@ export default async function GeneralPage() {
     <div className="p-4 md:p-6">
       <h1 className="text-xl md:text-2xl font-bold mb-3 md:mb-4">Справочники</h1>
       <Tabs defaultValue="brands" className="w-full">
-        <div className="mb-4 -mx-4 px-4 md:mx-0 md:px-0">
-          <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-transparent">
-            <TabsList className="inline-flex md:flex md:flex-wrap h-auto min-w-full md:min-w-0 w-max md:w-auto">
+        <div className="mb-4 space-y-2">
+          <div className="space-y-1">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide px-1">Запчасти</p>
+            <TabsList className="inline-flex flex-wrap h-auto w-auto">
               <TabsTrigger value="brands" className="whitespace-nowrap">Бренды</TabsTrigger>
               <TabsTrigger value="categories" className="whitespace-nowrap">Группы</TabsTrigger>
               <TabsTrigger value="auto" className="whitespace-nowrap">Авто</TabsTrigger>
-              <TabsTrigger value="engine-volumes" className="whitespace-nowrap">Объем двигателя</TabsTrigger>
-              <TabsTrigger value="texts-for-search" className="whitespace-nowrap">Текст Поиска</TabsTrigger>
-              <TabsTrigger value="warehouses" className="whitespace-nowrap">Базы</TabsTrigger>
-              <TabsTrigger value="price-types" className="whitespace-nowrap">типЦ</TabsTrigger>
-              <TabsTrigger value="order-statuses" className="whitespace-nowrap">Статусы заказов</TabsTrigger>
-              <TabsTrigger value="delivery-methods" className="whitespace-nowrap">Методы доставки</TabsTrigger>
               <TabsTrigger value="fuel-types" className="whitespace-nowrap">Виды топлива</TabsTrigger>
+              <TabsTrigger value="engine-volumes" className="whitespace-nowrap">Объём двигателя</TabsTrigger>
+              <TabsTrigger value="warehouses" className="whitespace-nowrap">Склады</TabsTrigger>
+              <TabsTrigger value="price-types" className="whitespace-nowrap">Типы цен</TabsTrigger>
+              <TabsTrigger value="texts-for-search" className="whitespace-nowrap">Текст поиска</TabsTrigger>
+            </TabsList>
+          </div>
+          <div className="space-y-1">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide px-1">Заказы</p>
+            <TabsList className="inline-flex flex-wrap h-auto w-auto">
+              <TabsTrigger value="order-statuses" className="whitespace-nowrap">Статусы заказов</TabsTrigger>
+              <TabsTrigger value="purchase-statuses" className="whitespace-nowrap">Статусы поступлений</TabsTrigger>
+              <TabsTrigger value="delivery-methods" className="whitespace-nowrap">Методы доставки</TabsTrigger>
+              <TabsTrigger value="order-defaults" className="whitespace-nowrap">Настройки по умолчанию</TabsTrigger>
             </TabsList>
           </div>
         </div>
@@ -87,6 +97,12 @@ export default async function GeneralPage() {
         </TabsContent>
         <TabsContent value="fuel-types">
           <FuelTypesPanel fuelTypes={fuelTypes} />
+        </TabsContent>
+        <TabsContent value="purchase-statuses">
+          <PurchaseStatusesPanel />
+        </TabsContent>
+        <TabsContent value="order-defaults">
+          <OrderDefaultsPanel orderStatuses={orderStatuses} deliveryMethods={deliveryMethods} />
         </TabsContent>
       </Tabs>
     </div>

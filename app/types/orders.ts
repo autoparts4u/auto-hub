@@ -15,6 +15,7 @@ export interface Order {
   updatedAt: Date | string;
   issuedAt: Date | string | null;
   paidAt: Date | string | null;
+  cancelledAt: Date | string | null;
   
   // Связанные данные
   client?: Client;

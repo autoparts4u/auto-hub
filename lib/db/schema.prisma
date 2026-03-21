@@ -14,6 +14,36 @@ model health_check {
     updated_at DateTime? @default(now()) @db.Timestamptz(6)
 }
 
+model UserActivitySession {
+    id        String    @id @default(cuid())
+    userId    String
+    startedAt DateTime  @default(now())
+    endedAt   DateTime?
+    userAgent String?
+    ipAddress String?
+    country   String?
+    city      String?
+
+    user   User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+    events UserActivityEvent[]
+
+    @@index([userId])
+    @@index([startedAt])
+}
+
+model UserActivityEvent {
+    id        String   @id @default(cuid())
+    sessionId String
+    type      String   // "page_view" | "search" | "filter"
+    payload   Json?
+    createdAt DateTime @default(now())
+
+    session UserActivitySession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+    @@index([sessionId])
+    @@index([createdAt])
+}
+
 enum Role {
     user
     admin
@@ -21,6 +51,7 @@ enum Role {
 
 model User {
     id            String    @id @default(cuid())
+    name          String?
     email         String    @unique
     password      String?
     emailVerified DateTime?
@@ -36,6 +67,7 @@ model User {
     sessions           Session[]
     Authenticator      Authenticator[]
     orderStatusHistory OrderStatusHistory[]
+    activitySessions   UserActivitySession[]
 
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
@@ -109,6 +141,7 @@ model Clients {
     warehouseAccess Warehouses?              @relation("ClientWarehouseAccess", fields: [warehouseAccessId], references: [id])
     orders          Orders[]
     deliveryMethods ClientsDeliveryMethods[]
+    reservations    Reservations[]
 
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
@@ -130,6 +163,7 @@ model DeliveryMethods {
     hexColor String?
     clients  ClientsDeliveryMethods[]
     orders   Orders[]
+    appSettings AppSettings[]
 }
 
 model Orders {
@@ -147,6 +181,7 @@ model Orders {
     updatedAt         DateTime  @updatedAt
     issuedAt          DateTime?
     paidAt            DateTime?
+    cancelledAt       DateTime?
 
     client         Clients              @relation(fields: [client_id], references: [id])
     deliveryMethod DeliveryMethods?     @relation(fields: [deliveryMethod_id], references: [id])
@@ -162,6 +197,7 @@ model OrderStatuses {
     isLast        Boolean
     orders        Orders[]
     statusHistory OrderStatusHistory[]
+    appSettings   AppSettings[]
 }
 
 model OrderStatusHistory {
@@ -197,9 +233,11 @@ model Warehouses {
     name    String
     address String
 
-    parts         AutopartsWarehouses[]
-    orderItems    OrderItems[]
-    clientsAccess Clients[]             @relation("ClientWarehouseAccess")
+    parts              AutopartsWarehouses[]
+    orderItems         OrderItems[]
+    purchaseOrderItems PurchaseOrderItems[]
+    clientsAccess      Clients[]             @relation("ClientWarehouseAccess")
+    reservations       Reservations[]
 }
 
 model Autoparts {
@@ -218,15 +256,17 @@ model Autoparts {
     category      Categories?              @relation(fields: [category_id], references: [id])
     textForSearch TextForAuthopartsSearch? @relation(fields: [text_for_search_id], references: [id])
     fuelType      FuelType?               @relation(fields: [fuel_type_id], references: [id])
-    prices        AutopartPrices[]
-    warehouses    AutopartsWarehouses[]
-    orderItems    OrderItems[]
-    autos         AutopartsAutos[]
-    engineVolumes AutopartsEngineVolumes[]
+    prices             AutopartPrices[]
+    warehouses         AutopartsWarehouses[]
+    orderItems         OrderItems[]
+    purchaseOrderItems PurchaseOrderItems[]
+    autos              AutopartsAutos[]
+    engineVolumes      AutopartsEngineVolumes[]
 
-    analoguesA  Analogues[]   @relation("PartA")
-    analoguesB  Analogues[]   @relation("PartB")
-    AutopartLog AutopartLog[]
+    analoguesA   Analogues[]    @relation("PartA")
+    analoguesB   Analogues[]    @relation("PartB")
+    AutopartLog  AutopartLog[]
+    reservations Reservations[]
 }
 
 model AutopartLog {
@@ -336,4 +376,101 @@ model FuelType {
     id    Int         @id @default(autoincrement())
     name  String      @unique
     parts Autoparts[]
+}
+
+model AppSettings {
+    id                        Int  @id @default(1)
+    defaultOrderStatusId      Int?
+    defaultDeliveryMethodId   Int?
+    defaultPurchaseStatusId   Int?
+    usdRateOffset             Float @default(0)
+    reservationDurationMinutes Int @default(1440)
+
+    defaultOrderStatus    OrderStatuses?   @relation(fields: [defaultOrderStatusId], references: [id])
+    defaultDeliveryMethod DeliveryMethods? @relation(fields: [defaultDeliveryMethodId], references: [id])
+    defaultPurchaseStatus PurchaseStatuses? @relation(fields: [defaultPurchaseStatusId], references: [id])
+}
+
+enum ReservationStatus {
+    active
+    cancelled
+    expired
+    converted
+}
+
+model Reservations {
+    id           String            @id @default(cuid())
+    client_id    String
+    autopart_id  String
+    warehouse_id Int?
+    quantity     Int
+    status       ReservationStatus @default(active)
+    notes        String?
+    reservedAt   DateTime          @default(now())
+    expiresAt    DateTime
+    createdAt    DateTime          @default(now())
+    updatedAt    DateTime          @updatedAt
+
+    client    Clients     @relation(fields: [client_id], references: [id])
+    autopart  Autoparts   @relation(fields: [autopart_id], references: [id])
+    warehouse Warehouses? @relation(fields: [warehouse_id], references: [id])
+
+    @@index([client_id])
+    @@index([autopart_id])
+    @@index([status])
+    @@index([expiresAt])
+}
+
+model Suppliers {
+    id            Int       @id @default(autoincrement())
+    name          String
+    contactPerson String?
+    phone         String?
+    email         String?
+    notes         String?
+    createdAt     DateTime  @default(now())
+    updatedAt     DateTime  @updatedAt
+
+    purchases PurchaseOrders[]
+}
+
+model PurchaseStatuses {
+    id       Int              @id @default(autoincrement())
+    name     String
+    hexColor String
+    isLast   Boolean          @default(false)
+
+    purchases   PurchaseOrders[]
+    appSettings AppSettings[]
+}
+
+model PurchaseOrders {
+    id                String   @id @default(cuid())
+    supplier_id       Int
+    purchaseStatus_id Int
+    totalAmount       Float    @default(0)
+    notes             String?
+    orderedAt         DateTime @default(now())
+    receivedAt        DateTime?
+    createdAt         DateTime @default(now())
+    updatedAt         DateTime @updatedAt
+
+    supplier       Suppliers          @relation(fields: [supplier_id], references: [id])
+    purchaseStatus PurchaseStatuses   @relation(fields: [purchaseStatus_id], references: [id])
+    items          PurchaseOrderItems[]
+}
+
+model PurchaseOrderItems {
+    id                Int    @id @default(autoincrement())
+    purchaseOrder_id  String
+    autopart_id       String?
+    warehouse_id      Int
+    quantity          Int
+    purchase_price    Float
+    article           String
+    description       String
+
+    purchaseOrder PurchaseOrders @relation(fields: [purchaseOrder_id], references: [id], onDelete: Cascade)
+    autopart      Autoparts?     @relation(fields: [autopart_id], references: [id], onDelete: SetNull)
+    warehouse     Warehouses     @relation(fields: [warehouse_id], references: [id])
 }

@@ -1,5 +1,6 @@
 import db from "@/lib/db/db";
 import { NextRequest, NextResponse } from "next/server";
+import { revalidateTag } from "next/cache";
 
 // Получить все цены по автозапчасти
 export async function GET(_: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -77,6 +78,7 @@ console.log(prices)
 
     await db.$transaction(transactions);
 
+    revalidateTag("autoparts");
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Ошибка при обновлении цен:", error);

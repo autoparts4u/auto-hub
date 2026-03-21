@@ -36,14 +36,17 @@ import {
   FileText,
   Clock,
   CheckCircle2,
+  Pencil,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { getContrastTextColor } from '@/lib/utils';
 
 interface OrderDetailsModalProps {
   open: boolean;
   onClose: () => void;
   orderId: string;
   statuses: OrderStatus[];
+  onEdit?: () => void;
 }
 
 export default function OrderDetailsModal({
@@ -51,6 +54,7 @@ export default function OrderDetailsModal({
   onClose,
   orderId,
   statuses,
+  onEdit,
 }: OrderDetailsModalProps) {
   const [order, setOrder] = useState<Order | null>(null);
   const [history, setHistory] = useState<OrderStatusHistoryItem[]>([]);
@@ -59,6 +63,7 @@ export default function OrderDetailsModal({
 
   const [newStatusId, setNewStatusId] = useState('');
   const [comment, setComment] = useState('');
+  const [showItemDetails, setShowItemDetails] = useState(false);
 
   useEffect(() => {
     if (open && orderId) {
@@ -68,22 +73,22 @@ export default function OrderDetailsModal({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, orderId]);
 
-  const fetchOrderDetails = async () => {
+  const fetchOrderDetails = async (silent = false) => {
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       const res = await fetch(`/api/orders/${orderId}`);
       if (res.ok) {
         const data = await res.json();
         setOrder(data);
         setNewStatusId(data.orderStatus_id.toString());
-      } else {
+      } else if (!silent) {
         toast.error('Ошибка загрузки заказа');
       }
     } catch (error) {
       console.error('Error fetching order:', error);
-      toast.error('Ошибка загрузки заказа');
+      if (!silent) toast.error('Ошибка загрузки заказа');
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
@@ -127,7 +132,7 @@ export default function OrderDetailsModal({
       if (res.ok) {
         toast.success('Статус успешно обновлен');
         setComment('');
-        fetchOrderDetails();
+        fetchOrderDetails(true);
         fetchHistory();
       } else {
         const error = await res.json();
@@ -165,7 +170,7 @@ export default function OrderDetailsModal({
       <Badge
         style={{
           backgroundColor: status.hexColor,
-          color: '#fff',
+          color: getContrastTextColor(status.hexColor),
         }}
       >
         {status.name}
@@ -195,11 +200,26 @@ export default function OrderDetailsModal({
   return (
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Детали заказа #{order.id.substring(0, 8)}</DialogTitle>
-          <DialogDescription>
-            Информация о заказе и история изменений
-          </DialogDescription>
+        <DialogHeader className="pr-8">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <DialogTitle>Детали заказа #{order.id.substring(0, 8)}</DialogTitle>
+              <DialogDescription>
+                Информация о заказе и история изменений
+              </DialogDescription>
+            </div>
+            {onEdit && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onEdit}
+                className="gap-2 flex-shrink-0"
+              >
+                <Pencil className="h-4 w-4" />
+                Редактировать
+              </Button>
+            )}
+          </div>
         </DialogHeader>
 
         <div className="space-y-6">
@@ -313,10 +333,21 @@ export default function OrderDetailsModal({
 
           {/* Позиции заказа */}
           <div>
-            <h3 className="font-semibold mb-3 flex items-center gap-2">
-              <Package className="h-4 w-4" />
-              Позиции заказа ({order.orderItems?.length || 0})
-            </h3>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="font-semibold flex items-center gap-2">
+                <Package className="h-4 w-4" />
+                Позиции заказа ({order.orderItems?.length || 0})
+              </h3>
+              <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={showItemDetails}
+                  onChange={(e) => setShowItemDetails(e.target.checked)}
+                  className="h-4 w-4 rounded border-gray-300"
+                />
+                Доп. инфо
+              </label>
+            </div>
             <div className="space-y-2">
               {order.orderItems?.map((item) => (
                 <div
@@ -326,27 +357,33 @@ export default function OrderDetailsModal({
                   <div className="flex justify-between items-start">
                     <div className="flex-1">
                       <div className="font-medium">{item.article}</div>
-                      <div className="text-sm text-muted-foreground">
-                        {item.description}
-                      </div>
-                      {item.autopart?.brand && (
-                        <div className="text-xs text-muted-foreground">
-                          Бренд: {item.autopart.brand.name}
-                        </div>
+                      {showItemDetails && (
+                        <>
+                          <div className="text-sm text-muted-foreground">
+                            {item.description}
+                          </div>
+                          {item.autopart?.brand && (
+                            <div className="text-xs text-muted-foreground">
+                              Бренд: {item.autopart.brand.name}
+                            </div>
+                          )}
+                        </>
                       )}
                     </div>
-                    <div className="text-right">
-                      <div className="font-semibold">
-                        {formatCurrency(item.item_final_price * item.quantity)}
-                      </div>
-                      <div className="text-xs text-muted-foreground">
+                    <div className="text-right shrink-0 ml-4">
+                      <div className="text-base font-semibold text-foreground">
                         {item.quantity} × {formatCurrency(item.item_final_price)}
+                      </div>
+                      <div className="font-extrabold text-xl text-foreground">
+                        {formatCurrency(item.item_final_price * item.quantity)}
                       </div>
                     </div>
                   </div>
-                  <div className="text-xs text-muted-foreground">
-                    Склад: {item.warehouse?.name}
-                  </div>
+                  {showItemDetails && (
+                    <div className="text-xs text-muted-foreground">
+                      Склад: {item.warehouse?.name}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

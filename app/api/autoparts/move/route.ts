@@ -1,5 +1,6 @@
 import db from "@/lib/db/db";
 import { NextResponse } from "next/server";
+import { revalidateTag } from "next/cache";
 // import getServerSession from "next-auth";
 // import { authOptions } from "@/lib/auth";
 
@@ -81,6 +82,7 @@ export async function POST(req: Request) {
     //   }),
     ]);
 
+    revalidateTag("autoparts");
     return NextResponse.json({ success: true, updatedFrom, updatedTo });
   } catch (error) {
     console.error("Move API error:", error);

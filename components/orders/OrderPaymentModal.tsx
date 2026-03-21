@@ -179,6 +179,7 @@ export default function OrderPaymentModal({
     order.discount,
     order.paidAmount || 0
   );
+  const notPaid = (order.paidAmount || 0) === 0;
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -247,7 +248,7 @@ export default function OrderPaymentModal({
                 <span className="text-sm text-muted-foreground">Оплачено:</span>
                 <span
                   className={`font-medium ${
-                    fullyPaid ? 'text-green-600' : 'text-orange-600'
+                    fullyPaid ? 'text-green-600' : notPaid ? 'text-red-600' : 'text-orange-600'
                   }`}
                 >
                   {(order.paidAmount || 0).toFixed(2)}
@@ -260,7 +261,7 @@ export default function OrderPaymentModal({
                 <span className="font-medium">Остаток:</span>
                 <span
                   className={`text-lg font-bold ${
-                    fullyPaid ? 'text-green-600' : 'text-orange-600'
+                    fullyPaid ? 'text-green-600' : notPaid ? 'text-red-600' : 'text-orange-600'
                   }`}
                 >
                   {remaining.toFixed(2)}
@@ -275,6 +276,13 @@ export default function OrderPaymentModal({
                   <CheckCircle2 className="h-5 w-5 text-green-600" />
                   <Badge variant="default" className="bg-green-600">
                     Полностью оплачено
+                  </Badge>
+                </>
+              ) : notPaid ? (
+                <>
+                  <AlertCircle className="h-5 w-5 text-red-600" />
+                  <Badge variant="default" className="bg-red-600">
+                    Не оплачено
                   </Badge>
                 </>
               ) : (

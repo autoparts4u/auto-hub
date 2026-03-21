@@ -1,6 +1,7 @@
 // app/api/autoparts/[id]/route.ts
 import db from "@/lib/db/db";
 import { NextResponse } from "next/server";
+import { revalidatePath, revalidateTag } from "next/cache";
 
 export async function DELETE(
   req: Request,
@@ -13,6 +14,7 @@ export async function DELETE(
       where: { id },
     });
 
+    revalidateTag("autoparts");
     return NextResponse.json({ success: true });
   } catch (e) {
     console.error("Ошибка удаления:", e);
@@ -42,7 +44,17 @@ export async function PATCH(
       analogueIds,
     } = await req.json();
 
-    console.log(textForSearchId)
+    const existing = await db.autoparts.findFirst({ where: { id }, select: { id: true } });
+    if (!existing) {
+      revalidateTag("autoparts"); // сбрасываем кэш, чтобы таблица не показывала несуществующие записи
+      return NextResponse.json({ error: "Деталь не найдена или была удалена" }, { status: 404 });
+    }
+
+    // PrismaNeon не поддерживает интерактивные транзакции и вложенные create внутри update,
+    // поэтому выполняем последовательно: сначала удаляем старые связи, затем обновляем основную запись, затем создаём новые связи.
+    await db.autopartsWarehouses.deleteMany({ where: { autopart_id: id } });
+    await db.autopartsAutos.deleteMany({ where: { autopart_id: id } });
+    await db.autopartsEngineVolumes.deleteMany({ where: { autopart_id: id } });
 
     const autopart = await db.autoparts.update({
       where: { id },
@@ -56,27 +68,36 @@ export async function PATCH(
         year_to: yearTo || null,
         text_for_search_id: textForSearchId || null,
         fuel_type_id: fuelTypeId || null,
-        warehouses: {
-          deleteMany: {},
-          create: stock.map((s: { warehouseId: number; quantity: number }) => ({
-            warehouse: { connect: { id: s.warehouseId } },
-            quantity: s.quantity,
-          })),
-        },
-        autos: {
-          deleteMany: {},
-          create: autoIds.map((autoId: number) => ({
-            auto: { connect: { id: autoId } },
-          })),
-        },
-        engineVolumes: {
-          deleteMany: {},
-          create: engineVolumeIds.map((engineVolumeId: number) => ({
-            engineVolume: { connect: { id: engineVolumeId } },
-          })),
-        },
       },
     });
+
+    if (stock?.length) {
+      await db.autopartsWarehouses.createMany({
+        data: stock.map((s: { warehouseId: number; quantity: number }) => ({
+          autopart_id: id,
+          warehouse_id: s.warehouseId,
+          quantity: s.quantity,
+        })),
+      });
+    }
+
+    if (autoIds?.length) {
+      await db.autopartsAutos.createMany({
+        data: autoIds.map((autoId: number) => ({
+          autopart_id: id,
+          auto_id: autoId,
+        })),
+      });
+    }
+
+    if (engineVolumeIds?.length) {
+      await db.autopartsEngineVolumes.createMany({
+        data: engineVolumeIds.map((engineVolumeId: number) => ({
+          autopart_id: id,
+          engine_volume_id: engineVolumeId,
+        })),
+      });
+    }
 
     // Обновляем аналоги: удаляем старые и добавляем новые
     await db.analogues.deleteMany({
@@ -97,6 +118,8 @@ export async function PATCH(
       });
     }
 
+    revalidateTag("autoparts");
+    revalidatePath("/shop");
     return NextResponse.json(autopart);
   } catch (e) {
     console.error(e);

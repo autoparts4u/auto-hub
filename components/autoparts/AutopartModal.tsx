@@ -91,6 +91,13 @@ export const AutopartModal = forwardRef<AutopartModalRef, AutopartModalProps>(
   const [isAnalogueDropdownOpen, setIsAnalogueDropdownOpen] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
 
+  const [brandOpen, setBrandOpen] = useState(false);
+  const [categoryOpen, setCategoryOpen] = useState(false);
+  const [autoOpen, setAutoOpen] = useState(false);
+  const [engineVolumeOpen, setEngineVolumeOpen] = useState(false);
+  const [textForSearchOpen, setTextForSearchOpen] = useState(false);
+  const [fuelTypeOpen, setFuelTypeOpen] = useState(false);
+
   const [touched, setTouched] = useState({
     article: false,
     description: false,
@@ -347,7 +354,7 @@ export const AutopartModal = forwardRef<AutopartModalRef, AutopartModalProps>(
       </div>
       <div className="space-y-1">
         <label className="text-sm font-medium">Бренд</label>
-        <Popover>
+        <Popover open={brandOpen} onOpenChange={setBrandOpen}>
           <PopoverTrigger asChild>
             <Button
               variant="outline"
@@ -373,6 +380,7 @@ export const AutopartModal = forwardRef<AutopartModalRef, AutopartModalProps>(
                       onSelect={() => {
                         setBrandId(b.id.toString());
                         setTouched((prev) => ({ ...prev, brandId: true }));
+                        setBrandOpen(false);
                       }}
                     >
                       {b.name}
@@ -390,7 +398,7 @@ export const AutopartModal = forwardRef<AutopartModalRef, AutopartModalProps>(
 
       <div className="space-y-1">
         <label className="text-sm font-medium">Категория</label>
-        <Popover>
+        <Popover open={categoryOpen} onOpenChange={setCategoryOpen}>
           <PopoverTrigger asChild>
             <Button
               variant="outline"
@@ -416,6 +424,7 @@ export const AutopartModal = forwardRef<AutopartModalRef, AutopartModalProps>(
                       onSelect={() => {
                         setCategoryId(c.id.toString());
                         setTouched((prev) => ({ ...prev, categoryId: true }));
+                        setCategoryOpen(false);
                       }}
                     >
                       {c.name}
@@ -461,12 +470,9 @@ export const AutopartModal = forwardRef<AutopartModalRef, AutopartModalProps>(
           </p>
         )}
         
-        <Popover>
+        <Popover open={autoOpen} onOpenChange={setAutoOpen}>
           <PopoverTrigger asChild>
-            <Button
-              variant="outline"
-              className="w-full justify-between"
-            >
+            <Button variant="outline" className="w-full justify-between">
               Добавить авто
             </Button>
           </PopoverTrigger>
@@ -484,6 +490,7 @@ export const AutopartModal = forwardRef<AutopartModalRef, AutopartModalProps>(
                         onSelect={() => {
                           setSelectedAutos((prev) => [...prev, a]);
                           setTouched((prev) => ({ ...prev, selectedAutos: true }));
+                          setAutoOpen(false);
                         }}
                       >
                         {a.name}
@@ -526,12 +533,9 @@ export const AutopartModal = forwardRef<AutopartModalRef, AutopartModalProps>(
           </p>
         )}
         
-        <Popover>
+        <Popover open={engineVolumeOpen} onOpenChange={setEngineVolumeOpen}>
           <PopoverTrigger asChild>
-            <Button
-              variant="outline"
-              className="w-full justify-between"
-            >
+            <Button variant="outline" className="w-full justify-between">
               Добавить объем двигателя
             </Button>
           </PopoverTrigger>
@@ -549,6 +553,7 @@ export const AutopartModal = forwardRef<AutopartModalRef, AutopartModalProps>(
                         onSelect={() => {
                           setSelectedEngineVolumes((prev) => [...prev, ev]);
                           setTouched((prev) => ({ ...prev, selectedEngineVolumes: true }));
+                          setEngineVolumeOpen(false);
                         }}
                       >
                         {ev.name}
@@ -562,16 +567,14 @@ export const AutopartModal = forwardRef<AutopartModalRef, AutopartModalProps>(
       </div>
       <div className="space-y-1">
         <label className="text-sm font-medium">Текст для поиска</label>
-        <Popover>
+        <Popover open={textForSearchOpen} onOpenChange={setTextForSearchOpen}>
           <PopoverTrigger asChild>
             <Button
               variant="outline"
               className="w-full justify-between min-h-20 whitespace-normal"
             >
               {textForSearchId
-                ? textsForSearch.find(
-                    (t) => t.id.toString() === textForSearchId
-                  )?.text
+                ? textsForSearch.find((t) => t.id.toString() === textForSearchId)?.text
                 : "Выберите текст"}
             </Button>
           </PopoverTrigger>
@@ -586,10 +589,8 @@ export const AutopartModal = forwardRef<AutopartModalRef, AutopartModalProps>(
                       key={t.id}
                       onSelect={() => {
                         setTextForSearchId(t.id.toString());
-                        setTouched((prev) => ({
-                          ...prev,
-                          textForSearchId: true,
-                        }));
+                        setTouched((prev) => ({ ...prev, textForSearchId: true }));
+                        setTextForSearchOpen(false);
                       }}
                     >
                       {t.text}
@@ -603,12 +604,9 @@ export const AutopartModal = forwardRef<AutopartModalRef, AutopartModalProps>(
       </div>
       <div className="space-y-1">
         <label className="text-sm font-medium">Вид топлива</label>
-        <Popover>
+        <Popover open={fuelTypeOpen} onOpenChange={setFuelTypeOpen}>
           <PopoverTrigger asChild>
-            <Button
-              variant="outline"
-              className="w-full justify-between"
-            >
+            <Button variant="outline" className="w-full justify-between">
               {fuelTypeId
                 ? fuelTypes.find((ft) => ft.id.toString() === fuelTypeId)?.name
                 : "Выберите вид топлива"}
@@ -620,19 +618,13 @@ export const AutopartModal = forwardRef<AutopartModalRef, AutopartModalProps>(
               <CommandList>
                 <CommandEmpty>Вид топлива не найден</CommandEmpty>
                 <CommandGroup>
-                  <CommandItem
-                    onSelect={() => {
-                      setFuelTypeId("");
-                    }}
-                  >
+                  <CommandItem onSelect={() => { setFuelTypeId(""); setFuelTypeOpen(false); }}>
                     Не выбрано
                   </CommandItem>
                   {fuelTypes.map((ft) => (
                     <CommandItem
                       key={ft.id}
-                      onSelect={() => {
-                        setFuelTypeId(ft.id.toString());
-                      }}
+                      onSelect={() => { setFuelTypeId(ft.id.toString()); setFuelTypeOpen(false); }}
                     >
                       {ft.name}
                     </CommandItem>

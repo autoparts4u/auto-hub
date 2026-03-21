@@ -24,7 +24,14 @@ export async function GET(request: NextRequest) {
         },
       });
 
-      deliveryMethods = clientMethods.map(cm => cm.deliveryMethod);
+      if (clientMethods.length > 0) {
+        deliveryMethods = clientMethods.map(cm => cm.deliveryMethod);
+      } else {
+        // Если у клиента нет привязанных методов — возвращаем все
+        deliveryMethods = await prisma.deliveryMethods.findMany({
+          orderBy: { name: 'asc' },
+        });
+      }
     } else {
       // Получаем все методы доставки
       deliveryMethods = await prisma.deliveryMethods.findMany({

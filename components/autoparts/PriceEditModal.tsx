@@ -7,18 +7,22 @@ import { Label } from "@/components/ui/label";
 import { DialogFooter } from "@/components/ui/dialog";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { useRouter } from "next/navigation";
+interface PriceType {
+  priceTypeId: number;
+  priceTypeName: string;
+  price: number | null;
+}
 
 interface PriceEditModalProps {
   autopartId: string;
   onClose: () => void;
+  onSaved?: (prices: PriceType[]) => void;
 }
 
-export function PriceEditModal({ autopartId, onClose }: PriceEditModalProps) {
-  const [prices, setPrices] = useState<{ priceTypeId: number; priceTypeName: string; price: number | null }[]>([]);
+export function PriceEditModal({ autopartId, onClose, onSaved }: PriceEditModalProps) {
+  const [prices, setPrices] = useState<PriceType[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const router = useRouter();
 
   useEffect(() => {
     const load = async () => {
@@ -55,7 +59,7 @@ export function PriceEditModal({ autopartId, onClose }: PriceEditModalProps) {
       });
       if (!res.ok) throw new Error();
       toast.success("Цены обновлены");
-      router.refresh();
+      onSaved?.(prices);
       onClose();
     } catch {
       toast.error("Ошибка при сохранении цен");

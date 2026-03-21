@@ -8,6 +8,7 @@ import Google from "next-auth/providers/google";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import db from "@/lib/db/db";
 import { schemaSignIn } from "./schema";
+import { finalizeSession } from "@/lib/activity/session";
 
 const adapter = PrismaAdapter(db);
 
@@ -110,39 +111,44 @@ export const authOptions: NextAuthConfig = {
       return token;
     },
     async session({ session, token }) {
-      if (token?.role === "admin" || token?.role === "user") {
-        session.user.role = token.role;
-      }
+      const userId = token?.sub ?? session.user?.id;
 
-      if (token?.isConfirmed !== undefined) {
-        session.user.isConfirmed = Boolean(token.isConfirmed);
-      }
+      if (!userId) return session;
 
-      if (token?.sub && token?.clientId) {
-        // Загружаем актуальные данные клиента из базы
-        const user = await db.user.findUnique({
-          where: { id: token.sub },
-          include: {
-            client: {
-              select: {
-                id: true,
-                name: true,
-                phone: true,
-              },
-            },
+      // Всегда загружаем актуальные данные из базы (для JWT и database стратегий)
+      const dbUser = await db.user.findUnique({
+        where: { id: userId },
+        select: {
+          role: true,
+          isConfirmed: true,
+          clientId: true,
+          client: {
+            select: { id: true, name: true, phone: true },
           },
-        });
+        },
+      });
 
-        if (user?.client) {
-          session.user.clientId = user.clientId;
-          session.user.client = user.client;
-        }
+      if (!dbUser) return session;
+
+      session.user.role = dbUser.role;
+      session.user.isConfirmed = dbUser.isConfirmed;
+
+      if (dbUser.client) {
+        session.user.clientId = dbUser.clientId ?? undefined;
+        session.user.client = dbUser.client;
       }
 
       return session;
     },
   },
   events: {
+    async signOut(message) {
+      // Закрываем activity-сессию при выходе
+      const userId = "token" in message ? message.token?.sub : message.session?.userId;
+      if (userId) {
+        finalizeSession(userId).catch(() => {});
+      }
+    },
     async createUser({ user }) {
       // Создаем клиента для нового пользователя, если его еще нет
       const existingClient = await db.clients.findFirst({

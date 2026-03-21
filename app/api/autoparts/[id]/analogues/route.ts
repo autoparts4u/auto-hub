@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import db from "@/lib/db/db";
+import { revalidateTag } from "next/cache";
 
 interface Params {
   params: Promise<{ id: string }>;
@@ -59,6 +60,7 @@ export async function POST(req: Request, { params }: Params) {
       skipDuplicates: true,
     });
 
+    revalidateTag("autoparts");
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error(error);
@@ -88,6 +90,7 @@ export async function DELETE(req: Request, { params }: Params) {
       },
     });
 
+    revalidateTag("autoparts");
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error(error);

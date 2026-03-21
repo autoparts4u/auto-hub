@@ -1,5 +1,6 @@
 import db from "@/lib/db/db";
 import { NextResponse } from "next/server";
+import { revalidatePath, revalidateTag } from "next/cache";
 
 export async function GET() {
   try {
@@ -64,7 +65,7 @@ export async function POST(req: Request) {
         fuel_type_id: fuelTypeId || null,
         warehouses: {
           create: stock.map((s: { warehouseId: number; quantity: number }) => ({
-            warehouseId: s.warehouseId,
+            warehouse_id: s.warehouseId,
             quantity: s.quantity,
           })),
         },
@@ -93,6 +94,8 @@ export async function POST(req: Request) {
       });
     }
 
+    revalidateTag("autoparts");
+    revalidatePath("/shop");
     return NextResponse.json(autopart, { status: 201 });
   } catch (e) {
     console.error(e);

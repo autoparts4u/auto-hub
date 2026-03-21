@@ -177,6 +177,7 @@ const ShopPage = async () => {
         onlyView={true}
         priceAccessId={user?.client?.priceAccessId ?? null}
         warehouseAccessId={user?.client?.warehouseAccessId ?? null}
+        clientId={currentUser?.client?.id ?? null}
       />
     </div>
   );

@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { toast } from "sonner";
+import { useActivity } from "@/components/activity/ActivityProvider";
 import { AutopartWithStock, AutopartFormData } from "@/app/types/autoparts";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -30,6 +31,8 @@ import { Label } from "@/components/ui/label";
 import { AutopartModal } from "./AutopartModal";
 import { MovePartModal } from "./MovePartModal";
 import { LogsModal } from "./LogsModal";
+import { ReservationModal } from "@/components/reservations/ReservationModal";
+import { MyReservationsModal } from "@/components/reservations/MyReservationsModal";
 import {
   Plus,
   Pencil,
@@ -46,8 +49,9 @@ import {
   ChevronsRight,
   Filter,
   X,
+  BookMarked,
+  BookmarkCheck,
 } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { PriceEditModal } from "./PriceEditModal";
 import { Auto, Categories, TextForAuthopartsSearch, EngineVolume, FuelType } from "@prisma/client";
 import ImportAutopartsButton from "./ImportAutopartsButton";
@@ -64,6 +68,7 @@ interface Props {
   onlyView?: boolean;
   priceAccessId?: number | null;
   warehouseAccessId?: number | null;
+  clientId?: string | null;
 }
 
 type SortKey =
@@ -73,6 +78,8 @@ type SortKey =
   | "category"
   | "totalQuantity"
   | "auto";
+
+const RE_NORM = /[/,.\-\s]/g;
 
 export function AutopartsTable({
   parts,
@@ -86,14 +93,44 @@ export function AutopartsTable({
   onlyView,
   priceAccessId,
   warehouseAccessId,
+  clientId,
 }: Props) {
+  const { logEvent } = useActivity();
+  const [localParts, setLocalParts] = useState<AutopartWithStock[]>(parts);
+
+  // Синхронизируем при обновлении пропа (например, при первой загрузке страницы)
+  useEffect(() => { setLocalParts(parts); }, [parts]);
+
+  // Для пользователей (onlyView) — поллинг обновлений каждые 15 секунд + при возврате на вкладку
+  useEffect(() => {
+    if (!onlyView) return;
+    const poll = async () => {
+      try {
+        const res = await fetch('/api/autoparts/full');
+        if (!res.ok) return;
+        const data = await res.json();
+        if (Array.isArray(data.parts)) setLocalParts(data.parts);
+      } catch {}
+    };
+    const onVisible = () => { if (document.visibilityState === 'visible') poll(); };
+    document.addEventListener('visibilitychange', onVisible);
+    const id = setInterval(poll, 15_000);
+    return () => {
+      clearInterval(id);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+  }, [onlyView]);
+
   const [selected, setSelected] = useState<AutopartWithStock | null>(null);
   const [movePart, setMovePart] = useState<AutopartWithStock | null>(null);
   const [creating, setCreating] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [logsPartId, setLogsPartId] = useState<string | null>(null);
   const [pricePartId, setPricePartId] = useState<string | null>(null);
-  const [search, setSearch] = useState("");
+  const [reservingPart, setReservingPart] = useState<AutopartWithStock | null>(null);
+  const [showMyReservations, setShowMyReservations] = useState(false);
+  const [searchFilter, setSearchFilter] = useState("");
+  const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
   const [selectedWarehouses, setSelectedWarehouses] = useState<string[]>([]);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
@@ -114,11 +151,27 @@ export function AutopartsTable({
   const [submitting, setSubmitting] = useState(false);
   const [showFilters, setShowFilters] = useState(true);
   const [showFiltersModal, setShowFiltersModal] = useState(false);
-  const router = useRouter();
+  const [usdRate, setUsdRate] = useState<number | null>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const searchModalInputRef = useRef<HTMLInputElement>(null);
   const autopartModalRef = useRef<{ handleSubmit: () => Promise<void> }>(null);
   const lastScrollY = useRef(0);
   const filtersModalContentRef = useRef<HTMLDivElement>(null);
   const filtersModalTitleRef = useRef<HTMLDivElement>(null);
+
+  // Загрузка курса USD от НБРБ + надбавка из настроек
+  useEffect(() => {
+    Promise.all([
+      fetch("https://www.nbrb.by/api/exrates/rates/431").then((r) => r.json()),
+      fetch("/api/settings").then((r) => r.json()),
+    ])
+      .then(([rateData, settings]) => {
+        const base = rateData.Cur_OfficialRate ?? 0;
+        const offset = settings.usdRateOffset ?? 0;
+        setUsdRate(base + offset);
+      })
+      .catch(() => {});
+  }, []);
 
   // Автоматическое скрытие фильтров при скролле вниз на мобильных
   useEffect(() => {
@@ -185,17 +238,11 @@ export function AutopartsTable({
 
   const handleConfirmDelete = async (id: string) => {
     try {
-      const res = await fetch(`/api/autoparts/${id}`, {
-        method: "DELETE",
-      });
-
-      if (!res.ok) {
-        throw new Error("Ошибка удаления");
-      }
-
+      const res = await fetch(`/api/autoparts/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error("Ошибка удаления");
       toast.success("Деталь удалена");
       setDeletingId(null);
-      router.refresh();
+      setLocalParts(prev => prev.filter(p => p.id !== id));
     } catch (error) {
       toast.error("Не удалось удалить деталь");
       console.error(error);
@@ -216,51 +263,76 @@ export function AutopartsTable({
       );
 
       if (!res.ok) {
-        throw new Error("Ошибка сохранения детали");
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || `Ошибка ${res.status}`);
+      }
+
+      const data = await res.json();
+
+      // Собираем полный объект AutopartWithStock из данных формы + справочников
+      const patchedPart: AutopartWithStock = {
+        id: creating ? data.id : selected!.id,
+        article: formData.article,
+        description: formData.description,
+        maxNumberShown: formData.maxNumberShown,
+        year_from: formData.yearFrom ?? null,
+        year_to: formData.yearTo ?? null,
+        brand: brands.find(b => b.id === formData.brandId) as AutopartWithStock['brand'] ?? null,
+        category: categories.find(c => c.id === formData.categoryId) ?? null,
+        fuelType: fuelTypes?.find(f => f.id === formData.fuelTypeId) ?? null,
+        autos: autos.filter(a => formData.autoIds.includes(a.id)),
+        engineVolumes: engineVolumes.filter(ev => formData.engineVolumeIds.includes(ev.id)),
+        textForSearch: textsForSearch.find(t => t.id === formData.textForSearchId) ?? null,
+        totalQuantity: formData.stock.reduce((sum, s) => sum + s.quantity, 0),
+        warehouses: formData.stock.map(s => ({
+          warehouseId: s.warehouseId,
+          warehouseName: warehouses.find(w => w.id === s.warehouseId)?.name ?? '',
+          quantity: s.quantity,
+        })),
+        prices: creating ? [] : (selected?.prices ?? []),
+        analogues: creating ? [] : (selected?.analogues ?? []),
+      };
+
+      if (creating) {
+        setLocalParts(prev => [...prev, patchedPart]);
+      } else {
+        setLocalParts(prev => prev.map(p => p.id === patchedPart.id ? patchedPart : p));
       }
 
       toast.success(selected ? "Деталь обновлена" : "Деталь добавлена");
       setSelected(null);
       setCreating(false);
-      router.refresh();
     } catch (error) {
-      toast.error("Ошибка сохранения детали");
+      toast.error(error instanceof Error ? error.message : "Ошибка сохранения детали");
       console.error(error);
     } finally {
       setSubmitting(false);
     }
   };
 
+  // Pre-index строк поиска — вычисляется один раз при изменении parts
+  const indexedParts = useMemo(() =>
+    localParts.map((p) => ({
+      ...p,
+      _searchStr: (p.article + " " + p.description + " " + (p.textForSearch?.text ?? ""))
+        .toLowerCase()
+        .replace(RE_NORM, ""),
+      _analogueStr: p.analogues
+        .map((a) => a.article + " " + a.description)
+        .join(" ")
+        .toLowerCase()
+        .replace(RE_NORM, ""),
+    })),
+    [localParts]
+  );
+
   // Фильтрация и сортировка данных
-  const filteredAndSortedParts = parts
+  const filteredAndSortedParts = useMemo(() => {
+    const query = searchFilter.toLowerCase().replace(RE_NORM, "");
+    return indexedParts
     .filter((p) => {
-      const query = search.toLowerCase().replaceAll(/[/,.-\s]/g, "");
-
-      const matchesSelf =
-        p.article
-          .toLowerCase()
-          .replaceAll(/[/,.-\s]/g, "")
-          .includes(query) ||
-        p.description
-          .toLowerCase()
-          .replaceAll(/[/,.-\s]/g, "")
-          .includes(query) ||
-        p.textForSearch?.text
-          .toLowerCase()
-          .replaceAll(/[/,.-\s]/g, "")
-          .includes(query);
-
-      const matchesAnalogue = p.analogues.some(
-        (a) =>
-          a.article
-            .toLowerCase()
-            .replaceAll(/[/,.-\s]/g, "")
-            .includes(query) ||
-          a.description
-            .toLowerCase()
-            .replaceAll(/[/,.-\s]/g, "")
-            .includes(query)
-      );
+      const matchesSelf = !query || p._searchStr.includes(query);
+      const matchesAnalogue = !query || p._analogueStr.includes(query);
 
       const matchesBrand =
         !p.brand ||
@@ -341,6 +413,7 @@ export function AutopartsTable({
       if (valA > valB) return sortOrder === "asc" ? 1 : -1;
       return 0;
     });
+  }, [indexedParts, searchFilter, selectedBrands, selectedWarehouses, selectedCategories, selectedAutos, selectedEngineVolumes, selectedFuelTypes, filterYear, selectedTextsForSearch, onlyInStock, sortKey, sortOrder]);
 
   // Пагинация
   const totalItems = filteredAndSortedParts.length;
@@ -351,7 +424,9 @@ export function AutopartsTable({
 
   // Сброс страницы при изменении фильтров
   const resetFilters = () => {
-    setSearch("");
+    if (searchInputRef.current) searchInputRef.current.value = "";
+    if (searchModalInputRef.current) searchModalInputRef.current.value = "";
+    setSearchFilter("");
     setSelectedBrands([]);
     setSelectedWarehouses([]);
     setSelectedCategories([]);
@@ -385,44 +460,54 @@ export function AutopartsTable({
 
   // Обработчики для сброса страницы при изменении фильтров
   const handleSearchChange = (value: string) => {
-    setSearch(value);
-    setCurrentPage(1);
+    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+    searchDebounceRef.current = setTimeout(() => {
+      setSearchFilter(value);
+      setCurrentPage(1);
+      if (value) logEvent("search", { query: value });
+    }, 300);
   };
 
   const handleBrandChange = (brands: string[]) => {
     setSelectedBrands(brands);
     setCurrentPage(1);
+    logEvent("filter", { type: "brand", values: brands });
   };
 
   const handleWarehouseChange = (warehouses: string[]) => {
     setSelectedWarehouses(warehouses);
     setCurrentPage(1);
+    logEvent("filter", { type: "warehouse", values: warehouses });
   };
 
   const handleCategoryChange = (categories: string[]) => {
     setSelectedCategories(categories);
     setCurrentPage(1);
+    logEvent("filter", { type: "category", values: categories });
   };
 
   const handleAutoChange = (autos: string[]) => {
     setSelectedAutos(autos);
     setCurrentPage(1);
+    logEvent("filter", { type: "auto", values: autos });
   };
 
   const handleTextsForSearchChange = (texts: string[]) => {
     setSelectedTextsForSearch(texts);
     setCurrentPage(1);
+    logEvent("filter", { type: "textForSearch", values: texts });
   };
 
   const handleOnlyInStockChange = (value: boolean | "indeterminate") => {
     setOnlyInStock(value);
     setCurrentPage(1);
+    logEvent("filter", { type: "onlyInStock", value });
   };
 
   // Подсчет активных фильтров
   const getActiveFiltersCount = () => {
     let count = 0;
-    if (search) count++;
+    if (searchFilter) count++;
     if (selectedBrands.length > 0) count++;
     if (selectedWarehouses.length > 0) count++;
     if (selectedCategories.length > 0) count++;
@@ -485,6 +570,15 @@ export function AutopartsTable({
         </div>
       )}
 
+      {onlyView && clientId && (
+        <div className="md:sticky md:top-0 z-20 bg-background flex items-center justify-end py-2">
+          <Button variant="outline" size="sm" onClick={() => setShowMyReservations(true)}>
+            <BookmarkCheck className="w-4 h-4 mr-2" />
+            Мои бронирования
+          </Button>
+        </div>
+      )}
+
       {/* Панель фильтров */}
       <div className={`md:sticky z-10 bg-[#FFD966] border-b mb-4 transition-all duration-300 ${!onlyView ? 'mt-4 md:mt-0 md:top-[40px]' : 'md:top-0'} ${showFilters ? 'p-4' : 'p-0 h-0 overflow-hidden border-0'}`}>
         <div className="flex items-center justify-between mb-3 pb-2 border-b md:border-0">
@@ -509,8 +603,9 @@ export function AutopartsTable({
         </div>
         <div className="flex flex-wrap gap-3 items-end">
         <Input
+          ref={searchInputRef}
           placeholder="Поиск по описанию или артикулу"
-          value={search}
+          defaultValue=""
           onChange={(e) => handleSearchChange(e.target.value)}
           className="w-full sm:max-w-xs bg-background"
         />
@@ -1009,6 +1104,11 @@ export function AutopartsTable({
                   Действия
                 </th>
               )}
+              {onlyView && clientId && (
+                <th className="px-2 py-3.5 text-center text-xs font-semibold tracking-wider w-[90px]">
+                  Резерв
+                </th>
+              )}
             </tr>
           </thead>
           <tbody className="bg-background">
@@ -1080,27 +1180,18 @@ export function AutopartsTable({
                     <div className="flex items-center gap-1">
                       <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
                         {(() => {
-                          const quantity = p.warehouses.find(
-                            (warehouse) =>
-                              warehouse.warehouseId === warehouseAccessId
-                          )?.quantity;
-                          return quantity
-                            ? quantity > p.maxNumberShown
-                              ? `${p.maxNumberShown}+`
-                              : quantity
-                            : "0";
+                          const quantity = p.warehouses.find(w => w.warehouseId === warehouseAccessId)?.quantity ?? 0;
+                          return quantity > p.maxNumberShown ? `${p.maxNumberShown}+` : quantity;
                         })()}
                       </span>
                       <span className="text-xs text-muted-foreground">
-                        (
-                        {p.totalQuantity > p.maxNumberShown
-                          ? `${p.maxNumberShown}+`
-                          : p.totalQuantity}
-                        )
+                        ({p.totalQuantity > p.maxNumberShown ? `${p.maxNumberShown}+` : p.totalQuantity})
                       </span>
                     </div>
                   ) : (
-                    "-"
+                    <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
+                      {p.totalQuantity > p.maxNumberShown ? `${p.maxNumberShown}+` : p.totalQuantity}
+                    </span>
                   )}
                 </td>
                 {!onlyView && (
@@ -1128,18 +1219,43 @@ export function AutopartsTable({
                           <span className="font-medium truncate">
                             {price.priceType.name}:
                           </span>
-                          <span className="font-semibold whitespace-nowrap text-green-600 dark:text-green-500">
-                            {price.price.toFixed(2)}
-                          </span>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span className="font-semibold whitespace-nowrap text-green-600 dark:text-green-500 cursor-default">
+                                  {price.price.toFixed(2)}
+                                </span>
+                              </TooltipTrigger>
+                              {usdRate !== null && (
+                                <TooltipContent side="top">
+                                  <p>{(price.price * usdRate).toFixed(2)} BYN</p>
+                                </TooltipContent>
+                              )}
+                            </Tooltip>
+                          </TooltipProvider>
                         </li>
                       ))}
                     </ul>
                   ) : (
-                    <span className="inline-flex items-center justify-center px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
-                      {p.prices
-                        .find((price) => price.priceType.id === priceAccessId)
-                        ?.price.toFixed(2) ?? "-"}
-                    </span>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className="inline-flex items-center justify-center px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 cursor-default">
+                            {p.prices
+                              .find((price) => price.priceType.id === priceAccessId)
+                              ?.price.toFixed(2) ?? "-"}
+                          </span>
+                        </TooltipTrigger>
+                        {usdRate !== null && (() => {
+                          const found = p.prices.find((price) => price.priceType.id === priceAccessId);
+                          return found ? (
+                            <TooltipContent side="top">
+                              <p>{(found.price * usdRate).toFixed(2)} BYN</p>
+                            </TooltipContent>
+                          ) : null;
+                        })()}
+                      </Tooltip>
+                    </TooltipProvider>
                   )}
                 </td>
                 {!onlyView && (
@@ -1222,6 +1338,31 @@ export function AutopartsTable({
                     </div>
                   </td>
                 )}
+                {onlyView && clientId && (
+                  <td className="px-2 py-3 text-center">
+                    {p.totalQuantity > 0 ? (
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7"
+                              onClick={() => setReservingPart(p)}
+                            >
+                              <BookMarked className="w-3.5 h-3.5 text-amber-600" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent side="left">
+                            <p>Зарезервировать</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">—</span>
+                    )}
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>
@@ -1249,29 +1390,16 @@ export function AutopartsTable({
                   <div className="inline-flex items-center justify-center px-3 py-1.5 rounded-full text-sm font-semibold bg-primary/10 text-primary">
                     {!onlyView ? (
                       p.totalQuantity
-                    ) : warehouseAccessId ? (
-                      <>
-                        {(() => {
-                          const quantity = p.warehouses.find(
-                            (warehouse) =>
-                              warehouse.warehouseId === warehouseAccessId
-                          )?.quantity;
-                          return quantity
-                            ? quantity > p.maxNumberShown
-                              ? `${p.maxNumberShown}>`
-                              : quantity
-                            : "0";
-                        })()}
-                      </>
-                    ) : (
-                      "-"
-                    )}
+                    ) : warehouseAccessId ? (() => {
+                        const quantity = p.warehouses.find(w => w.warehouseId === warehouseAccessId)?.quantity ?? 0;
+                        return quantity > p.maxNumberShown ? `${p.maxNumberShown}+` : quantity;
+                      })() : (
+                        p.totalQuantity > p.maxNumberShown ? `${p.maxNumberShown}+` : p.totalQuantity
+                      )}
                   </div>
                   {onlyView && warehouseAccessId && (
                     <div className="text-xs text-center text-muted-foreground mt-1">
-                      ({p.totalQuantity > p.maxNumberShown
-                        ? `${p.maxNumberShown}>`
-                        : p.totalQuantity})
+                      ({p.totalQuantity > p.maxNumberShown ? `${p.maxNumberShown}+` : p.totalQuantity})
                     </div>
                   )}
                 </div>
@@ -1356,22 +1484,47 @@ export function AutopartsTable({
                 {!onlyView && !priceAccessId ? (
                   <div className="flex flex-wrap gap-2">
                     {p.prices.map((price) => (
-                      <div key={price.priceType.id} className="inline-flex items-center gap-1.5 bg-green-50 dark:bg-green-900/20 rounded-md px-2.5 py-1.5 text-xs">
-                        <span className="font-medium text-muted-foreground">
-                          {price.priceType.name}:
-                        </span>
-                        <span className="font-semibold text-green-700 dark:text-green-400">
-                          {price.price.toFixed(2)}
-                        </span>
-                      </div>
+                      <TooltipProvider key={price.priceType.id}>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div className="inline-flex items-center gap-1.5 bg-green-50 dark:bg-green-900/20 rounded-md px-2.5 py-1.5 text-xs cursor-default">
+                              <span className="font-medium text-muted-foreground">
+                                {price.priceType.name}:
+                              </span>
+                              <span className="font-semibold text-green-700 dark:text-green-400">
+                                {price.price.toFixed(2)}
+                              </span>
+                            </div>
+                          </TooltipTrigger>
+                          {usdRate !== null && (
+                            <TooltipContent side="top">
+                              <p>{(price.price * usdRate).toFixed(2)} BYN</p>
+                            </TooltipContent>
+                          )}
+                        </Tooltip>
+                      </TooltipProvider>
                     ))}
                   </div>
                 ) : (
-                  <div className="inline-flex items-center justify-center px-3 py-1.5 rounded-full text-sm font-semibold bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
-                    {p.prices
-                      .find((price) => price.priceType.id === priceAccessId)
-                      ?.price.toFixed(2) ?? "-"}
-                  </div>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="inline-flex items-center justify-center px-3 py-1.5 rounded-full text-sm font-semibold bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 cursor-default">
+                          {p.prices
+                            .find((price) => price.priceType.id === priceAccessId)
+                            ?.price.toFixed(2) ?? "-"}
+                        </div>
+                      </TooltipTrigger>
+                      {usdRate !== null && (() => {
+                        const found = p.prices.find((price) => price.priceType.id === priceAccessId);
+                        return found ? (
+                          <TooltipContent side="top">
+                            <p>{(found.price * usdRate).toFixed(2)} BYN</p>
+                          </TooltipContent>
+                        ) : null;
+                      })()}
+                    </Tooltip>
+                  </TooltipProvider>
                 )}
               </div>
 
@@ -1395,6 +1548,20 @@ export function AutopartsTable({
                 </div>
               )}
             </div>
+
+            {onlyView && clientId && p.totalQuantity > 0 && (
+              <div className="px-4 pb-3">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="w-full text-amber-700 border-amber-300 hover:bg-amber-50 dark:text-amber-400 dark:border-amber-700 dark:hover:bg-amber-900/20"
+                  onClick={() => setReservingPart(p)}
+                >
+                  <BookMarked className="w-4 h-4 mr-2" />
+                  Зарезервировать
+                </Button>
+              </div>
+            )}
 
             {!onlyView && (
               <div className="flex items-center justify-between px-4 py-3 bg-muted/30 rounded-b-lg border-t">
@@ -1623,7 +1790,33 @@ export function AutopartsTable({
         <DialogContent className="sm:max-w-md">
           <DialogTitle>Переместить деталь</DialogTitle>
           {movePart && (
-            <MovePartModal part={movePart} onClose={() => setMovePart(null)} />
+            <MovePartModal
+              part={movePart}
+              onClose={() => setMovePart(null)}
+              onStockUpdated={(newWarehouses) => {
+                setLocalParts(prev => prev.map(p =>
+                  p.id === movePart.id
+                    ? { ...p, warehouses: newWarehouses, totalQuantity: newWarehouses.reduce((s, w) => s + w.quantity, 0) }
+                    : p
+                ));
+              }}
+              onMoved={(fromId, toId, qty) => {
+                setLocalParts(prev => prev.map(p => {
+                  if (p.id !== movePart.id) return p;
+                  let toExists = false;
+                  const updated = p.warehouses.map(w => {
+                    if (w.warehouseId === fromId) return { ...w, quantity: w.quantity - qty };
+                    if (w.warehouseId === toId) { toExists = true; return { ...w, quantity: w.quantity + qty }; }
+                    return w;
+                  });
+                  if (!toExists) {
+                    updated.push({ warehouseId: toId, warehouseName: `Склад #${toId}`, quantity: qty });
+                  }
+                  const filtered = updated.filter(w => w.quantity > 0);
+                  return { ...p, warehouses: filtered, totalQuantity: filtered.reduce((s, w) => s + w.quantity, 0) };
+                }));
+              }}
+            />
           )}
         </DialogContent>
       </Dialog>
@@ -1662,10 +1855,38 @@ export function AutopartsTable({
             <PriceEditModal
               autopartId={pricePartId}
               onClose={() => setPricePartId(null)}
+              onSaved={(updatedPrices) => {
+                setLocalParts(prev => prev.map(p =>
+                  p.id === pricePartId
+                    ? {
+                        ...p,
+                        prices: updatedPrices
+                          .filter(pr => pr.price !== null)
+                          .map(pr => ({
+                            priceType: { id: pr.priceTypeId, name: pr.priceTypeName },
+                            price: pr.price as number,
+                          })),
+                      }
+                    : p
+                ));
+              }}
             />
           )}
         </DialogContent>
       </Dialog>
+
+      {reservingPart && (
+        <ReservationModal
+          part={reservingPart}
+          warehouseAccessId={warehouseAccessId ?? null}
+          onClose={() => setReservingPart(null)}
+          onSuccess={() => setReservingPart(null)}
+        />
+      )}
+
+      {showMyReservations && (
+        <MyReservationsModal onClose={() => setShowMyReservations(false)} />
+      )}
 
       {/* Модальное окно фильтров (только мобильные) */}
       <Dialog open={showFiltersModal} onOpenChange={setShowFiltersModal}>
@@ -1714,9 +1935,10 @@ export function AutopartsTable({
             <div className="space-y-2">
               <Label htmlFor="modal-search" className="text-sm font-semibold">Поиск</Label>
               <Input
+                ref={searchModalInputRef}
                 id="modal-search"
                 placeholder="Поиск по описанию или артикулу"
-                value={search}
+                defaultValue=""
                 onChange={(e) => handleSearchChange(e.target.value)}
                 className="w-full"
                 autoFocus={false}

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import prisma from '@/lib/db/db';
 import { UpdateOrderStatusDTO } from '@/app/types/orders';
+import { revalidateTag } from 'next/cache';
 
 // PUT /api/orders/[id]/status - Изменить статус заказа
 export async function PUT(
@@ -54,6 +55,32 @@ export async function PUT(
       );
     }
 
+    // Если новый статус финальный — проверяем наличие товаров на складе
+    if (newStatus.isLast) {
+      const orderWithItems = await prisma.orders.findUnique({
+        where: { id },
+        include: { orderItems: true },
+      });
+
+      for (const item of orderWithItems?.orderItems ?? []) {
+        if (!item.autopart_id) continue;
+        const stock = await prisma.autopartsWarehouses.findUnique({
+          where: {
+            autopart_id_warehouse_id: {
+              autopart_id: item.autopart_id,
+              warehouse_id: item.warehouse_id,
+            },
+          },
+        });
+        if (!stock || stock.quantity < item.quantity) {
+          return NextResponse.json(
+            { error: `Недостаточно товара на складе: ${item.article}` },
+            { status: 400 }
+          );
+        }
+      }
+    }
+
     // Обновляем статус и создаем запись в истории в транзакции
     const result = await prisma.$transaction(async (tx) => {
       // Обновляем заказ
@@ -90,6 +117,22 @@ export async function PUT(
         },
       });
 
+      // Если статус финальный — списываем склад
+      if (newStatus.isLast) {
+        for (const item of updatedOrder.orderItems) {
+          if (!item.autopart_id) continue;
+          await tx.autopartsWarehouses.update({
+            where: {
+              autopart_id_warehouse_id: {
+                autopart_id: item.autopart_id,
+                warehouse_id: item.warehouse_id,
+              },
+            },
+            data: { quantity: { decrement: item.quantity } },
+          });
+        }
+      }
+
       // Создаем запись в истории
       await tx.orderStatusHistory.create({
         data: {
@@ -103,6 +146,7 @@ export async function PUT(
       return updatedOrder;
     });
 
+    revalidateTag("autoparts");
     return NextResponse.json(result);
   } catch (error) {
     console.error('Error updating order status:', error);

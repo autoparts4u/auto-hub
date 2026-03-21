@@ -30,9 +30,8 @@ export async function GET(request: NextRequest) {
       where.client_id = client;
     }
 
-    // Фильтр для неоплаченных выданных заказов
+    // Фильтр для неоплаченных заказов
     if (unpaidIssued) {
-      where.issuedAt = { not: null };
       where.paidAt = null; // Заказы без полной оплаты
     }
 
@@ -53,6 +52,10 @@ export async function GET(request: NextRequest) {
         { notes: { contains: search, mode: 'insensitive' } },
         { trackingNumber: { contains: search, mode: 'insensitive' } },
         { client: { name: { contains: search, mode: 'insensitive' } } },
+        { client: { fullName: { contains: search, mode: 'insensitive' } } },
+        { orderItems: { some: { article: { contains: search, mode: 'insensitive' } } } },
+        { orderItems: { some: { description: { contains: search, mode: 'insensitive' } } } },
+        { orderItems: { some: { autopart: { brand: { name: { contains: search, mode: 'insensitive' } } } } } },
       ];
     }
 
@@ -209,21 +212,7 @@ export async function POST(request: NextRequest) {
             description: autopart.description,
           },
         });
-
-        // Уменьшаем количество на складе
-        await tx.autopartsWarehouses.update({
-          where: {
-            autopart_id_warehouse_id: {
-              autopart_id: item.autopart_id,
-              warehouse_id: item.warehouse_id,
-            },
-          },
-          data: {
-            quantity: {
-              decrement: item.quantity,
-            },
-          },
-        });
+        // Склад списывается только при финальном статусе заказа
       }
 
       // Создаем первую запись истории статусов
