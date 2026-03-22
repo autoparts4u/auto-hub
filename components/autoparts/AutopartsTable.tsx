@@ -1,23 +1,23 @@
-"use client";
+'use client';
 
-import { useState, useRef, useEffect, useMemo } from "react";
-import { toast } from "sonner";
-import { useActivity } from "@/components/activity/ActivityProvider";
-import { AutopartWithStock, AutopartFormData } from "@/app/types/autoparts";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { useState, useRef, useEffect, useMemo } from 'react';
+import { toast } from 'sonner';
+import { useActivity } from '@/components/activity/ActivityProvider';
+import { AutopartWithStock, AutopartFormData } from '@/app/types/autoparts';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@/components/ui/popover";
+} from '@/components/ui/popover';
 import {
   Tooltip,
   TooltipTrigger,
   TooltipContent,
   TooltipProvider,
-} from "@/components/ui/tooltip";
+} from '@/components/ui/tooltip';
 import {
   Command,
   CommandEmpty,
@@ -25,16 +25,19 @@ import {
   CommandInput,
   CommandItem,
   CommandList,
-} from "@/components/ui/command";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
-import { AutopartModal } from "./AutopartModal";
-import { MovePartModal } from "./MovePartModal";
-import { LogsModal } from "./LogsModal";
-import { ReservationModal } from "@/components/reservations/ReservationModal";
-import { MyReservationsModal } from "@/components/reservations/MyReservationsModal";
-import { MyOrdersModal } from "@/components/orders/MyOrdersModal";
-import { BulkReservationModal, CartItem } from "@/components/reservations/BulkReservationModal";
+} from '@/components/ui/command';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
+import { AutopartModal } from './AutopartModal';
+import { MovePartModal } from './MovePartModal';
+import { LogsModal } from './LogsModal';
+import { ReservationModal } from '@/components/reservations/ReservationModal';
+import { MyReservationsModal } from '@/components/reservations/MyReservationsModal';
+import { MyOrdersModal } from '@/components/orders/MyOrdersModal';
+import {
+  BulkReservationModal,
+  CartItem,
+} from '@/components/reservations/BulkReservationModal';
 import {
   Plus,
   Pencil,
@@ -56,10 +59,16 @@ import {
   BookMarked,
   BookmarkCheck,
   ClipboardList,
-} from "lucide-react";
-import { PriceEditModal } from "./PriceEditModal";
-import { Auto, Categories, TextForAuthopartsSearch, EngineVolume, FuelType } from "@prisma/client";
-import ImportAutopartsButton from "./ImportAutopartsButton";
+} from 'lucide-react';
+import { PriceEditModal } from './PriceEditModal';
+import {
+  Auto,
+  Categories,
+  TextForAuthopartsSearch,
+  EngineVolume,
+  FuelType,
+} from '@prisma/client';
+import ImportAutopartsButton from './ImportAutopartsButton';
 
 interface Props {
   parts: AutopartWithStock[];
@@ -77,12 +86,12 @@ interface Props {
 }
 
 type SortKey =
-  | "article"
-  | "description"
-  | "brand"
-  | "category"
-  | "totalQuantity"
-  | "auto";
+  | 'article'
+  | 'description'
+  | 'brand'
+  | 'category'
+  | 'totalQuantity'
+  | 'auto';
 
 const RE_NORM = /[/,.\-\s]/g;
 
@@ -107,7 +116,9 @@ export function AutopartsTable({
   >({});
 
   // Синхронизируем при обновлении пропа (например, при первой загрузке страницы)
-  useEffect(() => { setLocalParts(parts); }, [parts]);
+  useEffect(() => {
+    setLocalParts(parts);
+  }, [parts]);
 
   // Для админа — загрузка сводки резерваций при монтировании и при возврате на вкладку
   useEffect(() => {
@@ -119,7 +130,9 @@ export function AutopartsTable({
       } catch {}
     };
     fetchSummary();
-    const onVisible = () => { if (document.visibilityState === 'visible') fetchSummary(); };
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') fetchSummary();
+    };
     document.addEventListener('visibilitychange', onVisible);
     return () => document.removeEventListener('visibilitychange', onVisible);
   }, [onlyView]);
@@ -144,7 +157,9 @@ export function AutopartsTable({
       } catch {}
     };
     poll();
-    const onVisible = () => { if (document.visibilityState === 'visible') poll(); };
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') poll();
+    };
     document.addEventListener('visibilitychange', onVisible);
     const id = setInterval(poll, 15_000);
     return () => {
@@ -160,28 +175,32 @@ export function AutopartsTable({
   const [logsPartId, setLogsPartId] = useState<string | null>(null);
   const [pricePartId, setPricePartId] = useState<string | null>(null);
   const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
-  const [reservingPart, setReservingPart] = useState<AutopartWithStock | null>(null);
+  const [reservingPart, setReservingPart] = useState<AutopartWithStock | null>(
+    null,
+  );
   const [cart, setCart] = useState<CartItem[]>([]);
   const [showBulkReservation, setShowBulkReservation] = useState(false);
   const [showMyReservations, setShowMyReservations] = useState(false);
   const [showMyOrders, setShowMyOrders] = useState(false);
-  const [searchFilter, setSearchFilter] = useState("");
+  const [searchFilter, setSearchFilter] = useState('');
   const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
   const [selectedWarehouses, setSelectedWarehouses] = useState<string[]>([]);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [selectedAutos, setSelectedAutos] = useState<string[]>([]);
-  const [selectedEngineVolumes, setSelectedEngineVolumes] = useState<string[]>([]);
+  const [selectedEngineVolumes, setSelectedEngineVolumes] = useState<string[]>(
+    [],
+  );
   const [selectedFuelTypes, setSelectedFuelTypes] = useState<string[]>([]);
-  const [filterYear, setFilterYear] = useState<string>("");
+  const [filterYear, setFilterYear] = useState<string>('');
   const [selectedTextsForSearch, setSelectedTextsForSearch] = useState<
     string[]
   >([]);
-  const [onlyInStock, setOnlyInStock] = useState<boolean | "indeterminate">(
-    false
+  const [onlyInStock, setOnlyInStock] = useState<boolean | 'indeterminate'>(
+    false,
   );
-  const [sortKey, setSortKey] = useState<SortKey>("description");
-  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+  const [sortKey, setSortKey] = useState<SortKey>('description');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(50);
   const [submitting, setSubmitting] = useState(false);
@@ -198,8 +217,8 @@ export function AutopartsTable({
   // Загрузка курса USD от НБРБ + надбавка из настроек
   useEffect(() => {
     Promise.all([
-      fetch("https://www.nbrb.by/api/exrates/rates/431").then((r) => r.json()),
-      fetch("/api/settings").then((r) => r.json()),
+      fetch('https://www.nbrb.by/api/exrates/rates/431').then((r) => r.json()),
+      fetch('/api/settings').then((r) => r.json()),
     ])
       .then(([rateData, settings]) => {
         const base = rateData.Cur_OfficialRate ?? 0;
@@ -214,19 +233,23 @@ export function AutopartsTable({
     const handleScroll = () => {
       // Только на мобильных устройствах
       if (window.innerWidth >= 768) return;
-      
+
       const currentScrollY = window.scrollY;
-      
+
       // Если скроллим вниз больше чем на 50px и фильтры открыты - скрываем
-      if (currentScrollY > lastScrollY.current && currentScrollY > 100 && showFilters) {
+      if (
+        currentScrollY > lastScrollY.current &&
+        currentScrollY > 100 &&
+        showFilters
+      ) {
         setShowFilters(false);
       }
-      
+
       lastScrollY.current = currentScrollY;
     };
 
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
   }, [showFilters]);
 
   // Закрытие модального окна фильтров при изменении размера на десктоп
@@ -237,8 +260,8 @@ export function AutopartsTable({
       }
     };
 
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
   }, [showFiltersModal]);
 
   // Прокрутка контента фильтров наверх при открытии
@@ -250,13 +273,13 @@ export function AutopartsTable({
           filtersModalContentRef.current.scrollTop = 0;
         }
       };
-      
+
       // Сразу
       scrollToTop();
-      
+
       // Через requestAnimationFrame
       const rafId = requestAnimationFrame(scrollToTop);
-      
+
       // И через небольшие задержки
       const timers = [
         setTimeout(scrollToTop, 0),
@@ -264,23 +287,23 @@ export function AutopartsTable({
         setTimeout(scrollToTop, 100),
         setTimeout(scrollToTop, 200),
       ];
-      
+
       return () => {
         cancelAnimationFrame(rafId);
-        timers.forEach(timer => clearTimeout(timer));
+        timers.forEach((timer) => clearTimeout(timer));
       };
     }
   }, [showFiltersModal]);
 
   const handleConfirmDelete = async (id: string) => {
     try {
-      const res = await fetch(`/api/autoparts/${id}`, { method: "DELETE" });
-      if (!res.ok) throw new Error("Ошибка удаления");
-      toast.success("Деталь удалена");
+      const res = await fetch(`/api/autoparts/${id}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error('Ошибка удаления');
+      toast.success('Деталь удалена');
       setDeletingId(null);
-      setLocalParts(prev => prev.filter(p => p.id !== id));
+      setLocalParts((prev) => prev.filter((p) => p.id !== id));
     } catch (error) {
-      toast.error("Не удалось удалить деталь");
+      toast.error('Не удалось удалить деталь');
       console.error(error);
     }
   };
@@ -290,12 +313,12 @@ export function AutopartsTable({
 
     try {
       const res = await fetch(
-        creating ? "/api/autoparts" : `/api/autoparts/${selected?.id}`,
+        creating ? '/api/autoparts' : `/api/autoparts/${selected?.id}`,
         {
-          method: creating ? "POST" : "PATCH",
-          headers: { "Content-Type": "application/json" },
+          method: creating ? 'POST' : 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(formData),
-        }
+        },
       );
 
       if (!res.ok) {
@@ -313,16 +336,23 @@ export function AutopartsTable({
         maxNumberShown: formData.maxNumberShown,
         year_from: formData.yearFrom ?? null,
         year_to: formData.yearTo ?? null,
-        brand: brands.find(b => b.id === formData.brandId) as AutopartWithStock['brand'] ?? null,
-        category: categories.find(c => c.id === formData.categoryId) ?? null,
-        fuelType: fuelTypes?.find(f => f.id === formData.fuelTypeId) ?? null,
-        autos: autos.filter(a => formData.autoIds.includes(a.id)),
-        engineVolumes: engineVolumes.filter(ev => formData.engineVolumeIds.includes(ev.id)),
-        textForSearch: textsForSearch.find(t => t.id === formData.textForSearchId) ?? null,
+        brand:
+          (brands.find(
+            (b) => b.id === formData.brandId,
+          ) as AutopartWithStock['brand']) ?? null,
+        category: categories.find((c) => c.id === formData.categoryId) ?? null,
+        fuelType: fuelTypes?.find((f) => f.id === formData.fuelTypeId) ?? null,
+        autos: autos.filter((a) => formData.autoIds.includes(a.id)),
+        engineVolumes: engineVolumes.filter((ev) =>
+          formData.engineVolumeIds.includes(ev.id),
+        ),
+        textForSearch:
+          textsForSearch.find((t) => t.id === formData.textForSearchId) ?? null,
         totalQuantity: formData.stock.reduce((sum, s) => sum + s.quantity, 0),
-        warehouses: formData.stock.map(s => ({
+        warehouses: formData.stock.map((s) => ({
           warehouseId: s.warehouseId,
-          warehouseName: warehouses.find(w => w.id === s.warehouseId)?.name ?? '',
+          warehouseName:
+            warehouses.find((w) => w.id === s.warehouseId)?.name ?? '',
           quantity: s.quantity,
         })),
         prices: creating ? [] : (selected?.prices ?? []),
@@ -330,16 +360,20 @@ export function AutopartsTable({
       };
 
       if (creating) {
-        setLocalParts(prev => [...prev, patchedPart]);
+        setLocalParts((prev) => [...prev, patchedPart]);
       } else {
-        setLocalParts(prev => prev.map(p => p.id === patchedPart.id ? patchedPart : p));
+        setLocalParts((prev) =>
+          prev.map((p) => (p.id === patchedPart.id ? patchedPart : p)),
+        );
       }
 
-      toast.success(selected ? "Деталь обновлена" : "Деталь добавлена");
+      toast.success(selected ? 'Деталь обновлена' : 'Деталь добавлена');
       setSelected(null);
       setCreating(false);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Ошибка сохранения детали");
+      toast.error(
+        error instanceof Error ? error.message : 'Ошибка сохранения детали',
+      );
       console.error(error);
     } finally {
       setSubmitting(false);
@@ -349,7 +383,9 @@ export function AutopartsTable({
   const handleDuplicate = async (part: AutopartWithStock) => {
     setDuplicatingId(part.id);
     try {
-      const res = await fetch(`/api/autoparts/${part.id}/duplicate`, { method: 'POST' });
+      const res = await fetch(`/api/autoparts/${part.id}/duplicate`, {
+        method: 'POST',
+      });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
         toast.error(err.error || 'Ошибка копирования детали');
@@ -368,14 +404,21 @@ export function AutopartsTable({
         category: raw.category ?? null,
         fuelType: raw.fuelType ?? null,
         textForSearch: raw.textForSearch ?? null,
-        autos: (raw.autos ?? []).map((a: { auto: typeof raw.autos[0] }) => a.auto),
-        engineVolumes: (raw.engineVolumes ?? []).map((e: { engineVolume: typeof raw.engineVolumes[0] }) => e.engineVolume),
+        autos: (raw.autos ?? []).map(
+          (a: { auto: (typeof raw.autos)[0] }) => a.auto,
+        ),
+        engineVolumes: (raw.engineVolumes ?? []).map(
+          (e: { engineVolume: (typeof raw.engineVolumes)[0] }) =>
+            e.engineVolume,
+        ),
         totalQuantity: 0,
         warehouses: [],
-        prices: (raw.prices ?? []).map((p: { priceType: { id: number; name: string }; price: number }) => ({
-          priceType: p.priceType,
-          price: p.price,
-        })),
+        prices: (raw.prices ?? []).map(
+          (p: { priceType: { id: number; name: string }; price: number }) => ({
+            priceType: p.priceType,
+            price: p.price,
+          }),
+        ),
         analogues: [],
       };
       setLocalParts((prev) => [copy, ...prev]);
@@ -389,109 +432,137 @@ export function AutopartsTable({
   };
 
   // Pre-index строк поиска — вычисляется один раз при изменении parts
-  const indexedParts = useMemo(() =>
-    localParts.map((p) => ({
-      ...p,
-      _searchStr: (p.article + " " + p.description + " " + (p.textForSearch?.text ?? ""))
-        .toLowerCase()
-        .replace(RE_NORM, ""),
-      _analogueStr: p.analogues
-        .map((a) => a.article + " " + a.description)
-        .join(" ")
-        .toLowerCase()
-        .replace(RE_NORM, ""),
-    })),
-    [localParts]
+  const indexedParts = useMemo(
+    () =>
+      localParts.map((p) => ({
+        ...p,
+        _searchStr: (
+          p.article +
+          ' ' +
+          p.description +
+          ' ' +
+          (p.textForSearch?.text ?? '')
+        )
+          .toLowerCase()
+          .replace(RE_NORM, ''),
+        _analogueStr: p.analogues
+          .map((a) => a.article + ' ' + a.description)
+          .join(' ')
+          .toLowerCase()
+          .replace(RE_NORM, ''),
+      })),
+    [localParts],
   );
 
   // Фильтрация и сортировка данных
   const filteredAndSortedParts = useMemo(() => {
-    const query = searchFilter.toLowerCase().replace(RE_NORM, "");
+    const query = searchFilter.toLowerCase().replace(RE_NORM, '');
     return indexedParts
-    .filter((p) => {
-      const matchesSelf = !query || p._searchStr.includes(query);
-      const matchesAnalogue = !query || p._analogueStr.includes(query);
+      .filter((p) => {
+        const matchesSelf = !query || p._searchStr.includes(query);
+        const matchesAnalogue = !query || p._analogueStr.includes(query);
 
-      const matchesBrand =
-        !p.brand ||
-        selectedBrands.length === 0 ||
-        selectedBrands.includes(p.brand.name);
+        const matchesBrand =
+          !p.brand ||
+          selectedBrands.length === 0 ||
+          selectedBrands.includes(p.brand.name);
 
-      const matchesWarehouse =
-        selectedWarehouses.length === 0 ||
-        p.warehouses.some((w) => selectedWarehouses.includes(w.warehouseName));
+        const matchesWarehouse =
+          selectedWarehouses.length === 0 ||
+          p.warehouses.some((w) =>
+            selectedWarehouses.includes(w.warehouseName),
+          );
 
-      const matchesCategory =
-        !p.category ||
-        selectedCategories.length === 0 ||
-        selectedCategories.includes(p.category.name);
+        const matchesCategory =
+          !p.category ||
+          selectedCategories.length === 0 ||
+          selectedCategories.includes(p.category.name);
 
-      const matchesAuto =
-        selectedAutos.length === 0 ||
-        p.autos.some((auto) => selectedAutos.includes(auto.name));
+        const matchesAuto =
+          selectedAutos.length === 0 ||
+          p.autos.some((auto) => selectedAutos.includes(auto.name));
 
-      const matchesEngineVolume =
-        selectedEngineVolumes.length === 0 ||
-        p.engineVolumes.some((ev) => selectedEngineVolumes.includes(ev.name));
+        const matchesEngineVolume =
+          selectedEngineVolumes.length === 0 ||
+          p.engineVolumes.some((ev) => selectedEngineVolumes.includes(ev.name));
 
-      const matchesFuelType =
-        selectedFuelTypes.length === 0 ||
-        (p.fuelType && selectedFuelTypes.includes(p.fuelType.name));
+        const matchesFuelType =
+          selectedFuelTypes.length === 0 ||
+          (p.fuelType && selectedFuelTypes.includes(p.fuelType.name));
 
-      const matchesYear = 
-        !filterYear ||
-        (
-          (p.year_from == null || (typeof p.year_from === 'number' && p.year_from <= Number(filterYear))) &&
-          (p.year_to == null || (typeof p.year_to === 'number' && p.year_to >= Number(filterYear)))
+        const matchesYear =
+          !filterYear ||
+          ((p.year_from == null ||
+            (typeof p.year_from === 'number' &&
+              p.year_from <= Number(filterYear))) &&
+            (p.year_to == null ||
+              (typeof p.year_to === 'number' &&
+                p.year_to >= Number(filterYear))));
+
+        const matchesTextsForSearch =
+          selectedTextsForSearch.length === 0 ||
+          (p.textForSearch &&
+            selectedTextsForSearch.includes(p.textForSearch.text));
+
+        const isInStock = onlyInStock ? p.totalQuantity > 0 : true;
+
+        return (
+          (matchesSelf || matchesAnalogue) &&
+          matchesBrand &&
+          matchesWarehouse &&
+          matchesCategory &&
+          matchesAuto &&
+          matchesEngineVolume &&
+          matchesFuelType &&
+          matchesYear &&
+          matchesTextsForSearch &&
+          isInStock
         );
+      })
+      .sort((a, b) => {
+        const getValue = (part: AutopartWithStock) => {
+          switch (sortKey) {
+            case 'article':
+              return part.article.toLowerCase();
+            case 'description':
+              return part.description.toLowerCase();
+            case 'brand':
+              return part.brand?.name.toLowerCase();
+            case 'category':
+              return part.category?.name.toLowerCase();
+            case 'auto':
+              return part.autos
+                .map((a) => a.name)
+                .join(', ')
+                .toLowerCase();
+            case 'totalQuantity':
+              return part.totalQuantity;
+          }
+        };
+        const valA = getValue(a);
+        const valB = getValue(b);
 
-      const matchesTextsForSearch =
-        selectedTextsForSearch.length === 0 ||
-        (p.textForSearch &&
-          selectedTextsForSearch.includes(p.textForSearch.text));
+        if (!valA || !valB) return 0;
 
-      const isInStock = onlyInStock ? p.totalQuantity > 0 : true;
-
-      return (
-        (matchesSelf || matchesAnalogue) &&
-        matchesBrand &&
-        matchesWarehouse &&
-        matchesCategory &&
-        matchesAuto &&
-        matchesEngineVolume &&
-        matchesFuelType &&
-        matchesYear &&
-        matchesTextsForSearch &&
-        isInStock
-      );
-    })
-    .sort((a, b) => {
-      const getValue = (part: AutopartWithStock) => {
-        switch (sortKey) {
-          case "article":
-            return part.article.toLowerCase();
-          case "description":
-            return part.description.toLowerCase();
-          case "brand":
-            return part.brand?.name.toLowerCase();
-          case "category":
-            return part.category?.name.toLowerCase();
-          case "auto":
-            return part.autos.map((a) => a.name).join(", ").toLowerCase();
-          case "totalQuantity":
-            return part.totalQuantity;
-        }
-      };
-      const valA = getValue(a);
-      const valB = getValue(b);
-
-      if (!valA || !valB) return 0;
-
-      if (valA < valB) return sortOrder === "asc" ? -1 : 1;
-      if (valA > valB) return sortOrder === "asc" ? 1 : -1;
-      return 0;
-    });
-  }, [indexedParts, searchFilter, selectedBrands, selectedWarehouses, selectedCategories, selectedAutos, selectedEngineVolumes, selectedFuelTypes, filterYear, selectedTextsForSearch, onlyInStock, sortKey, sortOrder]);
+        if (valA < valB) return sortOrder === 'asc' ? -1 : 1;
+        if (valA > valB) return sortOrder === 'asc' ? 1 : -1;
+        return 0;
+      });
+  }, [
+    indexedParts,
+    searchFilter,
+    selectedBrands,
+    selectedWarehouses,
+    selectedCategories,
+    selectedAutos,
+    selectedEngineVolumes,
+    selectedFuelTypes,
+    filterYear,
+    selectedTextsForSearch,
+    onlyInStock,
+    sortKey,
+    sortOrder,
+  ]);
 
   // Пагинация
   const totalItems = filteredAndSortedParts.length;
@@ -502,26 +573,26 @@ export function AutopartsTable({
 
   // Сброс страницы при изменении фильтров
   const resetFilters = () => {
-    if (searchInputRef.current) searchInputRef.current.value = "";
-    if (searchModalInputRef.current) searchModalInputRef.current.value = "";
-    setSearchFilter("");
+    if (searchInputRef.current) searchInputRef.current.value = '';
+    if (searchModalInputRef.current) searchModalInputRef.current.value = '';
+    setSearchFilter('');
     setSelectedBrands([]);
     setSelectedWarehouses([]);
     setSelectedCategories([]);
     setSelectedAutos([]);
     setSelectedEngineVolumes([]);
     setSelectedFuelTypes([]);
-    setFilterYear("");
+    setFilterYear('');
     setSelectedTextsForSearch([]);
     setCurrentPage(1);
   };
 
   const toggleSort = (key: SortKey) => {
     if (sortKey === key) {
-      setSortOrder((prev) => (prev === "asc" ? "desc" : "asc"));
+      setSortOrder((prev) => (prev === 'asc' ? 'desc' : 'asc'));
     } else {
       setSortKey(key);
-      setSortOrder("asc");
+      setSortOrder('asc');
     }
     setCurrentPage(1); // Сброс на первую страницу при изменении сортировки
   };
@@ -542,44 +613,44 @@ export function AutopartsTable({
     searchDebounceRef.current = setTimeout(() => {
       setSearchFilter(value);
       setCurrentPage(1);
-      if (value) logEvent("search", { query: value });
+      if (value) logEvent('search', { query: value });
     }, 300);
   };
 
   const handleBrandChange = (brands: string[]) => {
     setSelectedBrands(brands);
     setCurrentPage(1);
-    logEvent("filter", { type: "brand", values: brands });
+    logEvent('filter', { type: 'brand', values: brands });
   };
 
   const handleWarehouseChange = (warehouses: string[]) => {
     setSelectedWarehouses(warehouses);
     setCurrentPage(1);
-    logEvent("filter", { type: "warehouse", values: warehouses });
+    logEvent('filter', { type: 'warehouse', values: warehouses });
   };
 
   const handleCategoryChange = (categories: string[]) => {
     setSelectedCategories(categories);
     setCurrentPage(1);
-    logEvent("filter", { type: "category", values: categories });
+    logEvent('filter', { type: 'category', values: categories });
   };
 
   const handleAutoChange = (autos: string[]) => {
     setSelectedAutos(autos);
     setCurrentPage(1);
-    logEvent("filter", { type: "auto", values: autos });
+    logEvent('filter', { type: 'auto', values: autos });
   };
 
   const handleTextsForSearchChange = (texts: string[]) => {
     setSelectedTextsForSearch(texts);
     setCurrentPage(1);
-    logEvent("filter", { type: "textForSearch", values: texts });
+    logEvent('filter', { type: 'textForSearch', values: texts });
   };
 
-  const handleOnlyInStockChange = (value: boolean | "indeterminate") => {
+  const handleOnlyInStockChange = (value: boolean | 'indeterminate') => {
     setOnlyInStock(value);
     setCurrentPage(1);
-    logEvent("filter", { type: "onlyInStock", value });
+    logEvent('filter', { type: 'onlyInStock', value });
   };
 
   // Подсчет активных фильтров
@@ -610,12 +681,14 @@ export function AutopartsTable({
     (filterYear ? 1 : 0);
 
   const getFilterHighlightClass = (hasActive: boolean) =>
-    hasActive ? "bg-green-200" : "bg-blue-200";
+    hasActive ? 'bg-green-200' : 'bg-blue-200';
 
   const getAvailableQty = (part: AutopartWithStock) => {
     const reserved = reservationSummary[part.id]?.reservedCount ?? 0;
     const total = warehouseAccessId
-      ? part.warehouses.filter(w => w.warehouseId === warehouseAccessId).reduce((s, w) => s + w.quantity, 0)
+      ? part.warehouses
+          .filter((w) => w.warehouseId === warehouseAccessId)
+          .reduce((s, w) => s + w.quantity, 0)
       : part.totalQuantity;
     return Math.max(0, total - reserved);
   };
@@ -643,7 +716,7 @@ export function AutopartsTable({
     >
       {label}
       {sortKey === column ? (
-        sortOrder === "asc" ? (
+        sortOrder === 'asc' ? (
           <ArrowUpAZ className="w-4 h-4" />
         ) : (
           <ArrowDownAZ className="w-4 h-4" />
@@ -681,11 +754,19 @@ export function AutopartsTable({
               </span>
             </Button>
           )}
-          <Button variant="outline" size="sm" onClick={() => setShowMyOrders(true)}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowMyOrders(true)}
+          >
             <ClipboardList className="w-4 h-4 mr-2" />
             Мои заказы
           </Button>
-          <Button variant="outline" size="sm" onClick={() => setShowMyReservations(true)}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowMyReservations(true)}
+          >
             <BookmarkCheck className="w-4 h-4 mr-2" />
             Мои бронирования
           </Button>
@@ -693,7 +774,9 @@ export function AutopartsTable({
       )}
 
       {/* Панель фильтров */}
-      <div className={`md:sticky z-10 bg-[#FFD966] border-b mb-4 transition-all duration-300 ${!onlyView ? 'mt-4 md:mt-0 md:top-[40px]' : 'md:top-0'} ${showFilters ? 'p-4' : 'p-0 h-0 overflow-hidden border-0'}`}>
+      <div
+        className={`md:sticky z-10 bg-[#FFD966] border-b mb-4 transition-all duration-300 ${!onlyView ? 'mt-4 md:mt-0 md:top-[40px]' : 'md:top-0'} ${showFilters ? 'p-4' : 'p-0 h-0 overflow-hidden border-0'}`}
+      >
         <div className="flex items-center justify-between mb-3 pb-2 border-b md:border-0">
           <h3 className="text-base md:text-sm font-semibold flex items-center gap-2 text-foreground">
             <Filter className="w-5 h-5 md:w-4 md:h-4 text-primary" />
@@ -704,9 +787,9 @@ export function AutopartsTable({
               </span>
             )}
           </h3>
-          <Button 
-            variant="ghost" 
-            size="sm" 
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={() => setShowFilters(false)}
             className="h-8 w-8 p-0 md:hidden hover:bg-destructive/10"
             title="Скрыть фильтры"
@@ -715,120 +798,70 @@ export function AutopartsTable({
           </Button>
         </div>
         <div className="flex flex-wrap gap-3 items-end">
-        <Input
-          ref={searchInputRef}
-          placeholder="Поиск по описанию или артикулу"
-          defaultValue=""
-          onChange={(e) => handleSearchChange(e.target.value)}
-          className="w-full sm:max-w-xs bg-background"
-        />
-        <div className="space-y-1 w-full sm:w-auto">
-          <Label>Параметры авто</Label>
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                className={`w-full sm:w-[240px] justify-between ${getFilterHighlightClass(!hasNoAutoParamsFilters)}`}
+          <Input
+            ref={searchInputRef}
+            placeholder="Поиск по описанию или артикулу"
+            defaultValue=""
+            onChange={(e) => handleSearchChange(e.target.value)}
+            className="w-full sm:max-w-xs bg-background"
+          />
+          <div className="space-y-1 w-full sm:w-auto">
+            <Label>Параметры авто</Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={`w-full sm:w-[240px] justify-between ${getFilterHighlightClass(!hasNoAutoParamsFilters)}`}
+                >
+                  {hasNoAutoParamsFilters
+                    ? 'Все'
+                    : `Фильтры (${autoParamsFiltersCount})`}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent
+                className="w-[320px] p-4 overflow-y-auto"
+                align="start"
+                side="bottom"
+                sideOffset={8}
+                avoidCollisions={true}
+                collisionPadding={20}
+                style={{
+                  maxHeight: 'min(600px, calc(100vh - 120px))',
+                  maxWidth: 'calc(100vw - 40px)',
+                }}
               >
-                {hasNoAutoParamsFilters ? "Все" : `Фильтры (${autoParamsFiltersCount})`}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent 
-              className="w-[320px] p-4 overflow-y-auto"
-              align="start"
-              side="bottom"
-              sideOffset={8}
-              avoidCollisions={true}
-              collisionPadding={20}
-              style={{ 
-                maxHeight: 'min(600px, calc(100vh - 120px))',
-                maxWidth: 'calc(100vw - 40px)'
-              }}
-            >
-              <div className="space-y-4">
-                {/* Марки авто */}
-                <div className="space-y-2">
-                  <Label className="text-sm font-semibold">Марки авто</Label>
-                  <Command className="border rounded-md">
-                    <CommandInput placeholder="Поиск марки..." />
-                    <CommandList className="max-h-[150px]">
-                      <CommandEmpty>Марка не найдена</CommandEmpty>
-                      <CommandGroup>
-                        {autos.map((auto) => {
-                          const autoName = auto.name;
-                          if (!autoName) return null;
-                          const isSelected = selectedAutos.includes(autoName);
-                          return (
-                            <CommandItem
-                              key={autoName}
-                              onSelect={() => {
-                                const newAutos = isSelected
-                                  ? selectedAutos.filter((name) => name !== autoName)
-                                  : [...selectedAutos, autoName];
-                                handleAutoChange(newAutos);
-                              }}
-                            >
-                              <div className="flex items-center gap-2">
-                                <Check
-                                  className={`h-4 w-4 ${
-                                    isSelected ? "opacity-100" : "opacity-0"
-                                  }`}
-                                />
-                                {autoName}
-                              </div>
-                            </CommandItem>
-                          );
-                        })}
-                      </CommandGroup>
-                    </CommandList>
-                  </Command>
-                  {selectedAutos.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mt-1">
-                      {selectedAutos.map((auto) => (
-                        <span
-                          key={auto}
-                          className="inline-flex items-center gap-1 bg-primary/10 text-primary text-xs px-2 py-0.5 rounded-md cursor-pointer hover:bg-primary/20"
-                          onClick={() => handleAutoChange(selectedAutos.filter((a) => a !== auto))}
-                        >
-                          {auto}
-                          <span className="text-xs">×</span>
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                {/* Виды топлива */}
-                {fuelTypes.length > 0 && (
+                <div className="space-y-4">
+                  {/* Марки авто */}
                   <div className="space-y-2">
-                    <Label className="text-sm font-semibold">Виды топлива</Label>
+                    <Label className="text-sm font-semibold">Марки авто</Label>
                     <Command className="border rounded-md">
-                      <CommandInput placeholder="Поиск вида топлива..." />
+                      <CommandInput placeholder="Поиск марки..." />
                       <CommandList className="max-h-[150px]">
-                        <CommandEmpty>Вид топлива не найден</CommandEmpty>
+                        <CommandEmpty>Марка не найдена</CommandEmpty>
                         <CommandGroup>
-                          {fuelTypes.map((ft) => {
-                            const fuelTypeName = ft.name;
-                            if (!fuelTypeName) return null;
-                            const isSelected = selectedFuelTypes.includes(fuelTypeName);
+                          {autos.map((auto) => {
+                            const autoName = auto.name;
+                            if (!autoName) return null;
+                            const isSelected = selectedAutos.includes(autoName);
                             return (
                               <CommandItem
-                                key={ft.id}
+                                key={autoName}
                                 onSelect={() => {
-                                  const newFuelTypes = isSelected
-                                    ? selectedFuelTypes.filter((name) => name !== fuelTypeName)
-                                    : [...selectedFuelTypes, fuelTypeName];
-                                  setSelectedFuelTypes(newFuelTypes);
-                                  setCurrentPage(1);
+                                  const newAutos = isSelected
+                                    ? selectedAutos.filter(
+                                        (name) => name !== autoName,
+                                      )
+                                    : [...selectedAutos, autoName];
+                                  handleAutoChange(newAutos);
                                 }}
                               >
                                 <div className="flex items-center gap-2">
                                   <Check
                                     className={`h-4 w-4 ${
-                                      isSelected ? "opacity-100" : "opacity-0"
+                                      isSelected ? 'opacity-100' : 'opacity-0'
                                     }`}
                                   />
-                                  {fuelTypeName}
+                                  {autoName}
                                 </div>
                               </CommandItem>
                             );
@@ -836,53 +869,321 @@ export function AutopartsTable({
                         </CommandGroup>
                       </CommandList>
                     </Command>
-                    {selectedFuelTypes.length > 0 && (
+                    {selectedAutos.length > 0 && (
                       <div className="flex flex-wrap gap-1 mt-1">
-                        {selectedFuelTypes.map((fuelType) => (
+                        {selectedAutos.map((auto) => (
                           <span
-                            key={fuelType}
+                            key={auto}
                             className="inline-flex items-center gap-1 bg-primary/10 text-primary text-xs px-2 py-0.5 rounded-md cursor-pointer hover:bg-primary/20"
-                            onClick={() => setSelectedFuelTypes(selectedFuelTypes.filter((ft) => ft !== fuelType))}
+                            onClick={() =>
+                              handleAutoChange(
+                                selectedAutos.filter((a) => a !== auto),
+                              )
+                            }
                           >
-                            {fuelType}
+                            {auto}
                             <span className="text-xs">×</span>
                           </span>
                         ))}
                       </div>
                     )}
                   </div>
-                )}
 
-                {/* Объемы двигателя */}
-                <div className="space-y-2">
-                  <Label className="text-sm font-semibold">Объемы двигателя</Label>
-                  <Command className="border rounded-md">
-                    <CommandInput placeholder="Поиск объема..." />
-                    <CommandList className="max-h-[150px]">
-                      <CommandEmpty>Объем не найден</CommandEmpty>
+                  {/* Объемы двигателя */}
+                  <div className="space-y-2">
+                    <Label className="text-sm font-semibold">
+                      Объемы двигателя
+                    </Label>
+                    <Command className="border rounded-md">
+                      <CommandInput placeholder="Поиск объема..." />
+                      <CommandList className="max-h-[150px]">
+                        <CommandEmpty>Объем не найден</CommandEmpty>
+                        <CommandGroup>
+                          {engineVolumes.map((ev) => {
+                            const volumeName = ev.name;
+                            if (!volumeName) return null;
+                            const isSelected =
+                              selectedEngineVolumes.includes(volumeName);
+                            return (
+                              <CommandItem
+                                key={ev.id}
+                                onSelect={() => {
+                                  const newVolumes = isSelected
+                                    ? selectedEngineVolumes.filter(
+                                        (name) => name !== volumeName,
+                                      )
+                                    : [...selectedEngineVolumes, volumeName];
+                                  setSelectedEngineVolumes(newVolumes);
+                                  setCurrentPage(1);
+                                }}
+                              >
+                                <div className="flex items-center gap-2">
+                                  <Check
+                                    className={`h-4 w-4 ${
+                                      isSelected ? 'opacity-100' : 'opacity-0'
+                                    }`}
+                                  />
+                                  {volumeName}
+                                </div>
+                              </CommandItem>
+                            );
+                          })}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                    {selectedEngineVolumes.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {selectedEngineVolumes.map((volume) => (
+                          <span
+                            key={volume}
+                            className="inline-flex items-center gap-1 bg-primary/10 text-primary text-xs px-2 py-0.5 rounded-md cursor-pointer hover:bg-primary/20"
+                            onClick={() =>
+                              setSelectedEngineVolumes(
+                                selectedEngineVolumes.filter(
+                                  (v) => v !== volume,
+                                ),
+                              )
+                            }
+                          >
+                            {volume}
+                            <span className="text-xs">×</span>
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Виды топлива */}
+                  {fuelTypes.length > 0 && (
+                    <div className="space-y-2">
+                      <Label className="text-sm font-semibold">
+                        Виды топлива
+                      </Label>
+                      <Command className="border rounded-md">
+                        <CommandInput placeholder="Поиск вида топлива..." />
+                        <CommandList className="max-h-[150px]">
+                          <CommandEmpty>Вид топлива не найден</CommandEmpty>
+                          <CommandGroup>
+                            {fuelTypes.map((ft) => {
+                              const fuelTypeName = ft.name;
+                              if (!fuelTypeName) return null;
+                              const isSelected =
+                                selectedFuelTypes.includes(fuelTypeName);
+                              return (
+                                <CommandItem
+                                  key={ft.id}
+                                  onSelect={() => {
+                                    const newFuelTypes = isSelected
+                                      ? selectedFuelTypes.filter(
+                                          (name) => name !== fuelTypeName,
+                                        )
+                                      : [...selectedFuelTypes, fuelTypeName];
+                                    setSelectedFuelTypes(newFuelTypes);
+                                    setCurrentPage(1);
+                                  }}
+                                >
+                                  <div className="flex items-center gap-2">
+                                    <Check
+                                      className={`h-4 w-4 ${
+                                        isSelected ? 'opacity-100' : 'opacity-0'
+                                      }`}
+                                    />
+                                    {fuelTypeName}
+                                  </div>
+                                </CommandItem>
+                              );
+                            })}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                      {selectedFuelTypes.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-1">
+                          {selectedFuelTypes.map((fuelType) => (
+                            <span
+                              key={fuelType}
+                              className="inline-flex items-center gap-1 bg-primary/10 text-primary text-xs px-2 py-0.5 rounded-md cursor-pointer hover:bg-primary/20"
+                              onClick={() =>
+                                setSelectedFuelTypes(
+                                  selectedFuelTypes.filter(
+                                    (ft) => ft !== fuelType,
+                                  ),
+                                )
+                              }
+                            >
+                              {fuelType}
+                              <span className="text-xs">×</span>
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Год */}
+                  <div className="space-y-2">
+                    <Label className="text-sm font-semibold">Год выпуска</Label>
+                    <Input
+                      type="number"
+                      placeholder="Введите год"
+                      value={filterYear}
+                      onChange={(e) => {
+                        setFilterYear(e.target.value);
+                        setCurrentPage(1);
+                      }}
+                      className="h-9"
+                      min="1900"
+                      max="2100"
+                    />
+                  </div>
+                </div>
+              </PopoverContent>
+            </Popover>
+          </div>
+          <div className="space-y-1 w-full sm:w-auto">
+            <Label>Группы</Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={`w-full sm:w-[240px] justify-between ${getFilterHighlightClass(selectedCategories.length > 0)}`}
+                >
+                  {selectedCategories.length === 0
+                    ? 'Все'
+                    : `${selectedCategories.length} выбрано`}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[240px] p-0">
+                <Command>
+                  <CommandInput placeholder="Поиск группы..." />
+                  <CommandList>
+                    <CommandEmpty>Группа не найдена</CommandEmpty>
+                    <CommandGroup>
+                      {categories.map((category) => {
+                        const categoryName = category.name;
+                        const isSelected =
+                          selectedCategories.includes(categoryName);
+                        return (
+                          <CommandItem
+                            key={categoryName}
+                            onSelect={() => {
+                              const newCategories = isSelected
+                                ? selectedCategories.filter(
+                                    (name) => name !== categoryName,
+                                  )
+                                : [...selectedCategories, categoryName];
+                              handleCategoryChange(newCategories);
+                            }}
+                          >
+                            <div className="flex items-center gap-2">
+                              <Check
+                                className={`h-4 w-4 ${
+                                  isSelected ? 'opacity-100' : 'opacity-0'
+                                }`}
+                              />
+                              {categoryName}
+                            </div>
+                          </CommandItem>
+                        );
+                      })}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
+          </div>
+          <div className="space-y-1 w-full sm:w-auto">
+            <Label>Бренды</Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={`w-full sm:w-[240px] justify-between ${getFilterHighlightClass(selectedBrands.length > 0)}`}
+                >
+                  {selectedBrands.length === 0
+                    ? 'Все'
+                    : `${selectedBrands.length} выбрано`}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-[240px] p-0">
+                <Command>
+                  <CommandInput placeholder="Поиск бренда..." />
+                  <CommandList>
+                    <CommandEmpty>Бренд не найден</CommandEmpty>
+                    <CommandGroup>
+                      {brands.map((b) => {
+                        const isSelected = selectedBrands.includes(b.name);
+                        return (
+                          <CommandItem
+                            key={b.id}
+                            onSelect={() => {
+                              const newBrands = isSelected
+                                ? selectedBrands.filter(
+                                    (name) => name !== b.name,
+                                  )
+                                : [...selectedBrands, b.name];
+                              handleBrandChange(newBrands);
+                            }}
+                          >
+                            <div className="flex items-center gap-2">
+                              <Check
+                                className={`h-4 w-4 ${
+                                  isSelected ? 'opacity-100' : 'opacity-0'
+                                }`}
+                              />
+                              {b.name}
+                            </div>
+                          </CommandItem>
+                        );
+                      })}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
+          </div>
+          {!onlyView && (
+            <div className="space-y-1 w-full sm:w-auto">
+              <Label>Базы</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={`w-full sm:w-[240px] justify-between ${getFilterHighlightClass(selectedWarehouses.length > 0)}`}
+                  >
+                    {selectedWarehouses.length === 0
+                      ? 'Все'
+                      : `${selectedWarehouses.length} выбрано`}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[240px] p-0">
+                  <Command>
+                    <CommandInput placeholder="Поиск базы..." />
+                    <CommandList>
+                      <CommandEmpty>База не найдена</CommandEmpty>
                       <CommandGroup>
-                        {engineVolumes.map((ev) => {
-                          const volumeName = ev.name;
-                          if (!volumeName) return null;
-                          const isSelected = selectedEngineVolumes.includes(volumeName);
+                        {warehouses.map((w) => {
+                          const isSelected = selectedWarehouses.includes(
+                            w.name,
+                          );
                           return (
                             <CommandItem
-                              key={ev.id}
+                              key={w.id}
                               onSelect={() => {
-                                const newVolumes = isSelected
-                                  ? selectedEngineVolumes.filter((name) => name !== volumeName)
-                                  : [...selectedEngineVolumes, volumeName];
-                                setSelectedEngineVolumes(newVolumes);
-                                setCurrentPage(1);
+                                const newWarehouses = isSelected
+                                  ? selectedWarehouses.filter(
+                                      (name) => name !== w.name,
+                                    )
+                                  : [...selectedWarehouses, w.name];
+                                handleWarehouseChange(newWarehouses);
                               }}
                             >
                               <div className="flex items-center gap-2">
                                 <Check
                                   className={`h-4 w-4 ${
-                                    isSelected ? "opacity-100" : "opacity-0"
+                                    isSelected ? 'opacity-100' : 'opacity-0'
                                   }`}
                                 />
-                                {volumeName}
+                                {w.name}
                               </div>
                             </CommandItem>
                           );
@@ -890,249 +1191,87 @@ export function AutopartsTable({
                       </CommandGroup>
                     </CommandList>
                   </Command>
-                  {selectedEngineVolumes.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mt-1">
-                      {selectedEngineVolumes.map((volume) => (
-                        <span
-                          key={volume}
-                          className="inline-flex items-center gap-1 bg-primary/10 text-primary text-xs px-2 py-0.5 rounded-md cursor-pointer hover:bg-primary/20"
-                          onClick={() => setSelectedEngineVolumes(selectedEngineVolumes.filter((v) => v !== volume))}
-                        >
-                          {volume}
-                          <span className="text-xs">×</span>
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                </div>
+                </PopoverContent>
+              </Popover>
+            </div>
+          )}
+          {!onlyView && (
+            <div className="space-y-1 w-full sm:w-auto">
+              <Label>Текст для поиска</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={`w-full sm:w-[240px] justify-between ${getFilterHighlightClass(selectedTextsForSearch.length > 0)}`}
+                  >
+                    {selectedTextsForSearch.length === 0
+                      ? 'Все'
+                      : `${selectedTextsForSearch.length} выбрано`}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[240px] p-0">
+                  <Command>
+                    <CommandInput placeholder="Поиск текста..." />
+                    <CommandList>
+                      <CommandEmpty>Текст не найдено</CommandEmpty>
+                      <CommandGroup>
+                        {textsForSearch.map((textForSearch) => {
+                          const text = textForSearch.text;
 
-                {/* Год */}
-                <div className="space-y-2">
-                  <Label className="text-sm font-semibold">Год выпуска</Label>
-                  <Input
-                    type="number"
-                    placeholder="Введите год"
-                    value={filterYear}
-                    onChange={(e) => {
-                      setFilterYear(e.target.value);
-                      setCurrentPage(1);
-                    }}
-                    className="h-9"
-                    min="1900"
-                    max="2100"
-                  />
-                </div>
+                          if (!text) return;
+
+                          const isSelected =
+                            selectedTextsForSearch.includes(text);
+                          return (
+                            <CommandItem
+                              key={text}
+                              onSelect={() => {
+                                const newTexts = isSelected
+                                  ? selectedTextsForSearch.filter(
+                                      (textContent) => textContent !== text,
+                                    )
+                                  : [...selectedTextsForSearch, text];
+                                handleTextsForSearchChange(newTexts);
+                              }}
+                            >
+                              <div className="flex items-center gap-2">
+                                <Check
+                                  className={`h-4 w-4 ${
+                                    isSelected ? 'opacity-100' : 'opacity-0'
+                                  }`}
+                                />
+                                {text}
+                              </div>
+                            </CommandItem>
+                          );
+                        })}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+            </div>
+          )}
+          <div className="flex gap-3 w-full sm:w-auto">
+            <Button
+              onClick={() => resetFilters()}
+              className="flex-shrink-0"
+              title="Сбросить фильтры"
+            >
+              <RotateCcw className="w-4 h-4" />
+            </Button>
+            <Label className="hover:bg-accent/50 flex items-center gap-3 rounded-lg border px-3 py-2 flex-1 sm:flex-initial bg-background has-[[aria-checked=true]]:border-blue-600 has-[[aria-checked=true]]:bg-blue-50 dark:has-[[aria-checked=true]]:border-blue-900 dark:has-[[aria-checked=true]]:bg-blue-950">
+              <Checkbox
+                id="inStock"
+                checked={onlyInStock}
+                onCheckedChange={handleOnlyInStockChange}
+                className="data-[state=checked]:border-blue-600 data-[state=checked]:bg-blue-600 data-[state=checked]:text-white dark:data-[state=checked]:border-blue-700 dark:data-[state=checked]:bg-blue-700"
+              />
+              <div className="grid gap-1.5 font-normal">
+                <p className="text-sm leading-none font-medium">В наличии</p>
               </div>
-            </PopoverContent>
-          </Popover>
-        </div>
-        <div className="space-y-1 w-full sm:w-auto">
-          <Label>Группы</Label>
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="outline" className={`w-full sm:w-[240px] justify-between ${getFilterHighlightClass(selectedCategories.length > 0)}`}>
-                {selectedCategories.length === 0
-                  ? "Все"
-                  : `${selectedCategories.length} выбрано`}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-[240px] p-0">
-              <Command>
-                <CommandInput placeholder="Поиск группы..." />
-                <CommandList>
-                  <CommandEmpty>Группа не найдена</CommandEmpty>
-                  <CommandGroup>
-                    {categories.map((category) => {
-                      const categoryName = category.name;
-                      const isSelected =
-                        selectedCategories.includes(categoryName);
-                      return (
-                        <CommandItem
-                          key={categoryName}
-                          onSelect={() => {
-                            const newCategories = isSelected
-                              ? selectedCategories.filter((name) => name !== categoryName)
-                              : [...selectedCategories, categoryName];
-                            handleCategoryChange(newCategories);
-                          }}
-                        >
-                          <div className="flex items-center gap-2">
-                            <Check
-                              className={`h-4 w-4 ${
-                                isSelected ? "opacity-100" : "opacity-0"
-                              }`}
-                            />
-                            {categoryName}
-                          </div>
-                        </CommandItem>
-                      );
-                    })}
-                  </CommandGroup>
-                </CommandList>
-              </Command>
-            </PopoverContent>
-          </Popover>
-        </div>
-        <div className="space-y-1 w-full sm:w-auto">
-          <Label>Бренды</Label>
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button variant="outline" className={`w-full sm:w-[240px] justify-between ${getFilterHighlightClass(selectedBrands.length > 0)}`}>
-                {selectedBrands.length === 0
-                  ? "Все"
-                  : `${selectedBrands.length} выбрано`}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-[240px] p-0">
-              <Command>
-                <CommandInput placeholder="Поиск бренда..." />
-                <CommandList>
-                  <CommandEmpty>Бренд не найден</CommandEmpty>
-                  <CommandGroup>
-                    {brands.map((b) => {
-                      const isSelected = selectedBrands.includes(b.name);
-                      return (
-                        <CommandItem
-                          key={b.id}
-                          onSelect={() => {
-                            const newBrands = isSelected
-                              ? selectedBrands.filter((name) => name !== b.name)
-                              : [...selectedBrands, b.name];
-                            handleBrandChange(newBrands);
-                          }}
-                        >
-                          <div className="flex items-center gap-2">
-                            <Check
-                              className={`h-4 w-4 ${
-                                isSelected ? "opacity-100" : "opacity-0"
-                              }`}
-                            />
-                            {b.name}
-                          </div>
-                        </CommandItem>
-                      );
-                    })}
-                  </CommandGroup>
-                </CommandList>
-              </Command>
-            </PopoverContent>
-          </Popover>
-        </div>
-        {!onlyView && (
-          <div className="space-y-1 w-full sm:w-auto">
-            <Label>Базы</Label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="outline" className={`w-full sm:w-[240px] justify-between ${getFilterHighlightClass(selectedWarehouses.length > 0)}`}>
-                  {selectedWarehouses.length === 0
-                    ? "Все"
-                    : `${selectedWarehouses.length} выбрано`}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-[240px] p-0">
-                <Command>
-                  <CommandInput placeholder="Поиск базы..." />
-                  <CommandList>
-                    <CommandEmpty>База не найдена</CommandEmpty>
-                    <CommandGroup>
-                      {warehouses.map((w) => {
-                        const isSelected = selectedWarehouses.includes(w.name);
-                        return (
-                          <CommandItem
-                            key={w.id}
-                            onSelect={() => {
-                              const newWarehouses = isSelected
-                                ? selectedWarehouses.filter((name) => name !== w.name)
-                                : [...selectedWarehouses, w.name];
-                              handleWarehouseChange(newWarehouses);
-                            }}
-                          >
-                            <div className="flex items-center gap-2">
-                              <Check
-                                className={`h-4 w-4 ${
-                                  isSelected ? "opacity-100" : "opacity-0"
-                                }`}
-                              />
-                              {w.name}
-                            </div>
-                          </CommandItem>
-                        );
-                      })}
-                    </CommandGroup>
-                  </CommandList>
-                </Command>
-              </PopoverContent>
-            </Popover>
+            </Label>
           </div>
-        )}
-        {!onlyView && (
-          <div className="space-y-1 w-full sm:w-auto">
-            <Label>Текст для поиска</Label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="outline" className={`w-full sm:w-[240px] justify-between ${getFilterHighlightClass(selectedTextsForSearch.length > 0)}`}>
-                  {selectedTextsForSearch.length === 0
-                    ? "Все"
-                    : `${selectedTextsForSearch.length} выбрано`}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-[240px] p-0">
-                <Command>
-                  <CommandInput placeholder="Поиск текста..." />
-                  <CommandList>
-                    <CommandEmpty>Текст не найдено</CommandEmpty>
-                    <CommandGroup>
-                      {textsForSearch.map((textForSearch) => {
-                        const text = textForSearch.text;
-
-                        if (!text) return;
-
-                        const isSelected =
-                          selectedTextsForSearch.includes(text);
-                        return (
-                          <CommandItem
-                            key={text}
-                            onSelect={() => {
-                              const newTexts = isSelected
-                                ? selectedTextsForSearch.filter((textContent) => textContent !== text)
-                                : [...selectedTextsForSearch, text];
-                              handleTextsForSearchChange(newTexts);
-                            }}
-                          >
-                            <div className="flex items-center gap-2">
-                              <Check
-                                className={`h-4 w-4 ${
-                                  isSelected ? "opacity-100" : "opacity-0"
-                                }`}
-                              />
-                              {text}
-                            </div>
-                          </CommandItem>
-                        );
-                      })}
-                    </CommandGroup>
-                  </CommandList>
-                </Command>
-              </PopoverContent>
-            </Popover>
-          </div>
-        )}
-        <div className="flex gap-3 w-full sm:w-auto">
-          <Button onClick={() => resetFilters()} className="flex-shrink-0" title="Сбросить фильтры">
-            <RotateCcw className="w-4 h-4" />
-          </Button>
-          <Label className="hover:bg-accent/50 flex items-center gap-3 rounded-lg border px-3 py-2 flex-1 sm:flex-initial bg-background has-[[aria-checked=true]]:border-blue-600 has-[[aria-checked=true]]:bg-blue-50 dark:has-[[aria-checked=true]]:border-blue-900 dark:has-[[aria-checked=true]]:bg-blue-950">
-          <Checkbox
-            id="inStock"
-            checked={onlyInStock}
-            onCheckedChange={handleOnlyInStockChange}
-            className="data-[state=checked]:border-blue-600 data-[state=checked]:bg-blue-600 data-[state=checked]:text-white dark:data-[state=checked]:border-blue-700 dark:data-[state=checked]:bg-blue-700"
-          />
-          <div className="grid gap-1.5 font-normal">
-            <p className="text-sm leading-none font-medium">В наличии</p>
-          </div>
-        </Label>
-        </div>
         </div>
       </div>
 
@@ -1162,392 +1301,440 @@ export function AutopartsTable({
           <table className="w-full border-collapse text-sm">
             <thead className="bg-muted/50">
               <tr className="border-b">
-              <th className="px-3 py-3.5 text-center text-xs font-semibold tracking-wider border-r">
-                <SortHeader label="Артикул" column="article" />
-              </th>
-              {!onlyView && (
                 <th className="px-3 py-3.5 text-center text-xs font-semibold tracking-wider border-r">
-                  <SortHeader label="Бренд" column="brand" />
+                  <SortHeader label="Артикул" column="article" />
                 </th>
-              )}
-              <th className="px-3 py-3.5 text-center text-xs font-semibold tracking-wider border-r">
-                <SortHeader label="Описание" column="description" />
-              </th>
-              {!onlyView && (
-                <th className="px-3 py-3.5 text-center text-xs font-semibold tracking-wider border-r">
-                  <SortHeader label="Группа" column="category" />
-                </th>
-              )}
-              {!onlyView && (
-                <th className="px-3 py-3.5 text-center text-xs font-semibold tracking-wider border-r">
-                  <SortHeader label="Авто" column="auto" />
-                </th>
-              )}
-              {!onlyView && (
-                <th className="px-2 py-3.5 text-center text-xs font-semibold tracking-wider border-r w-24">
-                  Объем
-                </th>
-              )}
-              {!onlyView && (
-                <th className="px-2 py-3.5 text-center text-xs font-semibold tracking-wider border-r w-24">
-                  Годы
-                </th>
-              )}
-              <th className="px-2 py-3.5 text-center text-xs font-semibold tracking-wider border-r w-20">
-                <SortHeader
-                  label={onlyView ? "Кол (общ)" : "Кол-во"}
-                  column="totalQuantity"
-                />
-              </th>
-              {!onlyView && (
-                <th className="px-3 py-3.5 text-center text-xs font-semibold tracking-wider border-r">
-                  Базы
-                </th>
-              )}
-              <th className="px-3 py-3.5 text-center text-xs font-semibold tracking-wider border-r">
-                Цены
-              </th>
-              {!onlyView && (
-                <th className="px-2 py-3.5 text-center text-xs font-semibold tracking-wider border-r w-16">
-                  Текст
-                </th>
-              )}
-              {!onlyView && (
-                <th className="px-2 py-3.5 text-center text-xs font-semibold tracking-wider w-[70px]">
-                  Действия
-                </th>
-              )}
-              {onlyView && clientId && (
-                <th className="px-2 py-3.5 text-center text-xs font-semibold tracking-wider w-[90px]">
-                  Резерв
-                </th>
-              )}
-            </tr>
-          </thead>
-          <tbody className="bg-background">
-            {filteredParts.map((p, index) => (
-              <tr
-                key={p.id}
-                className={`border-b hover:bg-accent transition-colors ${
-                  index % 2 === 0 ? 'bg-background' : 'bg-muted/80'
-                }`}
-              >
-                <td className="px-3 py-4 text-sm font-mono font-medium border-r">
-                  {p.article}
-                </td>
                 {!onlyView && (
+                  <th className="px-3 py-3.5 text-center text-xs font-semibold tracking-wider border-r">
+                    <SortHeader label="Бренд" column="brand" />
+                  </th>
+                )}
+                <th className="px-3 py-3.5 text-center text-xs font-semibold tracking-wider border-r">
+                  <SortHeader label="Описание" column="description" />
+                </th>
+                {!onlyView && (
+                  <th className="px-3 py-3.5 text-center text-xs font-semibold tracking-wider border-r">
+                    <SortHeader label="Группа" column="category" />
+                  </th>
+                )}
+                {!onlyView && (
+                  <th className="px-3 py-3.5 text-center text-xs font-semibold tracking-wider border-r">
+                    <SortHeader label="Авто" column="auto" />
+                  </th>
+                )}
+                {!onlyView && (
+                  <th className="px-2 py-3.5 text-center text-xs font-semibold tracking-wider border-r w-24">
+                    Объем
+                  </th>
+                )}
+                {!onlyView && (
+                  <th className="px-2 py-3.5 text-center text-xs font-semibold tracking-wider border-r w-24">
+                    Годы
+                  </th>
+                )}
+                <th className="px-2 py-3.5 text-center text-xs font-semibold tracking-wider border-r w-20">
+                  <SortHeader
+                    label={onlyView ? 'Кол (общ)' : 'Кол-во'}
+                    column="totalQuantity"
+                  />
+                </th>
+                {!onlyView && (
+                  <th className="px-3 py-3.5 text-center text-xs font-semibold tracking-wider border-r">
+                    Базы
+                  </th>
+                )}
+                <th className="px-3 py-3.5 text-center text-xs font-semibold tracking-wider border-r">
+                  Цены
+                </th>
+                {!onlyView && (
+                  <th className="px-2 py-3.5 text-center text-xs font-semibold tracking-wider border-r w-16">
+                    Текст
+                  </th>
+                )}
+                {!onlyView && (
+                  <th className="px-2 py-3.5 text-center text-xs font-semibold tracking-wider w-[70px]">
+                    Действия
+                  </th>
+                )}
+                {onlyView && clientId && (
+                  <th className="px-2 py-3.5 text-center text-xs font-semibold tracking-wider w-[90px]">
+                    Резерв
+                  </th>
+                )}
+              </tr>
+            </thead>
+            <tbody className="bg-background">
+              {filteredParts.map((p, index) => (
+                <tr
+                  key={p.id}
+                  className={`border-b hover:bg-accent transition-colors ${
+                    index % 2 === 0 ? 'bg-background' : 'bg-muted/80'
+                  }`}
+                >
+                  <td className="px-3 py-4 text-sm font-mono font-medium border-r">
+                    {p.article}
+                  </td>
+                  {!onlyView && (
+                    <td className="px-3 py-4 text-sm border-r">
+                      {p.brand?.name || '-'}
+                    </td>
+                  )}
                   <td className="px-3 py-4 text-sm border-r">
-                    {p.brand?.name || "-"}
+                    {p.description}
                   </td>
-                )}
-                <td className="px-3 py-4 text-sm border-r">
-                  {p.description}
-                </td>
-                {!onlyView && (
-                  <td className="px-3 py-4 text-sm border-r">
-                    {p.category?.name || "-"}
-                  </td>
-                )}
-                {!onlyView && (
-                  <td className="px-3 py-4 text-sm border-r">
-                    {p.autos.map((a) => a.name).join(", ") || "-"}
-                  </td>
-                )}
-                {!onlyView && (
-                  <td className="px-2 py-4 text-xs border-r">
-                    {(() => {
-                      const volumes = p.engineVolumes.map((ev) => ev.name).join(", ");
-                      const fuelType = p.fuelType?.name;
-                      if (volumes && fuelType) {
-                        return `${volumes} / ${fuelType}`;
-                      } else if (volumes) {
-                        return volumes;
-                      } else if (fuelType) {
-                        return `- / ${fuelType}`;
-                      }
-                      return "-";
-                    })()}
-                  </td>
-                )}
-                {!onlyView && (
-                  <td className="px-2 py-4 text-sm text-center border-r">
-                    <div className="text-xs">
-                      {p.year_from && p.year_to ? (
-                        `${p.year_from}-${p.year_to}`
-                      ) : p.year_from ? (
-                        `от ${p.year_from}`
-                      ) : p.year_to ? (
-                        `до ${p.year_to}`
-                      ) : (
-                        "-"
-                      )}
-                    </div>
-                  </td>
-                )}
-                <td className="px-2 py-4 text-sm text-center font-semibold whitespace-nowrap border-r">
-                  {!onlyView ? (
-                    <div className="flex flex-col items-center gap-0.5">
-                      <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
-                        {p.totalQuantity}
-                      </span>
-                      {(reservationSummary[p.id]?.reservedCount ?? 0) > 0 && (
-                        <span className="text-xs text-amber-600 dark:text-amber-500">
-                          {reservationSummary[p.id].reservedCount} рез.
+                  {!onlyView && (
+                    <td className="px-3 py-4 text-sm border-r">
+                      {p.category?.name || '-'}
+                    </td>
+                  )}
+                  {!onlyView && (
+                    <td className="px-3 py-4 text-sm border-r">
+                      {p.autos.map((a) => a.name).join(', ') || '-'}
+                    </td>
+                  )}
+                  {!onlyView && (
+                    <td className="px-2 py-4 text-xs border-r">
+                      {(() => {
+                        const volumes = p.engineVolumes
+                          .map((ev) => ev.name)
+                          .join(', ');
+                        const fuelType = p.fuelType?.name;
+                        if (volumes && fuelType) {
+                          return `${volumes} / ${fuelType}`;
+                        } else if (volumes) {
+                          return volumes;
+                        } else if (fuelType) {
+                          return `- / ${fuelType}`;
+                        }
+                        return '-';
+                      })()}
+                    </td>
+                  )}
+                  {!onlyView && (
+                    <td className="px-2 py-4 text-sm text-center border-r">
+                      <div className="text-xs">
+                        {p.year_from && p.year_to
+                          ? `${p.year_from}-${p.year_to}`
+                          : p.year_from
+                            ? `от ${p.year_from}`
+                            : p.year_to
+                              ? `до ${p.year_to}`
+                              : '-'}
+                      </div>
+                    </td>
+                  )}
+                  <td className="px-2 py-4 text-sm text-center font-semibold whitespace-nowrap border-r">
+                    {!onlyView ? (
+                      <div className="flex flex-col items-center gap-0.5">
+                        <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
+                          {p.totalQuantity}
                         </span>
-                      )}
-                    </div>
-                  ) : warehouseAccessId ? (
-                    <div className="flex flex-col items-center gap-0.5">
-                      <div className="flex items-center gap-1">
+                        {(reservationSummary[p.id]?.reservedCount ?? 0) > 0 && (
+                          <span className="text-xs text-amber-600 dark:text-amber-500">
+                            {reservationSummary[p.id].reservedCount} рез.
+                          </span>
+                        )}
+                      </div>
+                    ) : warehouseAccessId ? (
+                      <div className="flex flex-col items-center gap-0.5">
+                        <div className="flex items-center gap-1">
+                          <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
+                            {(() => {
+                              const avail = getAvailableQty(p);
+                              return avail > p.maxNumberShown
+                                ? `${p.maxNumberShown}+`
+                                : avail;
+                            })()}
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            (
+                            {p.totalQuantity > p.maxNumberShown
+                              ? `${p.maxNumberShown}+`
+                              : p.totalQuantity}
+                            )
+                          </span>
+                        </div>
+                        {getReservationLabel(p.id) && (
+                          <span className="text-xs text-amber-600 dark:text-amber-500 leading-tight">
+                            {getReservationLabel(p.id)}
+                          </span>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center gap-0.5">
                         <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
                           {(() => {
                             const avail = getAvailableQty(p);
-                            return avail > p.maxNumberShown ? `${p.maxNumberShown}+` : avail;
+                            return avail > p.maxNumberShown
+                              ? `${p.maxNumberShown}+`
+                              : avail;
                           })()}
                         </span>
-                        <span className="text-xs text-muted-foreground">
-                          ({p.totalQuantity > p.maxNumberShown ? `${p.maxNumberShown}+` : p.totalQuantity})
-                        </span>
-                      </div>
-                      {getReservationLabel(p.id) && (
-                        <span className="text-xs text-amber-600 dark:text-amber-500 leading-tight">
-                          {getReservationLabel(p.id)}
-                        </span>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="flex flex-col items-center gap-0.5">
-                      <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
-                        {(() => {
-                          const avail = getAvailableQty(p);
-                          return avail > p.maxNumberShown ? `${p.maxNumberShown}+` : avail;
-                        })()}
-                      </span>
-                      {getReservationLabel(p.id) && (
-                        <span className="text-xs text-amber-600 dark:text-amber-500 leading-tight">
-                          {getReservationLabel(p.id)}
-                        </span>
-                      )}
-                    </div>
-                  )}
-                </td>
-                {!onlyView && (
-                  <td className="px-3 py-4 text-sm border-r align-top">
-                    <ul className="space-y-0.5">
-                      {p.warehouses.map(
-                        (w) =>
-                          w.quantity > 0 && (
-                            <li key={w.warehouseId} className="flex items-center justify-between gap-2 text-xs bg-muted/30 rounded px-2 py-1">
-                              <span className="truncate">{w.warehouseName}</span>
-                              <span className="font-semibold whitespace-nowrap text-primary">
-                                {w.quantity}
-                              </span>
-                            </li>
-                          )
-                      )}
-                    </ul>
-                  </td>
-                )}
-                <td className="px-3 py-4 text-sm border-r align-top">
-                  {!onlyView && !priceAccessId ? (
-                    <ul className="space-y-0.5">
-                      {p.prices.map((price) => (
-                        <li key={price.priceType.id} className="flex items-center justify-between gap-2 text-xs bg-muted/30 rounded px-2 py-1">
-                          <span className="font-medium truncate">
-                            {price.priceType.name}:
+                        {getReservationLabel(p.id) && (
+                          <span className="text-xs text-amber-600 dark:text-amber-500 leading-tight">
+                            {getReservationLabel(p.id)}
                           </span>
-                          <TooltipProvider>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <span className="font-semibold whitespace-nowrap text-green-600 dark:text-green-500 cursor-default">
-                                  {price.price.toFixed(2)}
-                                </span>
-                              </TooltipTrigger>
-                              {usdRate !== null && (
-                                <TooltipContent side="top">
-                                  <p>{(price.price * usdRate).toFixed(2)} BYN</p>
-                                </TooltipContent>
-                              )}
-                            </Tooltip>
-                          </TooltipProvider>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <span className="inline-flex items-center justify-center px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 cursor-default">
-                            {p.prices
-                              .find((price) => price.priceType.id === priceAccessId)
-                              ?.price.toFixed(2) ?? "-"}
-                          </span>
-                        </TooltipTrigger>
-                        {usdRate !== null && (() => {
-                          const found = p.prices.find((price) => price.priceType.id === priceAccessId);
-                          return found ? (
-                            <TooltipContent side="top">
-                              <p>{(found.price * usdRate).toFixed(2)} BYN</p>
-                            </TooltipContent>
-                          ) : null;
-                        })()}
-                      </Tooltip>
-                    </TooltipProvider>
-                  )}
-                </td>
-                {!onlyView && (
-                  <td className="px-2 py-4 text-center border-r">
-                    {p.textForSearch && (
-                      <div className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-green-100 dark:bg-green-900/30">
-                        <Check className="w-3.5 h-3.5 text-green-600 dark:text-green-500" />
+                        )}
                       </div>
                     )}
                   </td>
-                )}
-                {!onlyView && (
-                  <td className="px-2 py-3 text-center">
-                    <div className="grid grid-cols-2 gap-0.5">
+                  {!onlyView && (
+                    <td className="px-3 py-4 text-sm border-r align-top">
+                      <ul className="space-y-0.5">
+                        {p.warehouses.map(
+                          (w) =>
+                            w.quantity > 0 && (
+                              <li
+                                key={w.warehouseId}
+                                className="flex items-center justify-between gap-2 text-xs bg-muted/30 rounded px-2 py-1"
+                              >
+                                <span className="truncate">
+                                  {w.warehouseName}
+                                </span>
+                                <span className="font-semibold whitespace-nowrap text-primary">
+                                  {w.quantity}
+                                </span>
+                              </li>
+                            ),
+                        )}
+                      </ul>
+                    </td>
+                  )}
+                  <td className="px-3 py-4 text-sm border-r align-top">
+                    {!onlyView && !priceAccessId ? (
+                      <ul className="space-y-0.5">
+                        {p.prices.map((price) => (
+                          <li
+                            key={price.priceType.id}
+                            className="flex items-center justify-between gap-2 text-xs bg-muted/30 rounded px-2 py-1"
+                          >
+                            <span className="font-medium truncate">
+                              {price.priceType.name}:
+                            </span>
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <span className="font-semibold whitespace-nowrap text-green-600 dark:text-green-500 cursor-default">
+                                    {price.price.toFixed(2)}
+                                  </span>
+                                </TooltipTrigger>
+                                {usdRate !== null && (
+                                  <TooltipContent side="top">
+                                    <p>
+                                      {(price.price * usdRate).toFixed(2)} BYN
+                                    </p>
+                                  </TooltipContent>
+                                )}
+                              </Tooltip>
+                            </TooltipProvider>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7"
-                              onClick={() => setSelected(p)}
-                            >
-                              <Pencil className="w-3.5 h-3.5" />
-                            </Button>
+                            <span className="inline-flex items-center justify-center px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 cursor-default">
+                              {p.prices
+                                .find(
+                                  (price) =>
+                                    price.priceType.id === priceAccessId,
+                                )
+                                ?.price.toFixed(2) ?? '-'}
+                            </span>
                           </TooltipTrigger>
-                          <TooltipContent side="bottom">
-                            <p>Редактировать</p>
-                          </TooltipContent>
-                        </Tooltip>
-
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7"
-                              disabled={duplicatingId === p.id}
-                              onClick={() => handleDuplicate(p)}
-                            >
-                              <Copy className="w-3.5 h-3.5 text-violet-500" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent side="bottom">
-                            <p>Дублировать</p>
-                          </TooltipContent>
-                        </Tooltip>
-
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7"
-                              onClick={() => setMovePart(p)}
-                            >
-                              <ArrowRightLeft className="w-3.5 h-3.5 text-blue-500" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent side="bottom">
-                            <p>Переместить</p>
-                          </TooltipContent>
-                        </Tooltip>
-
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7"
-                              onClick={() => setPricePartId(p.id)}
-                            >
-                              <Tags className="w-3.5 h-3.5 text-green-600" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent side="bottom">
-                            <p>Редактировать цены</p>
-                          </TooltipContent>
-                        </Tooltip>
-
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7"
-                              onClick={() => setDeletingId(p.id)}
-                            >
-                              <Trash className="w-3.5 h-3.5 text-destructive" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent side="bottom">
-                            <p>Удалить</p>
-                          </TooltipContent>
+                          {usdRate !== null &&
+                            (() => {
+                              const found = p.prices.find(
+                                (price) => price.priceType.id === priceAccessId,
+                              );
+                              return found ? (
+                                <TooltipContent side="top">
+                                  <p>
+                                    {(found.price * usdRate).toFixed(2)} BYN
+                                  </p>
+                                </TooltipContent>
+                              ) : null;
+                            })()}
                         </Tooltip>
                       </TooltipProvider>
-                    </div>
+                    )}
                   </td>
-                )}
-                {onlyView && clientId && (
-                  <td className="px-2 py-3 text-center">
-                    {getAvailableQty(p) > 0 ? (() => {
-                      const inCart = cart.some((c) => c.part.id === p.id);
-                      return (
+                  {!onlyView && (
+                    <td className="px-2 py-4 text-center border-r">
+                      {p.textForSearch && (
+                        <div className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-green-100 dark:bg-green-900/30">
+                          <Check className="w-3.5 h-3.5 text-green-600 dark:text-green-500" />
+                        </div>
+                      )}
+                    </td>
+                  )}
+                  {!onlyView && (
+                    <td className="px-2 py-3 text-center">
+                      <div className="grid grid-cols-2 gap-0.5">
                         <TooltipProvider>
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <Button
                                 variant="ghost"
                                 size="icon"
-                                className={`h-7 w-7 ${inCart ? 'text-amber-600' : ''}`}
-                                onClick={() => {
-                                  if (inCart) {
-                                    setCart((prev) => prev.filter((c) => c.part.id !== p.id));
-                                  } else {
-                                    setCart((prev) => [...prev, { part: p, quantity: 1 }]);
-                                  }
-                                }}
+                                className="h-7 w-7"
+                                onClick={() => setSelected(p)}
                               >
-                                {inCart
-                                  ? <BookmarkCheck className="w-3.5 h-3.5 text-amber-600" />
-                                  : <BookMarked className="w-3.5 h-3.5 text-amber-600" />}
+                                <Pencil className="w-3.5 h-3.5" />
                               </Button>
                             </TooltipTrigger>
-                            <TooltipContent side="left">
-                              <p>{inCart ? 'Убрать из корзины' : 'В корзину'}</p>
+                            <TooltipContent side="bottom">
+                              <p>Редактировать</p>
+                            </TooltipContent>
+                          </Tooltip>
+
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7"
+                                disabled={duplicatingId === p.id}
+                                onClick={() => handleDuplicate(p)}
+                              >
+                                <Copy className="w-3.5 h-3.5 text-violet-500" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent side="bottom">
+                              <p>Дублировать</p>
+                            </TooltipContent>
+                          </Tooltip>
+
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7"
+                                onClick={() => setMovePart(p)}
+                              >
+                                <ArrowRightLeft className="w-3.5 h-3.5 text-blue-500" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent side="bottom">
+                              <p>Переместить</p>
+                            </TooltipContent>
+                          </Tooltip>
+
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7"
+                                onClick={() => setPricePartId(p.id)}
+                              >
+                                <Tags className="w-3.5 h-3.5 text-green-600" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent side="bottom">
+                              <p>Редактировать цены</p>
+                            </TooltipContent>
+                          </Tooltip>
+
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7"
+                                onClick={() => setDeletingId(p.id)}
+                              >
+                                <Trash className="w-3.5 h-3.5 text-destructive" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent side="bottom">
+                              <p>Удалить</p>
                             </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
-                      );
-                    })() : (
-                      <span className="text-xs text-muted-foreground">—</span>
-                    )}
-                  </td>
-                )}
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                      </div>
+                    </td>
+                  )}
+                  {onlyView && clientId && (
+                    <td className="px-2 py-3 text-center">
+                      {getAvailableQty(p) > 0 ? (
+                        (() => {
+                          const inCart = cart.some((c) => c.part.id === p.id);
+                          return (
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className={`h-7 w-7 ${inCart ? 'text-amber-600' : ''}`}
+                                    onClick={() => {
+                                      if (inCart) {
+                                        setCart((prev) =>
+                                          prev.filter(
+                                            (c) => c.part.id !== p.id,
+                                          ),
+                                        );
+                                      } else {
+                                        setCart((prev) => [
+                                          ...prev,
+                                          { part: p, quantity: 1 },
+                                        ]);
+                                      }
+                                    }}
+                                  >
+                                    {inCart ? (
+                                      <BookmarkCheck className="w-3.5 h-3.5 text-amber-600" />
+                                    ) : (
+                                      <BookMarked className="w-3.5 h-3.5 text-amber-600" />
+                                    )}
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent side="left">
+                                  <p>
+                                    {inCart ? 'Убрать из корзины' : 'В корзину'}
+                                  </p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          );
+                        })()
+                      ) : (
+                        <span className="text-xs text-muted-foreground">—</span>
+                      )}
+                    </td>
+                  )}
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
 
       {/* Мобильная версия таблицы */}
       <div className="md:hidden space-y-3">
         {filteredParts.map((p, index) => (
-          <div key={p.id} className={`border rounded-lg hover:shadow-md transition-shadow ${
-            index % 2 === 0 ? 'bg-card' : 'bg-muted/50'
-          }`}>
+          <div
+            key={p.id}
+            className={`border rounded-lg hover:shadow-md transition-shadow ${
+              index % 2 === 0 ? 'bg-card' : 'bg-muted/50'
+            }`}
+          >
             <div className="p-4 space-y-3">
               <div className="flex justify-between items-start gap-3">
                 <div className="flex-1 min-w-0 space-y-1">
-                  <h3 className="font-mono font-semibold text-sm" title={p.article}>
+                  <h3
+                    className="font-mono font-semibold text-sm"
+                    title={p.article}
+                  >
                     {p.article}
                   </h3>
-                  <p className="text-sm text-muted-foreground line-clamp-2" title={p.description}>
+                  <p
+                    className="text-sm text-muted-foreground line-clamp-2"
+                    title={p.description}
+                  >
                     {p.description}
                   </p>
                 </div>
@@ -1562,19 +1749,29 @@ export function AutopartsTable({
                           </span>
                         )}
                       </>
-                    ) : warehouseAccessId ? (() => {
+                    ) : warehouseAccessId ? (
+                      (() => {
                         const avail = getAvailableQty(p);
-                        return avail > p.maxNumberShown ? `${p.maxNumberShown}+` : avail;
-                      })() : (
-                        (() => {
-                          const avail = getAvailableQty(p);
-                          return avail > p.maxNumberShown ? `${p.maxNumberShown}+` : avail;
-                        })()
-                      )}
+                        return avail > p.maxNumberShown
+                          ? `${p.maxNumberShown}+`
+                          : avail;
+                      })()
+                    ) : (
+                      (() => {
+                        const avail = getAvailableQty(p);
+                        return avail > p.maxNumberShown
+                          ? `${p.maxNumberShown}+`
+                          : avail;
+                      })()
+                    )}
                   </div>
                   {onlyView && warehouseAccessId && (
                     <div className="text-xs text-center text-muted-foreground">
-                      ({p.totalQuantity > p.maxNumberShown ? `${p.maxNumberShown}+` : p.totalQuantity})
+                      (
+                      {p.totalQuantity > p.maxNumberShown
+                        ? `${p.maxNumberShown}+`
+                        : p.totalQuantity}
+                      )
                     </div>
                   )}
                   {onlyView && getReservationLabel(p.id) && (
@@ -1584,38 +1781,58 @@ export function AutopartsTable({
                   )}
                 </div>
               </div>
-              
+
               <div className="grid grid-cols-2 gap-3 text-xs">
                 {!onlyView && p.brand && (
                   <div className="space-y-1">
-                    <span className="text-muted-foreground font-medium">Бренд</span>
-                    <div className="font-semibold truncate" title={p.brand.name}>
+                    <span className="text-muted-foreground font-medium">
+                      Бренд
+                    </span>
+                    <div
+                      className="font-semibold truncate"
+                      title={p.brand.name}
+                    >
                       {p.brand.name}
                     </div>
                   </div>
                 )}
                 {!onlyView && p.category && (
                   <div className="space-y-1">
-                    <span className="text-muted-foreground font-medium">Группа</span>
-                    <div className="font-semibold truncate" title={p.category.name}>
+                    <span className="text-muted-foreground font-medium">
+                      Группа
+                    </span>
+                    <div
+                      className="font-semibold truncate"
+                      title={p.category.name}
+                    >
                       {p.category.name}
                     </div>
                   </div>
                 )}
                 {!onlyView && p.autos.length > 0 && (
                   <div className="space-y-1">
-                    <span className="text-muted-foreground font-medium">Авто</span>
-                    <div className="font-semibold truncate" title={p.autos.map((a) => a.name).join(", ")}>
-                      {p.autos.map((a) => a.name).join(", ")}
+                    <span className="text-muted-foreground font-medium">
+                      Авто
+                    </span>
+                    <div
+                      className="font-semibold truncate"
+                      title={p.autos.map((a) => a.name).join(', ')}
+                    >
+                      {p.autos.map((a) => a.name).join(', ')}
                     </div>
                   </div>
                 )}
                 {!onlyView && (p.engineVolumes.length > 0 || p.fuelType) && (
                   <div className="space-y-1">
-                    <span className="text-muted-foreground font-medium">Объем</span>
-                    <div className="font-semibold truncate" title={
-                      (() => {
-                        const volumes = p.engineVolumes.map((ev) => ev.name).join(", ");
+                    <span className="text-muted-foreground font-medium">
+                      Объем
+                    </span>
+                    <div
+                      className="font-semibold truncate"
+                      title={(() => {
+                        const volumes = p.engineVolumes
+                          .map((ev) => ev.name)
+                          .join(', ');
                         const fuelType = p.fuelType?.name;
                         if (volumes && fuelType) {
                           return `${volumes} / ${fuelType}`;
@@ -1624,11 +1841,13 @@ export function AutopartsTable({
                         } else if (fuelType) {
                           return `- / ${fuelType}`;
                         }
-                        return "-";
-                      })()
-                    }>
+                        return '-';
+                      })()}
+                    >
                       {(() => {
-                        const volumes = p.engineVolumes.map((ev) => ev.name).join(", ");
+                        const volumes = p.engineVolumes
+                          .map((ev) => ev.name)
+                          .join(', ');
                         const fuelType = p.fuelType?.name;
                         if (volumes && fuelType) {
                           return `${volumes} / ${fuelType}`;
@@ -1637,22 +1856,22 @@ export function AutopartsTable({
                         } else if (fuelType) {
                           return `- / ${fuelType}`;
                         }
-                        return "-";
+                        return '-';
                       })()}
                     </div>
                   </div>
                 )}
                 {!onlyView && (p.year_from != null || p.year_to != null) && (
                   <div className="space-y-1">
-                    <span className="text-muted-foreground font-medium">Годы</span>
+                    <span className="text-muted-foreground font-medium">
+                      Годы
+                    </span>
                     <div className="font-semibold">
-                      {p.year_from && p.year_to ? (
-                        `${p.year_from}-${p.year_to}`
-                      ) : p.year_from ? (
-                        `от ${p.year_from}`
-                      ) : (
-                        `до ${p.year_to}`
-                      )}
+                      {p.year_from && p.year_to
+                        ? `${p.year_from}-${p.year_to}`
+                        : p.year_from
+                          ? `от ${p.year_from}`
+                          : `до ${p.year_to}`}
                     </div>
                   </div>
                 )}
@@ -1660,7 +1879,9 @@ export function AutopartsTable({
 
               {/* Цены */}
               <div className="pt-3 border-t">
-                <div className="text-xs text-muted-foreground font-medium mb-2">Цены</div>
+                <div className="text-xs text-muted-foreground font-medium mb-2">
+                  Цены
+                </div>
                 {!onlyView && !priceAccessId ? (
                   <div className="flex flex-wrap gap-2">
                     {p.prices.map((price) => (
@@ -1691,18 +1912,23 @@ export function AutopartsTable({
                       <TooltipTrigger asChild>
                         <div className="inline-flex items-center justify-center px-3 py-1.5 rounded-full text-sm font-semibold bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 cursor-default">
                           {p.prices
-                            .find((price) => price.priceType.id === priceAccessId)
-                            ?.price.toFixed(2) ?? "-"}
+                            .find(
+                              (price) => price.priceType.id === priceAccessId,
+                            )
+                            ?.price.toFixed(2) ?? '-'}
                         </div>
                       </TooltipTrigger>
-                      {usdRate !== null && (() => {
-                        const found = p.prices.find((price) => price.priceType.id === priceAccessId);
-                        return found ? (
-                          <TooltipContent side="top">
-                            <p>{(found.price * usdRate).toFixed(2)} BYN</p>
-                          </TooltipContent>
-                        ) : null;
-                      })()}
+                      {usdRate !== null &&
+                        (() => {
+                          const found = p.prices.find(
+                            (price) => price.priceType.id === priceAccessId,
+                          );
+                          return found ? (
+                            <TooltipContent side="top">
+                              <p>{(found.price * usdRate).toFixed(2)} BYN</p>
+                            </TooltipContent>
+                          ) : null;
+                        })()}
                     </Tooltip>
                   </TooltipProvider>
                 )}
@@ -1711,50 +1937,70 @@ export function AutopartsTable({
               {/* Склады */}
               {!onlyView && p.warehouses.some((w) => w.quantity > 0) && (
                 <div className="pt-3 border-t">
-                  <div className="text-xs text-muted-foreground font-medium mb-2">Склады</div>
+                  <div className="text-xs text-muted-foreground font-medium mb-2">
+                    Склады
+                  </div>
                   <div className="flex flex-wrap gap-2">
                     {p.warehouses.map(
                       (w) =>
                         w.quantity > 0 && (
-                          <div key={w.warehouseId} className="inline-flex items-center gap-1.5 bg-muted/50 rounded-md px-2.5 py-1.5 text-xs">
+                          <div
+                            key={w.warehouseId}
+                            className="inline-flex items-center gap-1.5 bg-muted/50 rounded-md px-2.5 py-1.5 text-xs"
+                          >
                             <span className="truncate">{w.warehouseName}:</span>
                             <span className="font-semibold text-primary">
                               {w.quantity}
                             </span>
                           </div>
-                        )
+                        ),
                     )}
                   </div>
                 </div>
               )}
             </div>
 
-            {onlyView && clientId && getAvailableQty(p) > 0 && (() => {
-              const inCart = cart.some((c) => c.part.id === p.id);
-              return (
-                <div className="px-4 pb-3">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className={`w-full ${inCart
-                      ? 'text-amber-700 border-amber-500 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-600'
-                      : 'text-amber-700 border-amber-300 hover:bg-amber-50 dark:text-amber-400 dark:border-amber-700 dark:hover:bg-amber-900/20'
-                    }`}
-                    onClick={() => {
-                      if (inCart) {
-                        setCart((prev) => prev.filter((c) => c.part.id !== p.id));
-                      } else {
-                        setCart((prev) => [...prev, { part: p, quantity: 1 }]);
-                      }
-                    }}
-                  >
-                    {inCart
-                      ? <><BookmarkCheck className="w-4 h-4 mr-2" />В корзине</>
-                      : <><BookMarked className="w-4 h-4 mr-2" />В корзину</>}
-                  </Button>
-                </div>
-              );
-            })()}
+            {onlyView &&
+              clientId &&
+              getAvailableQty(p) > 0 &&
+              (() => {
+                const inCart = cart.some((c) => c.part.id === p.id);
+                return (
+                  <div className="px-4 pb-3">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className={`w-full ${
+                        inCart
+                          ? 'text-amber-700 border-amber-500 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-600'
+                          : 'text-amber-700 border-amber-300 hover:bg-amber-50 dark:text-amber-400 dark:border-amber-700 dark:hover:bg-amber-900/20'
+                      }`}
+                      onClick={() => {
+                        if (inCart) {
+                          setCart((prev) =>
+                            prev.filter((c) => c.part.id !== p.id),
+                          );
+                        } else {
+                          setCart((prev) => [
+                            ...prev,
+                            { part: p, quantity: 1 },
+                          ]);
+                        }
+                      }}
+                    >
+                      {inCart ? (
+                        <>
+                          <BookmarkCheck className="w-4 h-4 mr-2" />В корзине
+                        </>
+                      ) : (
+                        <>
+                          <BookMarked className="w-4 h-4 mr-2" />В корзину
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                );
+              })()}
 
             {!onlyView && (
               <div className="flex items-center justify-between px-4 py-3 bg-muted/30 rounded-b-lg border-t">
@@ -1859,7 +2105,10 @@ export function AutopartsTable({
       {/* Пагинация */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 p-4 bg-muted/30 rounded-lg border">
         <div className="flex items-center gap-2 flex-wrap justify-center sm:justify-start">
-          <Label htmlFor="pageSize" className="text-sm font-medium whitespace-nowrap">
+          <Label
+            htmlFor="pageSize"
+            className="text-sm font-medium whitespace-nowrap"
+          >
             Показать:
           </Label>
           <select
@@ -1877,15 +2126,20 @@ export function AutopartsTable({
             <option value={200}>200</option>
           </select>
           <span className="text-sm text-muted-foreground whitespace-nowrap">
-            из <span className="font-semibold text-foreground">{totalItems}</span> записей
+            из{' '}
+            <span className="font-semibold text-foreground">{totalItems}</span>{' '}
+            записей
           </span>
         </div>
 
         <div className="flex flex-col sm:flex-row items-center gap-3">
           <span className="text-sm text-muted-foreground whitespace-nowrap">
-            Страница <span className="font-semibold text-foreground">{currentPage}</span> из <span className="font-semibold text-foreground">{totalPages}</span>
+            Страница{' '}
+            <span className="font-semibold text-foreground">{currentPage}</span>{' '}
+            из{' '}
+            <span className="font-semibold text-foreground">{totalPages}</span>
           </span>
-          
+
           <div className="flex items-center gap-1">
             <Button
               variant="outline"
@@ -1907,15 +2161,21 @@ export function AutopartsTable({
             >
               <ChevronLeft className="h-4 w-4" />
             </Button>
-            
+
             {/* Показываем номера страниц */}
             <div className="hidden sm:flex items-center gap-1">
               {(() => {
                 const pages = [];
                 const maxVisiblePages = 5;
-                let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
-                const endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
-                
+                let startPage = Math.max(
+                  1,
+                  currentPage - Math.floor(maxVisiblePages / 2),
+                );
+                const endPage = Math.min(
+                  totalPages,
+                  startPage + maxVisiblePages - 1,
+                );
+
                 if (endPage - startPage + 1 < maxVisiblePages) {
                   startPage = Math.max(1, endPage - maxVisiblePages + 1);
                 }
@@ -1924,19 +2184,19 @@ export function AutopartsTable({
                   pages.push(
                     <Button
                       key={i}
-                      variant={i === currentPage ? "default" : "outline"}
+                      variant={i === currentPage ? 'default' : 'outline'}
                       size="sm"
                       onClick={() => goToPage(i)}
                       className="h-9 min-w-[36px] px-3 font-medium"
                     >
                       {i}
-                    </Button>
+                    </Button>,
                   );
                 }
                 return pages;
               })()}
             </div>
-            
+
             <Button
               variant="outline"
               size="sm"
@@ -1970,14 +2230,18 @@ export function AutopartsTable({
         <DialogContent className="sm:max-w-2xl max-h-[90vh] p-0 flex flex-col overflow-hidden">
           <div className="sticky top-0 z-10 bg-background border-b px-6 py-4 flex-shrink-0 flex items-center justify-between">
             <DialogTitle>
-              {creating ? "Добавить деталь" : "Редактировать деталь"}
+              {creating ? 'Добавить деталь' : 'Редактировать деталь'}
             </DialogTitle>
-            <Button 
-              onClick={() => autopartModalRef.current?.handleSubmit()} 
+            <Button
+              onClick={() => autopartModalRef.current?.handleSubmit()}
               disabled={submitting}
               size="sm"
             >
-              {submitting ? "Сохранение..." : creating ? "Добавить" : "Сохранить"}
+              {submitting
+                ? 'Сохранение...'
+                : creating
+                  ? 'Добавить'
+                  : 'Сохранить'}
             </Button>
           </div>
           <div className="overflow-y-auto flex-1 px-6 py-4">
@@ -2004,27 +2268,53 @@ export function AutopartsTable({
               part={movePart}
               onClose={() => setMovePart(null)}
               onStockUpdated={(newWarehouses) => {
-                setLocalParts(prev => prev.map(p =>
-                  p.id === movePart.id
-                    ? { ...p, warehouses: newWarehouses, totalQuantity: newWarehouses.reduce((s, w) => s + w.quantity, 0) }
-                    : p
-                ));
+                setLocalParts((prev) =>
+                  prev.map((p) =>
+                    p.id === movePart.id
+                      ? {
+                          ...p,
+                          warehouses: newWarehouses,
+                          totalQuantity: newWarehouses.reduce(
+                            (s, w) => s + w.quantity,
+                            0,
+                          ),
+                        }
+                      : p,
+                  ),
+                );
               }}
               onMoved={(fromId, toId, qty) => {
-                setLocalParts(prev => prev.map(p => {
-                  if (p.id !== movePart.id) return p;
-                  let toExists = false;
-                  const updated = p.warehouses.map(w => {
-                    if (w.warehouseId === fromId) return { ...w, quantity: w.quantity - qty };
-                    if (w.warehouseId === toId) { toExists = true; return { ...w, quantity: w.quantity + qty }; }
-                    return w;
-                  });
-                  if (!toExists) {
-                    updated.push({ warehouseId: toId, warehouseName: `Склад #${toId}`, quantity: qty });
-                  }
-                  const filtered = updated.filter(w => w.quantity > 0);
-                  return { ...p, warehouses: filtered, totalQuantity: filtered.reduce((s, w) => s + w.quantity, 0) };
-                }));
+                setLocalParts((prev) =>
+                  prev.map((p) => {
+                    if (p.id !== movePart.id) return p;
+                    let toExists = false;
+                    const updated = p.warehouses.map((w) => {
+                      if (w.warehouseId === fromId)
+                        return { ...w, quantity: w.quantity - qty };
+                      if (w.warehouseId === toId) {
+                        toExists = true;
+                        return { ...w, quantity: w.quantity + qty };
+                      }
+                      return w;
+                    });
+                    if (!toExists) {
+                      updated.push({
+                        warehouseId: toId,
+                        warehouseName: `Склад #${toId}`,
+                        quantity: qty,
+                      });
+                    }
+                    const filtered = updated.filter((w) => w.quantity > 0);
+                    return {
+                      ...p,
+                      warehouses: filtered,
+                      totalQuantity: filtered.reduce(
+                        (s, w) => s + w.quantity,
+                        0,
+                      ),
+                    };
+                  }),
+                );
               }}
             />
           )}
@@ -2066,19 +2356,24 @@ export function AutopartsTable({
               autopartId={pricePartId}
               onClose={() => setPricePartId(null)}
               onSaved={(updatedPrices) => {
-                setLocalParts(prev => prev.map(p =>
-                  p.id === pricePartId
-                    ? {
-                        ...p,
-                        prices: updatedPrices
-                          .filter(pr => pr.price !== null)
-                          .map(pr => ({
-                            priceType: { id: pr.priceTypeId, name: pr.priceTypeName },
-                            price: pr.price as number,
-                          })),
-                      }
-                    : p
-                ));
+                setLocalParts((prev) =>
+                  prev.map((p) =>
+                    p.id === pricePartId
+                      ? {
+                          ...p,
+                          prices: updatedPrices
+                            .filter((pr) => pr.price !== null)
+                            .map((pr) => ({
+                              priceType: {
+                                id: pr.priceTypeId,
+                                name: pr.priceTypeName,
+                              },
+                              price: pr.price as number,
+                            })),
+                        }
+                      : p,
+                  ),
+                );
               }}
             />
           )}
@@ -2089,7 +2384,9 @@ export function AutopartsTable({
         <ReservationModal
           part={reservingPart}
           warehouseAccessId={warehouseAccessId ?? null}
-          reservedCount={reservationSummary[reservingPart.id]?.reservedCount ?? 0}
+          reservedCount={
+            reservationSummary[reservingPart.id]?.reservedCount ?? 0
+          }
           onClose={() => setReservingPart(null)}
           onSuccess={() => setReservingPart(null)}
         />
@@ -2103,16 +2400,18 @@ export function AutopartsTable({
           reservationSummary={reservationSummary}
           onClose={() => setShowBulkReservation(false)}
           onSuccess={(succeededIds) => {
-            setCart((prev) => prev.filter((c) => !succeededIds.includes(c.part.id)));
+            setCart((prev) =>
+              prev.filter((c) => !succeededIds.includes(c.part.id)),
+            );
             setShowBulkReservation(false);
           }}
-          onItemRemoved={(partId) => setCart((prev) => prev.filter((c) => c.part.id !== partId))}
+          onItemRemoved={(partId) =>
+            setCart((prev) => prev.filter((c) => c.part.id !== partId))
+          }
         />
       )}
 
-      {showMyOrders && (
-        <MyOrdersModal onClose={() => setShowMyOrders(false)} />
-      )}
+      {showMyOrders && <MyOrdersModal onClose={() => setShowMyOrders(false)} />}
 
       {showMyReservations && (
         <MyReservationsModal onClose={() => setShowMyReservations(false)} />
@@ -2120,7 +2419,7 @@ export function AutopartsTable({
 
       {/* Модальное окно фильтров (только мобильные) */}
       <Dialog open={showFiltersModal} onOpenChange={setShowFiltersModal}>
-        <DialogContent 
+        <DialogContent
           key={String(showFiltersModal)}
           className="max-w-[95vw] w-full max-h-[90vh] p-0 flex flex-col rounded-2xl overflow-hidden"
           style={{ height: '90vh', maxHeight: '90vh' }}
@@ -2128,7 +2427,10 @@ export function AutopartsTable({
             e.preventDefault();
           }}
         >
-          <div ref={filtersModalTitleRef} className="sticky top-0 z-10 bg-background border-b px-6 py-4 flex-shrink-0">
+          <div
+            ref={filtersModalTitleRef}
+            className="sticky top-0 z-10 bg-background border-b px-6 py-4 flex-shrink-0"
+          >
             <div className="flex items-center justify-between">
               <DialogTitle className="flex items-center gap-2 text-lg">
                 <Filter className="w-5 h-5 text-primary" />
@@ -2151,7 +2453,7 @@ export function AutopartsTable({
             </div>
           </div>
 
-          <div 
+          <div
             ref={(el) => {
               filtersModalContentRef.current = el;
               if (el) {
@@ -2160,73 +2462,145 @@ export function AutopartsTable({
             }}
             className="overflow-y-auto flex-1 min-h-0"
           >
-          <div className="px-6 py-4 space-y-4">
-            {/* Поиск */}
-            <div className="space-y-2">
-              <Label htmlFor="modal-search" className="text-sm font-semibold">Поиск</Label>
-              <Input
-                ref={searchModalInputRef}
-                id="modal-search"
-                placeholder="Поиск по описанию или артикулу"
-                defaultValue=""
-                onChange={(e) => handleSearchChange(e.target.value)}
-                className="w-full"
-                autoFocus={false}
-              />
-            </div>
-
-            {/* Параметры авто */}
-            <div className="space-y-2">
-              <Label className="text-sm font-semibold">Параметры авто</Label>
-              
-              {/* Марки авто */}
+            <div className="px-6 py-4 space-y-4">
+              {/* Поиск */}
               <div className="space-y-2">
-                <Label className="text-xs text-muted-foreground">Марки авто</Label>
-                <Command className="border rounded-md">
-                  <CommandInput placeholder="Поиск марки..." />
-                  <CommandList className="max-h-[150px]">
-                    <CommandEmpty>Марка не найдена</CommandEmpty>
-                    <CommandGroup>
-                      {autos.map((auto) => {
-                        const autoName = auto.name;
-                        if (!autoName) return null;
-                        const isSelected = selectedAutos.includes(autoName);
-                        return (
-                          <CommandItem
-                            key={autoName}
-                            onSelect={() => {
-                              const newAutos = isSelected
-                                ? selectedAutos.filter((name) => name !== autoName)
-                                : [...selectedAutos, autoName];
-                              handleAutoChange(newAutos);
-                            }}
-                          >
-                            <div className="flex items-center gap-2">
-                              <Check
-                                className={`h-4 w-4 ${
-                                  isSelected ? "opacity-100" : "opacity-0"
-                                }`}
-                              />
-                              {autoName}
-                            </div>
-                          </CommandItem>
-                        );
-                      })}
-                    </CommandGroup>
-                  </CommandList>
-                </Command>
-                {selectedAutos.length > 0 && (
-                  <div className="flex flex-wrap gap-1 mt-1">
-                    {selectedAutos.map((auto) => (
-                      <span
-                        key={auto}
-                        className="inline-flex items-center gap-1 bg-primary/10 text-primary text-xs px-2 py-1 rounded-md cursor-pointer hover:bg-primary/20"
-                        onClick={() => handleAutoChange(selectedAutos.filter((a) => a !== auto))}
-                      >
-                        {auto}
-                        <X className="w-3 h-3" />
-                      </span>
-                    ))}
+                <Label htmlFor="modal-search" className="text-sm font-semibold">
+                  Поиск
+                </Label>
+                <Input
+                  ref={searchModalInputRef}
+                  id="modal-search"
+                  placeholder="Поиск по описанию или артикулу"
+                  defaultValue=""
+                  onChange={(e) => handleSearchChange(e.target.value)}
+                  className="w-full"
+                  autoFocus={false}
+                />
+              </div>
+
+              {/* Параметры авто */}
+              <div className="space-y-2">
+                <Label className="text-sm font-semibold">Параметры авто</Label>
+
+                {/* Марки авто */}
+                <div className="space-y-2">
+                  <Label className="text-xs text-muted-foreground">
+                    Марки авто
+                  </Label>
+                  <Command className="border rounded-md">
+                    <CommandInput placeholder="Поиск марки..." />
+                    <CommandList className="max-h-[150px]">
+                      <CommandEmpty>Марка не найдена</CommandEmpty>
+                      <CommandGroup>
+                        {autos.map((auto) => {
+                          const autoName = auto.name;
+                          if (!autoName) return null;
+                          const isSelected = selectedAutos.includes(autoName);
+                          return (
+                            <CommandItem
+                              key={autoName}
+                              onSelect={() => {
+                                const newAutos = isSelected
+                                  ? selectedAutos.filter(
+                                      (name) => name !== autoName,
+                                    )
+                                  : [...selectedAutos, autoName];
+                                handleAutoChange(newAutos);
+                              }}
+                            >
+                              <div className="flex items-center gap-2">
+                                <Check
+                                  className={`h-4 w-4 ${
+                                    isSelected ? 'opacity-100' : 'opacity-0'
+                                  }`}
+                                />
+                                {autoName}
+                              </div>
+                            </CommandItem>
+                          );
+                        })}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                  {selectedAutos.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {selectedAutos.map((auto) => (
+                        <span
+                          key={auto}
+                          className="inline-flex items-center gap-1 bg-primary/10 text-primary text-xs px-2 py-1 rounded-md cursor-pointer hover:bg-primary/20"
+                          onClick={() =>
+                            handleAutoChange(
+                              selectedAutos.filter((a) => a !== auto),
+                            )
+                          }
+                        >
+                          {auto}
+                          <X className="w-3 h-3" />
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Объемы двигателя */}
+                <div className="space-y-2">
+                  <Label className="text-xs text-muted-foreground">
+                    Объемы двигателя
+                  </Label>
+                  <Command className="border rounded-md">
+                    <CommandInput placeholder="Поиск объема..." />
+                    <CommandList className="max-h-[150px]">
+                      <CommandEmpty>Объем не найден</CommandEmpty>
+                      <CommandGroup>
+                        {engineVolumes.map((ev) => {
+                          const volumeName = ev.name;
+                          if (!volumeName) return null;
+                          const isSelected =
+                            selectedEngineVolumes.includes(volumeName);
+                          return (
+                            <CommandItem
+                              key={ev.id}
+                              onSelect={() => {
+                                const newVolumes = isSelected
+                                  ? selectedEngineVolumes.filter(
+                                      (name) => name !== volumeName,
+                                    )
+                                  : [...selectedEngineVolumes, volumeName];
+                                setSelectedEngineVolumes(newVolumes);
+                                setCurrentPage(1);
+                              }}
+                            >
+                              <div className="flex items-center gap-2">
+                                <Check
+                                  className={`h-4 w-4 ${
+                                    isSelected ? 'opacity-100' : 'opacity-0'
+                                  }`}
+                                />
+                                {volumeName}
+                              </div>
+                            </CommandItem>
+                          );
+                        })}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                  {selectedEngineVolumes.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {selectedEngineVolumes.map((volume) => (
+                        <span
+                          key={volume}
+                          className="inline-flex items-center gap-1 bg-primary/10 text-primary text-xs px-2 py-1 rounded-md cursor-pointer hover:bg-primary/20"
+                          onClick={() =>
+                            setSelectedEngineVolumes(
+                              selectedEngineVolumes.filter((v) => v !== volume),
+                            )
+                          }
+                        >
+                          {volume}
+                          <X className="w-3 h-3" />
+                        </span>
+                      ))}
                     </div>
                   )}
                 </div>
@@ -2234,7 +2608,9 @@ export function AutopartsTable({
                 {/* Виды топлива */}
                 {fuelTypes.length > 0 && (
                   <div className="space-y-2">
-                    <Label className="text-sm font-semibold">Виды топлива</Label>
+                    <Label className="text-xs text-muted-foreground">
+                      Виды топлива
+                    </Label>
                     <Command className="border rounded-md">
                       <CommandInput placeholder="Поиск вида топлива..." />
                       <CommandList className="max-h-[150px]">
@@ -2243,13 +2619,16 @@ export function AutopartsTable({
                           {fuelTypes.map((ft) => {
                             const fuelTypeName = ft.name;
                             if (!fuelTypeName) return null;
-                            const isSelected = selectedFuelTypes.includes(fuelTypeName);
+                            const isSelected =
+                              selectedFuelTypes.includes(fuelTypeName);
                             return (
                               <CommandItem
                                 key={ft.id}
                                 onSelect={() => {
                                   const newFuelTypes = isSelected
-                                    ? selectedFuelTypes.filter((name) => name !== fuelTypeName)
+                                    ? selectedFuelTypes.filter(
+                                        (name) => name !== fuelTypeName,
+                                      )
                                     : [...selectedFuelTypes, fuelTypeName];
                                   setSelectedFuelTypes(newFuelTypes);
                                   setCurrentPage(1);
@@ -2258,7 +2637,7 @@ export function AutopartsTable({
                                 <div className="flex items-center gap-2">
                                   <Check
                                     className={`h-4 w-4 ${
-                                      isSelected ? "opacity-100" : "opacity-0"
+                                      isSelected ? 'opacity-100' : 'opacity-0'
                                     }`}
                                   />
                                   {fuelTypeName}
@@ -2275,7 +2654,13 @@ export function AutopartsTable({
                           <span
                             key={fuelType}
                             className="inline-flex items-center gap-1 bg-primary/10 text-primary text-xs px-2 py-0.5 rounded-md cursor-pointer hover:bg-primary/20"
-                            onClick={() => setSelectedFuelTypes(selectedFuelTypes.filter((ft) => ft !== fuelType))}
+                            onClick={() =>
+                              setSelectedFuelTypes(
+                                selectedFuelTypes.filter(
+                                  (ft) => ft !== fuelType,
+                                ),
+                              )
+                            }
                           >
                             {fuelType}
                             <span className="text-xs">×</span>
@@ -2286,91 +2671,61 @@ export function AutopartsTable({
                   </div>
                 )}
 
-                {/* Виды топлива */}
-                {fuelTypes.length > 0 && (
-                  <div className="space-y-2">
-                    <Label className="text-xs text-muted-foreground">Виды топлива</Label>
-                    <Command className="border rounded-md">
-                      <CommandInput placeholder="Поиск вида топлива..." />
-                      <CommandList className="max-h-[150px]">
-                        <CommandEmpty>Вид топлива не найден</CommandEmpty>
-                        <CommandGroup>
-                          {fuelTypes.map((ft) => {
-                            const fuelTypeName = ft.name;
-                            if (!fuelTypeName) return null;
-                            const isSelected = selectedFuelTypes.includes(fuelTypeName);
-                            return (
-                              <CommandItem
-                                key={ft.id}
-                                onSelect={() => {
-                                  const newFuelTypes = isSelected
-                                    ? selectedFuelTypes.filter((name) => name !== fuelTypeName)
-                                    : [...selectedFuelTypes, fuelTypeName];
-                                  setSelectedFuelTypes(newFuelTypes);
-                                  setCurrentPage(1);
-                                }}
-                              >
-                                <div className="flex items-center gap-2">
-                                  <Check
-                                    className={`h-4 w-4 ${
-                                      isSelected ? "opacity-100" : "opacity-0"
-                                    }`}
-                                  />
-                                  {fuelTypeName}
-                                </div>
-                              </CommandItem>
-                            );
-                          })}
-                        </CommandGroup>
-                      </CommandList>
-                    </Command>
-                    {selectedFuelTypes.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mt-1">
-                        {selectedFuelTypes.map((fuelType) => (
-                          <span
-                            key={fuelType}
-                            className="inline-flex items-center gap-1 bg-primary/10 text-primary text-xs px-2 py-0.5 rounded-md cursor-pointer hover:bg-primary/20"
-                            onClick={() => setSelectedFuelTypes(selectedFuelTypes.filter((ft) => ft !== fuelType))}
-                          >
-                            {fuelType}
-                            <span className="text-xs">×</span>
-                          </span>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Объемы двигателя */}
+                {/* Год */}
                 <div className="space-y-2">
-                  <Label className="text-xs text-muted-foreground">Объемы двигателя</Label>
+                  <Label
+                    htmlFor="modal-year"
+                    className="text-xs text-muted-foreground"
+                  >
+                    Год выпуска
+                  </Label>
+                  <Input
+                    id="modal-year"
+                    type="number"
+                    placeholder="Введите год"
+                    value={filterYear}
+                    onChange={(e) => {
+                      setFilterYear(e.target.value);
+                      setCurrentPage(1);
+                    }}
+                    className="h-9"
+                    min="1900"
+                    max="2100"
+                  />
+                </div>
+              </div>
+
+              {/* Группы */}
+              <div className="space-y-2">
+                <Label className="text-sm font-semibold">Группы</Label>
                 <Command className="border rounded-md">
-                  <CommandInput placeholder="Поиск объема..." />
+                  <CommandInput placeholder="Поиск группы..." />
                   <CommandList className="max-h-[150px]">
-                    <CommandEmpty>Объем не найден</CommandEmpty>
+                    <CommandEmpty>Группа не найдена</CommandEmpty>
                     <CommandGroup>
-                      {engineVolumes.map((ev) => {
-                        const volumeName = ev.name;
-                        if (!volumeName) return null;
-                        const isSelected = selectedEngineVolumes.includes(volumeName);
+                      {categories.map((category) => {
+                        const categoryName = category.name;
+                        const isSelected =
+                          selectedCategories.includes(categoryName);
                         return (
                           <CommandItem
-                            key={ev.id}
+                            key={categoryName}
                             onSelect={() => {
-                              const newVolumes = isSelected
-                                ? selectedEngineVolumes.filter((name) => name !== volumeName)
-                                : [...selectedEngineVolumes, volumeName];
-                              setSelectedEngineVolumes(newVolumes);
-                              setCurrentPage(1);
+                              const newCategories = isSelected
+                                ? selectedCategories.filter(
+                                    (name) => name !== categoryName,
+                                  )
+                                : [...selectedCategories, categoryName];
+                              handleCategoryChange(newCategories);
                             }}
                           >
                             <div className="flex items-center gap-2">
                               <Check
                                 className={`h-4 w-4 ${
-                                  isSelected ? "opacity-100" : "opacity-0"
+                                  isSelected ? 'opacity-100' : 'opacity-0'
                                 }`}
                               />
-                              {volumeName}
+                              {categoryName}
                             </div>
                           </CommandItem>
                         );
@@ -2378,15 +2733,19 @@ export function AutopartsTable({
                     </CommandGroup>
                   </CommandList>
                 </Command>
-                {selectedEngineVolumes.length > 0 && (
+                {selectedCategories.length > 0 && (
                   <div className="flex flex-wrap gap-1 mt-1">
-                    {selectedEngineVolumes.map((volume) => (
+                    {selectedCategories.map((category) => (
                       <span
-                        key={volume}
+                        key={category}
                         className="inline-flex items-center gap-1 bg-primary/10 text-primary text-xs px-2 py-1 rounded-md cursor-pointer hover:bg-primary/20"
-                        onClick={() => setSelectedEngineVolumes(selectedEngineVolumes.filter((v) => v !== volume))}
+                        onClick={() =>
+                          handleCategoryChange(
+                            selectedCategories.filter((c) => c !== category),
+                          )
+                        }
                       >
-                        {volume}
+                        {category}
                         <X className="w-3 h-3" />
                       </span>
                     ))}
@@ -2394,254 +2753,211 @@ export function AutopartsTable({
                 )}
               </div>
 
-              {/* Год */}
+              {/* Бренды */}
               <div className="space-y-2">
-                <Label htmlFor="modal-year" className="text-xs text-muted-foreground">Год выпуска</Label>
-                <Input
-                  id="modal-year"
-                  type="number"
-                  placeholder="Введите год"
-                  value={filterYear}
-                  onChange={(e) => {
-                    setFilterYear(e.target.value);
-                    setCurrentPage(1);
-                  }}
-                  className="h-9"
-                  min="1900"
-                  max="2100"
-                />
+                <Label className="text-sm font-semibold">Бренды</Label>
+                <Command className="border rounded-md">
+                  <CommandInput placeholder="Поиск бренда..." />
+                  <CommandList className="max-h-[150px]">
+                    <CommandEmpty>Бренд не найден</CommandEmpty>
+                    <CommandGroup>
+                      {brands.map((b) => {
+                        const isSelected = selectedBrands.includes(b.name);
+                        return (
+                          <CommandItem
+                            key={b.id}
+                            onSelect={() => {
+                              const newBrands = isSelected
+                                ? selectedBrands.filter(
+                                    (name) => name !== b.name,
+                                  )
+                                : [...selectedBrands, b.name];
+                              handleBrandChange(newBrands);
+                            }}
+                          >
+                            <div className="flex items-center gap-2">
+                              <Check
+                                className={`h-4 w-4 ${
+                                  isSelected ? 'opacity-100' : 'opacity-0'
+                                }`}
+                              />
+                              {b.name}
+                            </div>
+                          </CommandItem>
+                        );
+                      })}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+                {selectedBrands.length > 0 && (
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {selectedBrands.map((brand) => (
+                      <span
+                        key={brand}
+                        className="inline-flex items-center gap-1 bg-primary/10 text-primary text-xs px-2 py-1 rounded-md cursor-pointer hover:bg-primary/20"
+                        onClick={() =>
+                          handleBrandChange(
+                            selectedBrands.filter((b) => b !== brand),
+                          )
+                        }
+                      >
+                        {brand}
+                        <X className="w-3 h-3" />
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
-            </div>
 
-            {/* Группы */}
-            <div className="space-y-2">
-              <Label className="text-sm font-semibold">Группы</Label>
-              <Command className="border rounded-md">
-                <CommandInput placeholder="Поиск группы..." />
-                <CommandList className="max-h-[150px]">
-                  <CommandEmpty>Группа не найдена</CommandEmpty>
-                  <CommandGroup>
-                    {categories.map((category) => {
-                      const categoryName = category.name;
-                      const isSelected = selectedCategories.includes(categoryName);
-                      return (
-                        <CommandItem
-                          key={categoryName}
-                          onSelect={() => {
-                            const newCategories = isSelected
-                              ? selectedCategories.filter((name) => name !== categoryName)
-                              : [...selectedCategories, categoryName];
-                            handleCategoryChange(newCategories);
-                          }}
+              {/* Базы */}
+              {!onlyView && (
+                <div className="space-y-2">
+                  <Label className="text-sm font-semibold">Базы</Label>
+                  <Command className="border rounded-md">
+                    <CommandInput placeholder="Поиск базы..." />
+                    <CommandList className="max-h-[150px]">
+                      <CommandEmpty>База не найдена</CommandEmpty>
+                      <CommandGroup>
+                        {warehouses.map((w) => {
+                          const isSelected = selectedWarehouses.includes(
+                            w.name,
+                          );
+                          return (
+                            <CommandItem
+                              key={w.id}
+                              onSelect={() => {
+                                const newWarehouses = isSelected
+                                  ? selectedWarehouses.filter(
+                                      (name) => name !== w.name,
+                                    )
+                                  : [...selectedWarehouses, w.name];
+                                handleWarehouseChange(newWarehouses);
+                              }}
+                            >
+                              <div className="flex items-center gap-2">
+                                <Check
+                                  className={`h-4 w-4 ${
+                                    isSelected ? 'opacity-100' : 'opacity-0'
+                                  }`}
+                                />
+                                {w.name}
+                              </div>
+                            </CommandItem>
+                          );
+                        })}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                  {selectedWarehouses.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {selectedWarehouses.map((warehouse) => (
+                        <span
+                          key={warehouse}
+                          className="inline-flex items-center gap-1 bg-primary/10 text-primary text-xs px-2 py-1 rounded-md cursor-pointer hover:bg-primary/20"
+                          onClick={() =>
+                            handleWarehouseChange(
+                              selectedWarehouses.filter((w) => w !== warehouse),
+                            )
+                          }
                         >
-                          <div className="flex items-center gap-2">
-                            <Check
-                              className={`h-4 w-4 ${
-                                isSelected ? "opacity-100" : "opacity-0"
-                              }`}
-                            />
-                            {categoryName}
-                          </div>
-                        </CommandItem>
-                      );
-                    })}
-                  </CommandGroup>
-                </CommandList>
-              </Command>
-              {selectedCategories.length > 0 && (
-                <div className="flex flex-wrap gap-1 mt-1">
-                  {selectedCategories.map((category) => (
-                    <span
-                      key={category}
-                      className="inline-flex items-center gap-1 bg-primary/10 text-primary text-xs px-2 py-1 rounded-md cursor-pointer hover:bg-primary/20"
-                      onClick={() => handleCategoryChange(selectedCategories.filter((c) => c !== category))}
-                    >
-                      {category}
-                      <X className="w-3 h-3" />
-                    </span>
-                  ))}
+                          {warehouse}
+                          <X className="w-3 h-3" />
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
-            </div>
 
-            {/* Бренды */}
-            <div className="space-y-2">
-              <Label className="text-sm font-semibold">Бренды</Label>
-              <Command className="border rounded-md">
-                <CommandInput placeholder="Поиск бренда..." />
-                <CommandList className="max-h-[150px]">
-                  <CommandEmpty>Бренд не найден</CommandEmpty>
-                  <CommandGroup>
-                    {brands.map((b) => {
-                      const isSelected = selectedBrands.includes(b.name);
-                      return (
-                        <CommandItem
-                          key={b.id}
-                          onSelect={() => {
-                            const newBrands = isSelected
-                              ? selectedBrands.filter((name) => name !== b.name)
-                              : [...selectedBrands, b.name];
-                            handleBrandChange(newBrands);
-                          }}
+              {/* Текст для поиска */}
+              {!onlyView && (
+                <div className="space-y-2">
+                  <Label className="text-sm font-semibold">
+                    Текст для поиска
+                  </Label>
+                  <Command className="border rounded-md">
+                    <CommandInput placeholder="Поиск текста..." />
+                    <CommandList className="max-h-[150px]">
+                      <CommandEmpty>Текст не найден</CommandEmpty>
+                      <CommandGroup>
+                        {textsForSearch.map((textForSearch) => {
+                          const text = textForSearch.text;
+                          if (!text) return;
+                          const isSelected =
+                            selectedTextsForSearch.includes(text);
+                          return (
+                            <CommandItem
+                              key={text}
+                              onSelect={() => {
+                                const newTexts = isSelected
+                                  ? selectedTextsForSearch.filter(
+                                      (textContent) => textContent !== text,
+                                    )
+                                  : [...selectedTextsForSearch, text];
+                                handleTextsForSearchChange(newTexts);
+                              }}
+                            >
+                              <div className="flex items-center gap-2">
+                                <Check
+                                  className={`h-4 w-4 ${
+                                    isSelected ? 'opacity-100' : 'opacity-0'
+                                  }`}
+                                />
+                                {text}
+                              </div>
+                            </CommandItem>
+                          );
+                        })}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                  {selectedTextsForSearch.length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {selectedTextsForSearch.map((text) => (
+                        <span
+                          key={text}
+                          className="inline-flex items-center gap-1 bg-primary/10 text-primary text-xs px-2 py-1 rounded-md cursor-pointer hover:bg-primary/20"
+                          onClick={() =>
+                            handleTextsForSearchChange(
+                              selectedTextsForSearch.filter((t) => t !== text),
+                            )
+                          }
                         >
-                          <div className="flex items-center gap-2">
-                            <Check
-                              className={`h-4 w-4 ${
-                                isSelected ? "opacity-100" : "opacity-0"
-                              }`}
-                            />
-                            {b.name}
-                          </div>
-                        </CommandItem>
-                      );
-                    })}
-                  </CommandGroup>
-                </CommandList>
-              </Command>
-              {selectedBrands.length > 0 && (
-                <div className="flex flex-wrap gap-1 mt-1">
-                  {selectedBrands.map((brand) => (
-                    <span
-                      key={brand}
-                      className="inline-flex items-center gap-1 bg-primary/10 text-primary text-xs px-2 py-1 rounded-md cursor-pointer hover:bg-primary/20"
-                      onClick={() => handleBrandChange(selectedBrands.filter((b) => b !== brand))}
-                    >
-                      {brand}
-                      <X className="w-3 h-3" />
-                    </span>
-                  ))}
+                          {text}
+                          <X className="w-3 h-3" />
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
-            </div>
 
-            {/* Базы */}
-            {!onlyView && (
-              <div className="space-y-2">
-                <Label className="text-sm font-semibold">Базы</Label>
-                <Command className="border rounded-md">
-                  <CommandInput placeholder="Поиск базы..." />
-                  <CommandList className="max-h-[150px]">
-                    <CommandEmpty>База не найдена</CommandEmpty>
-                    <CommandGroup>
-                      {warehouses.map((w) => {
-                        const isSelected = selectedWarehouses.includes(w.name);
-                        return (
-                          <CommandItem
-                            key={w.id}
-                            onSelect={() => {
-                              const newWarehouses = isSelected
-                                ? selectedWarehouses.filter((name) => name !== w.name)
-                                : [...selectedWarehouses, w.name];
-                              handleWarehouseChange(newWarehouses);
-                            }}
-                          >
-                            <div className="flex items-center gap-2">
-                              <Check
-                                className={`h-4 w-4 ${
-                                  isSelected ? "opacity-100" : "opacity-0"
-                                }`}
-                              />
-                              {w.name}
-                            </div>
-                          </CommandItem>
-                        );
-                      })}
-                    </CommandGroup>
-                  </CommandList>
-                </Command>
-                {selectedWarehouses.length > 0 && (
-                  <div className="flex flex-wrap gap-1 mt-1">
-                    {selectedWarehouses.map((warehouse) => (
-                      <span
-                        key={warehouse}
-                        className="inline-flex items-center gap-1 bg-primary/10 text-primary text-xs px-2 py-1 rounded-md cursor-pointer hover:bg-primary/20"
-                        onClick={() => handleWarehouseChange(selectedWarehouses.filter((w) => w !== warehouse))}
-                      >
-                        {warehouse}
-                        <X className="w-3 h-3" />
-                      </span>
-                    ))}
+              {/* Только в наличии */}
+              <div className="pt-2">
+                <Label className="flex items-center gap-3 rounded-lg border px-4 py-3 cursor-pointer hover:bg-accent/50 has-[[aria-checked=true]]:border-blue-600 has-[[aria-checked=true]]:bg-blue-50 dark:has-[[aria-checked=true]]:border-blue-900 dark:has-[[aria-checked=true]]:bg-blue-950">
+                  <Checkbox
+                    id="modal-inStock"
+                    checked={onlyInStock}
+                    onCheckedChange={handleOnlyInStockChange}
+                    className="data-[state=checked]:border-blue-600 data-[state=checked]:bg-blue-600 data-[state=checked]:text-white dark:data-[state=checked]:border-blue-700 dark:data-[state=checked]:bg-blue-700"
+                  />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium leading-none">
+                      В наличии
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Показывать только товары в наличии
+                    </p>
                   </div>
-                )}
+                </Label>
               </div>
-            )}
-
-            {/* Текст для поиска */}
-            {!onlyView && (
-              <div className="space-y-2">
-                <Label className="text-sm font-semibold">Текст для поиска</Label>
-                <Command className="border rounded-md">
-                  <CommandInput placeholder="Поиск текста..." />
-                  <CommandList className="max-h-[150px]">
-                    <CommandEmpty>Текст не найден</CommandEmpty>
-                    <CommandGroup>
-                      {textsForSearch.map((textForSearch) => {
-                        const text = textForSearch.text;
-                        if (!text) return;
-                        const isSelected = selectedTextsForSearch.includes(text);
-                        return (
-                          <CommandItem
-                            key={text}
-                            onSelect={() => {
-                              const newTexts = isSelected
-                                ? selectedTextsForSearch.filter((textContent) => textContent !== text)
-                                : [...selectedTextsForSearch, text];
-                              handleTextsForSearchChange(newTexts);
-                            }}
-                          >
-                            <div className="flex items-center gap-2">
-                              <Check
-                                className={`h-4 w-4 ${
-                                  isSelected ? "opacity-100" : "opacity-0"
-                                }`}
-                              />
-                              {text}
-                            </div>
-                          </CommandItem>
-                        );
-                      })}
-                    </CommandGroup>
-                  </CommandList>
-                </Command>
-                {selectedTextsForSearch.length > 0 && (
-                  <div className="flex flex-wrap gap-1 mt-1">
-                    {selectedTextsForSearch.map((text) => (
-                      <span
-                        key={text}
-                        className="inline-flex items-center gap-1 bg-primary/10 text-primary text-xs px-2 py-1 rounded-md cursor-pointer hover:bg-primary/20"
-                        onClick={() => handleTextsForSearchChange(selectedTextsForSearch.filter((t) => t !== text))}
-                      >
-                        {text}
-                        <X className="w-3 h-3" />
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Только в наличии */}
-            <div className="pt-2">
-              <Label className="flex items-center gap-3 rounded-lg border px-4 py-3 cursor-pointer hover:bg-accent/50 has-[[aria-checked=true]]:border-blue-600 has-[[aria-checked=true]]:bg-blue-50 dark:has-[[aria-checked=true]]:border-blue-900 dark:has-[[aria-checked=true]]:bg-blue-950">
-                <Checkbox
-                  id="modal-inStock"
-                  checked={onlyInStock}
-                  onCheckedChange={handleOnlyInStockChange}
-                  className="data-[state=checked]:border-blue-600 data-[state=checked]:bg-blue-600 data-[state=checked]:text-white dark:data-[state=checked]:border-blue-700 dark:data-[state=checked]:bg-blue-700"
-                />
-                <div className="flex-1">
-                  <p className="text-sm font-medium leading-none">В наличии</p>
-                  <p className="text-xs text-muted-foreground mt-1">Показывать только товары в наличии</p>
-                </div>
-              </Label>
             </div>
-          </div>
           </div>
 
           {/* Кнопки действий */}
           <div className="bg-background border-t px-6 py-4 flex gap-3 flex-shrink-0">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               className="flex-1"
               onClick={() => {
                 resetFilters();
@@ -2650,7 +2966,7 @@ export function AutopartsTable({
               <RotateCcw className="w-4 h-4 mr-2" />
               Сбросить
             </Button>
-            <Button 
+            <Button
               className="flex-1"
               onClick={() => setShowFiltersModal(false)}
             >

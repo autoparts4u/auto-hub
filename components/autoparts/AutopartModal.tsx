@@ -94,6 +94,7 @@ export const AutopartModal = forwardRef<AutopartModalRef, AutopartModalProps>(
   const [brandOpen, setBrandOpen] = useState(false);
   const [categoryOpen, setCategoryOpen] = useState(false);
   const [autoOpen, setAutoOpen] = useState(false);
+  const autoSelectingRef = useRef(false);
   const [engineVolumeOpen, setEngineVolumeOpen] = useState(false);
   const [textForSearchOpen, setTextForSearchOpen] = useState(false);
   const [fuelTypeOpen, setFuelTypeOpen] = useState(false);
@@ -470,7 +471,13 @@ export const AutopartModal = forwardRef<AutopartModalRef, AutopartModalProps>(
           </p>
         )}
         
-        <Popover open={autoOpen} onOpenChange={setAutoOpen}>
+        <Popover
+          open={autoOpen}
+          onOpenChange={(open) => {
+            if (!open && autoSelectingRef.current) return;
+            setAutoOpen(open);
+          }}
+        >
           <PopoverTrigger asChild>
             <Button variant="outline" className="w-full justify-between">
               Добавить авто
@@ -487,10 +494,11 @@ export const AutopartModal = forwardRef<AutopartModalRef, AutopartModalProps>(
                     .map((a) => (
                       <CommandItem
                         key={a.id}
+                        onPointerDown={() => { autoSelectingRef.current = true; }}
                         onSelect={() => {
                           setSelectedAutos((prev) => [...prev, a]);
                           setTouched((prev) => ({ ...prev, selectedAutos: true }));
-                          setAutoOpen(false);
+                          setTimeout(() => { autoSelectingRef.current = false; }, 0);
                         }}
                       >
                         {a.name}
