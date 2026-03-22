@@ -5,7 +5,8 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
-import { Ban, RefreshCw, Search, ShoppingCart, Trash2 } from 'lucide-react';
+import { Ban, Package, RefreshCw, Search, ShoppingCart, Trash2 } from 'lucide-react';
+import { ClientBulkOrderModal } from './ClientBulkOrderModal';
 import { RESERVATIONS_READ_EVENT } from '@/lib/hooks/useReservationBadge';
 import {
   Tooltip,
@@ -71,6 +72,7 @@ export function ReservationsTable() {
   const [cancellingId, setCancellingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [convertingId, setConvertingId] = useState<string | null>(null);
+  const [bulkOrderClientId, setBulkOrderClientId] = useState<string | null>(null);
   // warehouseSelections: reservationId → warehouseId string
   const [warehouseSelections, setWarehouseSelections] = useState<Record<string, string>>({});
 
@@ -183,6 +185,16 @@ export function ReservationsTable() {
     }
   };
 
+  // Клиенты с ≥2 активными резервациями (для кнопки общего заказа)
+  const activeByClient = new Map<string, Reservation[]>();
+  reservations
+    .filter((r) => r.status === 'active')
+    .forEach((r) => {
+      if (!activeByClient.has(r.client.id)) activeByClient.set(r.client.id, []);
+      activeByClient.get(r.client.id)!.push(r);
+    });
+  const bulkOrderClient = bulkOrderClientId ? activeByClient.get(bulkOrderClientId) : undefined;
+
   const filtered = reservations.filter(r => {
     if (!search) return true;
     const q = search.toLowerCase();
@@ -274,7 +286,28 @@ export function ReservationsTable() {
                     {r.notes && <div className="text-xs text-muted-foreground italic mt-0.5">{r.notes}</div>}
                   </td>
                   <td className="px-3 py-3 border-r">
-                    <div className="text-sm font-medium">{r.client.name}</div>
+                    <div className="flex items-center gap-1.5">
+                      <div className="text-sm font-medium">{r.client.name}</div>
+                      {r.status === 'active' && (activeByClient.get(r.client.id)?.length ?? 0) >= 2 && (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                                onClick={() => setBulkOrderClientId(r.client.id)}
+                              >
+                                <Package className="w-3.5 h-3.5" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent side="right">
+                              Создать общий заказ ({activeByClient.get(r.client.id)?.length} позиций)
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      )}
+                    </div>
                     {r.client.phone && <div className="text-xs text-muted-foreground">{r.client.phone}</div>}
                   </td>
                   <td className="px-3 py-3 border-r text-center">
@@ -399,7 +432,20 @@ export function ReservationsTable() {
               </div>
 
               <div className="grid grid-cols-2 gap-2 text-xs">
-                <div><span className="text-muted-foreground">Клиент: </span><span className="font-medium">{r.client.name}</span></div>
+                <div className="flex items-center gap-1.5 col-span-2">
+                  <span className="text-muted-foreground">Клиент: </span>
+                  <span className="font-medium">{r.client.name}</span>
+                  {r.status === 'active' && (activeByClient.get(r.client.id)?.length ?? 0) >= 2 && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-5 w-5 text-blue-600 hover:bg-blue-50"
+                      onClick={() => setBulkOrderClientId(r.client.id)}
+                    >
+                      <Package className="w-3 h-3" />
+                    </Button>
+                  )}
+                </div>
                 <div><span className="text-muted-foreground">Кол-во: </span><span className="font-semibold text-primary">{r.quantity}</span></div>
                 <div><span className="text-muted-foreground">Телефон: </span><span>{r.client.phone ?? '—'}</span></div>
               </div>
@@ -480,6 +526,19 @@ export function ReservationsTable() {
         <div className="text-xs text-muted-foreground text-right">
           Показано: {filtered.length} из {reservations.length}
         </div>
+      )}
+
+      {bulkOrderClientId && bulkOrderClient && (
+        <ClientBulkOrderModal
+          clientName={bulkOrderClient[0].client.name}
+          reservations={bulkOrderClient}
+          warehouses={warehouses}
+          onClose={() => setBulkOrderClientId(null)}
+          onSuccess={() => {
+            setBulkOrderClientId(null);
+            fetchReservations();
+          }}
+        />
       )}
 
       <Dialog open={!!deletingId} onOpenChange={() => setDeletingId(null)}>

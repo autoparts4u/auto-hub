@@ -73,15 +73,26 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { autopartId, quantity, notes } = body;
+    const { autopartId, quantity, notes, warehouseId: bodyWarehouseId } = body;
 
     if (!autopartId || !quantity || quantity < 1) {
       return NextResponse.json({ error: 'Invalid data' }, { status: 400 });
     }
 
-    // Получаем настройки (длительность резервации)
-    const settings = await prisma.appSettings.findUnique({ where: { id: 1 } });
-    const durationMinutes = settings?.reservationDurationMinutes ?? 1440;
+    // Получаем настройки и склад клиента параллельно
+    const [settings, client] = await Promise.all([
+      prisma.appSettings.findUnique({ where: { id: 1 } }),
+      prisma.clients.findUnique({
+        where: { id: session.user.clientId },
+        select: { warehouseAccessId: true, reservationDurationMinutes: true },
+      }),
+    ]);
+
+    // Склад: берём из тела запроса, иначе из профиля клиента
+    const warehouseId = bodyWarehouseId ?? client?.warehouseAccessId ?? null;
+    // Время резервации: клиентское если задано, иначе глобальное
+    const durationMinutes =
+      client?.reservationDurationMinutes ?? settings?.reservationDurationMinutes ?? 1440;
 
     // Считаем общий остаток по всем складам
     const warehouseStocks = await prisma.autopartsWarehouses.findMany({
@@ -118,6 +129,7 @@ export async function POST(request: NextRequest) {
         quantity,
         notes: notes ?? null,
         expiresAt,
+        warehouse_id: warehouseId ?? null,
       },
       include: {
         autopart: { select: { article: true, description: true } },

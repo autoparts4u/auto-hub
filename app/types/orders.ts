@@ -82,6 +82,7 @@ export interface Client {
   address: string | null;
   priceAccessId: number | null;
   warehouseAccessId: number | null;
+  reservationDurationMinutes: number | null;
   deliveryMethods?: ClientDeliveryMethod[];
   priceAccess?: PriceType;
   warehouseAccess?: Warehouse;

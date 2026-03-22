@@ -33,6 +33,8 @@ import { MovePartModal } from "./MovePartModal";
 import { LogsModal } from "./LogsModal";
 import { ReservationModal } from "@/components/reservations/ReservationModal";
 import { MyReservationsModal } from "@/components/reservations/MyReservationsModal";
+import { MyOrdersModal } from "@/components/orders/MyOrdersModal";
+import { BulkReservationModal, CartItem } from "@/components/reservations/BulkReservationModal";
 import {
   Plus,
   Pencil,
@@ -48,9 +50,12 @@ import {
   ChevronsLeft,
   ChevronsRight,
   Filter,
+  ShoppingCart,
+  Copy,
   X,
   BookMarked,
   BookmarkCheck,
+  ClipboardList,
 } from "lucide-react";
 import { PriceEditModal } from "./PriceEditModal";
 import { Auto, Categories, TextForAuthopartsSearch, EngineVolume, FuelType } from "@prisma/client";
@@ -97,21 +102,48 @@ export function AutopartsTable({
 }: Props) {
   const { logEvent } = useActivity();
   const [localParts, setLocalParts] = useState<AutopartWithStock[]>(parts);
+  const [reservationSummary, setReservationSummary] = useState<
+    Record<string, { reservedCount: number; nearestExpiry: string | null }>
+  >({});
 
   // Синхронизируем при обновлении пропа (например, при первой загрузке страницы)
   useEffect(() => { setLocalParts(parts); }, [parts]);
+
+  // Для админа — загрузка сводки резерваций при монтировании и при возврате на вкладку
+  useEffect(() => {
+    if (onlyView) return;
+    const fetchSummary = async () => {
+      try {
+        const res = await fetch('/api/reservations/public-summary');
+        if (res.ok) setReservationSummary(await res.json());
+      } catch {}
+    };
+    fetchSummary();
+    const onVisible = () => { if (document.visibilityState === 'visible') fetchSummary(); };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => document.removeEventListener('visibilitychange', onVisible);
+  }, [onlyView]);
 
   // Для пользователей (onlyView) — поллинг обновлений каждые 15 секунд + при возврате на вкладку
   useEffect(() => {
     if (!onlyView) return;
     const poll = async () => {
       try {
-        const res = await fetch('/api/autoparts/full');
-        if (!res.ok) return;
-        const data = await res.json();
-        if (Array.isArray(data.parts)) setLocalParts(data.parts);
+        const [partsRes, summaryRes] = await Promise.all([
+          fetch('/api/autoparts/full'),
+          fetch('/api/reservations/public-summary'),
+        ]);
+        if (partsRes.ok) {
+          const data = await partsRes.json();
+          if (Array.isArray(data.parts)) setLocalParts(data.parts);
+        }
+        if (summaryRes.ok) {
+          const data = await summaryRes.json();
+          setReservationSummary(data);
+        }
       } catch {}
     };
+    poll();
     const onVisible = () => { if (document.visibilityState === 'visible') poll(); };
     document.addEventListener('visibilitychange', onVisible);
     const id = setInterval(poll, 15_000);
@@ -127,8 +159,12 @@ export function AutopartsTable({
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [logsPartId, setLogsPartId] = useState<string | null>(null);
   const [pricePartId, setPricePartId] = useState<string | null>(null);
+  const [duplicatingId, setDuplicatingId] = useState<string | null>(null);
   const [reservingPart, setReservingPart] = useState<AutopartWithStock | null>(null);
+  const [cart, setCart] = useState<CartItem[]>([]);
+  const [showBulkReservation, setShowBulkReservation] = useState(false);
   const [showMyReservations, setShowMyReservations] = useState(false);
+  const [showMyOrders, setShowMyOrders] = useState(false);
   const [searchFilter, setSearchFilter] = useState("");
   const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
@@ -307,6 +343,48 @@ export function AutopartsTable({
       console.error(error);
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleDuplicate = async (part: AutopartWithStock) => {
+    setDuplicatingId(part.id);
+    try {
+      const res = await fetch(`/api/autoparts/${part.id}/duplicate`, { method: 'POST' });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        toast.error(err.error || 'Ошибка копирования детали');
+        return;
+      }
+      const raw = await res.json();
+      // Привести ответ к AutopartWithStock
+      const copy: AutopartWithStock = {
+        id: raw.id,
+        article: raw.article,
+        description: raw.description,
+        maxNumberShown: raw.maxNumberShown,
+        year_from: raw.year_from ?? null,
+        year_to: raw.year_to ?? null,
+        brand: raw.brand ?? null,
+        category: raw.category ?? null,
+        fuelType: raw.fuelType ?? null,
+        textForSearch: raw.textForSearch ?? null,
+        autos: (raw.autos ?? []).map((a: { auto: typeof raw.autos[0] }) => a.auto),
+        engineVolumes: (raw.engineVolumes ?? []).map((e: { engineVolume: typeof raw.engineVolumes[0] }) => e.engineVolume),
+        totalQuantity: 0,
+        warehouses: [],
+        prices: (raw.prices ?? []).map((p: { priceType: { id: number; name: string }; price: number }) => ({
+          priceType: p.priceType,
+          price: p.price,
+        })),
+        analogues: [],
+      };
+      setLocalParts((prev) => [copy, ...prev]);
+      toast.success('Копия создана — отредактируйте артикул');
+      setSelected(copy);
+    } catch {
+      toast.error('Ошибка копирования детали');
+    } finally {
+      setDuplicatingId(null);
     }
   };
 
@@ -534,6 +612,24 @@ export function AutopartsTable({
   const getFilterHighlightClass = (hasActive: boolean) =>
     hasActive ? "bg-green-200" : "bg-blue-200";
 
+  const getAvailableQty = (part: AutopartWithStock) => {
+    const reserved = reservationSummary[part.id]?.reservedCount ?? 0;
+    const total = warehouseAccessId
+      ? part.warehouses.filter(w => w.warehouseId === warehouseAccessId).reduce((s, w) => s + w.quantity, 0)
+      : part.totalQuantity;
+    return Math.max(0, total - reserved);
+  };
+
+  const getReservationLabel = (partId: string) => {
+    const entry = reservationSummary[partId];
+    if (!entry || entry.reservedCount === 0) return null;
+    if (!entry.nearestExpiry) return `${entry.reservedCount} в резерве`;
+    const diff = new Date(entry.nearestExpiry).getTime() - Date.now();
+    if (diff <= 0) return null;
+    const mins = Math.ceil(diff / 60000);
+    return `${entry.reservedCount} в резерве, через ${mins} мин.`;
+  };
+
   const SortHeader = ({
     label,
     column,
@@ -571,7 +667,24 @@ export function AutopartsTable({
       )}
 
       {onlyView && clientId && (
-        <div className="md:sticky md:top-0 z-20 bg-background flex items-center justify-end py-2">
+        <div className="md:sticky md:top-0 z-20 bg-background flex items-center justify-end gap-2 py-2">
+          {cart.length > 0 && (
+            <Button
+              size="sm"
+              className="bg-amber-600 hover:bg-amber-700 text-white"
+              onClick={() => setShowBulkReservation(true)}
+            >
+              <ShoppingCart className="w-4 h-4 mr-2" />
+              Корзина
+              <span className="ml-2 inline-flex items-center justify-center h-5 min-w-[20px] px-1.5 text-xs font-bold rounded-full bg-white/25">
+                {cart.length}
+              </span>
+            </Button>
+          )}
+          <Button variant="outline" size="sm" onClick={() => setShowMyOrders(true)}>
+            <ClipboardList className="w-4 h-4 mr-2" />
+            Мои заказы
+          </Button>
           <Button variant="outline" size="sm" onClick={() => setShowMyReservations(true)}>
             <BookmarkCheck className="w-4 h-4 mr-2" />
             Мои бронирования
@@ -1173,25 +1286,49 @@ export function AutopartsTable({
                 )}
                 <td className="px-2 py-4 text-sm text-center font-semibold whitespace-nowrap border-r">
                   {!onlyView ? (
-                    <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
-                      {p.totalQuantity}
-                    </span>
-                  ) : warehouseAccessId ? (
-                    <div className="flex items-center gap-1">
+                    <div className="flex flex-col items-center gap-0.5">
                       <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
-                        {(() => {
-                          const quantity = p.warehouses.find(w => w.warehouseId === warehouseAccessId)?.quantity ?? 0;
-                          return quantity > p.maxNumberShown ? `${p.maxNumberShown}+` : quantity;
-                        })()}
+                        {p.totalQuantity}
                       </span>
-                      <span className="text-xs text-muted-foreground">
-                        ({p.totalQuantity > p.maxNumberShown ? `${p.maxNumberShown}+` : p.totalQuantity})
-                      </span>
+                      {(reservationSummary[p.id]?.reservedCount ?? 0) > 0 && (
+                        <span className="text-xs text-amber-600 dark:text-amber-500">
+                          {reservationSummary[p.id].reservedCount} рез.
+                        </span>
+                      )}
+                    </div>
+                  ) : warehouseAccessId ? (
+                    <div className="flex flex-col items-center gap-0.5">
+                      <div className="flex items-center gap-1">
+                        <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
+                          {(() => {
+                            const avail = getAvailableQty(p);
+                            return avail > p.maxNumberShown ? `${p.maxNumberShown}+` : avail;
+                          })()}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          ({p.totalQuantity > p.maxNumberShown ? `${p.maxNumberShown}+` : p.totalQuantity})
+                        </span>
+                      </div>
+                      {getReservationLabel(p.id) && (
+                        <span className="text-xs text-amber-600 dark:text-amber-500 leading-tight">
+                          {getReservationLabel(p.id)}
+                        </span>
+                      )}
                     </div>
                   ) : (
-                    <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
-                      {p.totalQuantity > p.maxNumberShown ? `${p.maxNumberShown}+` : p.totalQuantity}
-                    </span>
+                    <div className="flex flex-col items-center gap-0.5">
+                      <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
+                        {(() => {
+                          const avail = getAvailableQty(p);
+                          return avail > p.maxNumberShown ? `${p.maxNumberShown}+` : avail;
+                        })()}
+                      </span>
+                      {getReservationLabel(p.id) && (
+                        <span className="text-xs text-amber-600 dark:text-amber-500 leading-tight">
+                          {getReservationLabel(p.id)}
+                        </span>
+                      )}
+                    </div>
                   )}
                 </td>
                 {!onlyView && (
@@ -1293,6 +1430,23 @@ export function AutopartsTable({
                               variant="ghost"
                               size="icon"
                               className="h-7 w-7"
+                              disabled={duplicatingId === p.id}
+                              onClick={() => handleDuplicate(p)}
+                            >
+                              <Copy className="w-3.5 h-3.5 text-violet-500" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent side="bottom">
+                            <p>Дублировать</p>
+                          </TooltipContent>
+                        </Tooltip>
+
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7"
                               onClick={() => setMovePart(p)}
                             >
                               <ArrowRightLeft className="w-3.5 h-3.5 text-blue-500" />
@@ -1340,25 +1494,36 @@ export function AutopartsTable({
                 )}
                 {onlyView && clientId && (
                   <td className="px-2 py-3 text-center">
-                    {p.totalQuantity > 0 ? (
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-7 w-7"
-                              onClick={() => setReservingPart(p)}
-                            >
-                              <BookMarked className="w-3.5 h-3.5 text-amber-600" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent side="left">
-                            <p>Зарезервировать</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    ) : (
+                    {getAvailableQty(p) > 0 ? (() => {
+                      const inCart = cart.some((c) => c.part.id === p.id);
+                      return (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className={`h-7 w-7 ${inCart ? 'text-amber-600' : ''}`}
+                                onClick={() => {
+                                  if (inCart) {
+                                    setCart((prev) => prev.filter((c) => c.part.id !== p.id));
+                                  } else {
+                                    setCart((prev) => [...prev, { part: p, quantity: 1 }]);
+                                  }
+                                }}
+                              >
+                                {inCart
+                                  ? <BookmarkCheck className="w-3.5 h-3.5 text-amber-600" />
+                                  : <BookMarked className="w-3.5 h-3.5 text-amber-600" />}
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent side="left">
+                              <p>{inCart ? 'Убрать из корзины' : 'В корзину'}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      );
+                    })() : (
                       <span className="text-xs text-muted-foreground">—</span>
                     )}
                   </td>
@@ -1386,20 +1551,35 @@ export function AutopartsTable({
                     {p.description}
                   </p>
                 </div>
-                <div className="flex-shrink-0">
+                <div className="flex-shrink-0 flex flex-col items-center gap-0.5">
                   <div className="inline-flex items-center justify-center px-3 py-1.5 rounded-full text-sm font-semibold bg-primary/10 text-primary">
                     {!onlyView ? (
-                      p.totalQuantity
+                      <>
+                        {p.totalQuantity}
+                        {(reservationSummary[p.id]?.reservedCount ?? 0) > 0 && (
+                          <span className="ml-1.5 text-xs font-normal text-amber-600 dark:text-amber-500">
+                            ({reservationSummary[p.id].reservedCount} рез.)
+                          </span>
+                        )}
+                      </>
                     ) : warehouseAccessId ? (() => {
-                        const quantity = p.warehouses.find(w => w.warehouseId === warehouseAccessId)?.quantity ?? 0;
-                        return quantity > p.maxNumberShown ? `${p.maxNumberShown}+` : quantity;
+                        const avail = getAvailableQty(p);
+                        return avail > p.maxNumberShown ? `${p.maxNumberShown}+` : avail;
                       })() : (
-                        p.totalQuantity > p.maxNumberShown ? `${p.maxNumberShown}+` : p.totalQuantity
+                        (() => {
+                          const avail = getAvailableQty(p);
+                          return avail > p.maxNumberShown ? `${p.maxNumberShown}+` : avail;
+                        })()
                       )}
                   </div>
                   {onlyView && warehouseAccessId && (
-                    <div className="text-xs text-center text-muted-foreground mt-1">
+                    <div className="text-xs text-center text-muted-foreground">
                       ({p.totalQuantity > p.maxNumberShown ? `${p.maxNumberShown}+` : p.totalQuantity})
+                    </div>
+                  )}
+                  {onlyView && getReservationLabel(p.id) && (
+                    <div className="text-xs text-center text-amber-600 dark:text-amber-500 leading-tight max-w-[90px]">
+                      {getReservationLabel(p.id)}
                     </div>
                   )}
                 </div>
@@ -1549,19 +1729,32 @@ export function AutopartsTable({
               )}
             </div>
 
-            {onlyView && clientId && p.totalQuantity > 0 && (
-              <div className="px-4 pb-3">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="w-full text-amber-700 border-amber-300 hover:bg-amber-50 dark:text-amber-400 dark:border-amber-700 dark:hover:bg-amber-900/20"
-                  onClick={() => setReservingPart(p)}
-                >
-                  <BookMarked className="w-4 h-4 mr-2" />
-                  Зарезервировать
-                </Button>
-              </div>
-            )}
+            {onlyView && clientId && getAvailableQty(p) > 0 && (() => {
+              const inCart = cart.some((c) => c.part.id === p.id);
+              return (
+                <div className="px-4 pb-3">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className={`w-full ${inCart
+                      ? 'text-amber-700 border-amber-500 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-600'
+                      : 'text-amber-700 border-amber-300 hover:bg-amber-50 dark:text-amber-400 dark:border-amber-700 dark:hover:bg-amber-900/20'
+                    }`}
+                    onClick={() => {
+                      if (inCart) {
+                        setCart((prev) => prev.filter((c) => c.part.id !== p.id));
+                      } else {
+                        setCart((prev) => [...prev, { part: p, quantity: 1 }]);
+                      }
+                    }}
+                  >
+                    {inCart
+                      ? <><BookmarkCheck className="w-4 h-4 mr-2" />В корзине</>
+                      : <><BookMarked className="w-4 h-4 mr-2" />В корзину</>}
+                  </Button>
+                </div>
+              );
+            })()}
 
             {!onlyView && (
               <div className="flex items-center justify-between px-4 py-3 bg-muted/30 rounded-b-lg border-t">
@@ -1588,6 +1781,23 @@ export function AutopartsTable({
                       </TooltipTrigger>
                       <TooltipContent side="bottom">
                         <p>Редактировать</p>
+                      </TooltipContent>
+                    </Tooltip>
+
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-9 w-9"
+                          disabled={duplicatingId === p.id}
+                          onClick={() => handleDuplicate(p)}
+                        >
+                          <Copy className="w-4 h-4 text-violet-500" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom">
+                        <p>Дублировать</p>
                       </TooltipContent>
                     </Tooltip>
 
@@ -1879,9 +2089,29 @@ export function AutopartsTable({
         <ReservationModal
           part={reservingPart}
           warehouseAccessId={warehouseAccessId ?? null}
+          reservedCount={reservationSummary[reservingPart.id]?.reservedCount ?? 0}
           onClose={() => setReservingPart(null)}
           onSuccess={() => setReservingPart(null)}
         />
+      )}
+
+      {showBulkReservation && (
+        <BulkReservationModal
+          cart={cart}
+          warehouseAccessId={warehouseAccessId ?? null}
+          priceAccessId={priceAccessId ?? null}
+          reservationSummary={reservationSummary}
+          onClose={() => setShowBulkReservation(false)}
+          onSuccess={(succeededIds) => {
+            setCart((prev) => prev.filter((c) => !succeededIds.includes(c.part.id)));
+            setShowBulkReservation(false);
+          }}
+          onItemRemoved={(partId) => setCart((prev) => prev.filter((c) => c.part.id !== partId))}
+        />
+      )}
+
+      {showMyOrders && (
+        <MyOrdersModal onClose={() => setShowMyOrders(false)} />
       )}
 
       {showMyReservations && (

@@ -29,6 +29,7 @@ interface ClientModalProps {
   priceTypes: PriceType[];
   warehouses: Warehouse[];
   client?: Client | null;
+  defaultReservationDuration?: number;
 }
 
 export default function ClientModal({
@@ -37,6 +38,7 @@ export default function ClientModal({
   priceTypes,
   warehouses,
   client,
+  defaultReservationDuration = 1440,
 }: ClientModalProps) {
   const [loading, setLoading] = useState(false);
   const isEditMode = !!client;
@@ -48,6 +50,7 @@ export default function ClientModal({
   const [address, setAddress] = useState('');
   const [priceAccessId, setPriceAccessId] = useState<string>('');
   const [warehouseAccessId, setWarehouseAccessId] = useState<string>('');
+  const [reservationDuration, setReservationDuration] = useState<string>('');
 
   // Заполнение формы при редактировании
   useEffect(() => {
@@ -58,6 +61,7 @@ export default function ClientModal({
       setAddress(client.address || '');
       setPriceAccessId(client.priceAccessId?.toString() || '');
       setWarehouseAccessId(client.warehouseAccessId?.toString() || '');
+      setReservationDuration(client.reservationDurationMinutes?.toString() || '');
     } else if (!open) {
       // Очистка формы при закрытии
       setName('');
@@ -66,6 +70,7 @@ export default function ClientModal({
       setAddress('');
       setPriceAccessId('');
       setWarehouseAccessId('');
+      setReservationDuration('');
     }
   }, [client, open]);
 
@@ -77,6 +82,7 @@ export default function ClientModal({
     setAddress('');
     setPriceAccessId('');
     setWarehouseAccessId('');
+    setReservationDuration('');
     onClose();
   };
 
@@ -113,6 +119,9 @@ export default function ClientModal({
       } else {
         payload.warehouseAccessId = null;
       }
+      const parsedDuration = parseInt(reservationDuration);
+      payload.reservationDurationMinutes =
+        reservationDuration.trim() && parsedDuration > 0 ? parsedDuration : null;
 
       const url = isEditMode ? `/api/clients/${client!.id}` : '/api/clients';
       const method = isEditMode ? 'PATCH' : 'POST';
@@ -294,6 +303,29 @@ export default function ClientModal({
                   🏪 Доступный склад
                 </p>
               </div>
+            </div>
+          </div>
+
+          {/* Время резервации */}
+          <div className="space-y-4">
+            <h3 className="font-semibold text-sm text-muted-foreground">
+              БРОНИРОВАНИЕ
+            </h3>
+            <div className="space-y-2">
+              <Label htmlFor="reservationDuration">Время резервации (минуты)</Label>
+              <Input
+                id="reservationDuration"
+                type="number"
+                inputMode="numeric"
+                min={1}
+                value={reservationDuration}
+                onChange={(e) => setReservationDuration(e.target.value)}
+                onFocus={(e) => e.target.select()}
+                placeholder={`По умолчанию: ${defaultReservationDuration} мин. (${Math.round(defaultReservationDuration / 60)} ч.)`}
+              />
+              <p className="text-xs text-muted-foreground">
+                Оставьте пустым, чтобы использовать глобальное значение из настроек
+              </p>
             </div>
           </div>
 

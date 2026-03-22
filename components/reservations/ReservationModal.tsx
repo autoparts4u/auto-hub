@@ -12,17 +12,19 @@ import { Clock, Package } from 'lucide-react';
 interface Props {
   part: AutopartWithStock;
   warehouseAccessId: number | null;
+  reservedCount?: number;
   onClose: () => void;
   onSuccess: () => void;
 }
 
-export function ReservationModal({ part, warehouseAccessId, onClose, onSuccess }: Props) {
+export function ReservationModal({ part, warehouseAccessId, reservedCount = 0, onClose, onSuccess }: Props) {
   const availableWarehouses = part.warehouses.filter(w => {
     if (warehouseAccessId) return w.warehouseId === warehouseAccessId && w.quantity > 0;
     return w.quantity > 0;
   });
 
-  const totalAvailable = availableWarehouses.reduce((sum, w) => sum + w.quantity, 0);
+  const physicalStock = availableWarehouses.reduce((sum, w) => sum + w.quantity, 0);
+  const totalAvailable = Math.max(0, physicalStock - reservedCount);
 
   const [quantity, setQuantity] = useState('1');
   const [notes, setNotes] = useState('');
@@ -58,6 +60,7 @@ export function ReservationModal({ part, warehouseAccessId, onClose, onSuccess }
           autopartId: part.id,
           quantity: qty,
           notes: notes.trim() || undefined,
+          warehouseId: warehouseAccessId ?? undefined,
         }),
       });
 
@@ -110,9 +113,14 @@ export function ReservationModal({ part, warehouseAccessId, onClose, onSuccess }
             <>
               {/* Общее наличие */}
               <div className="flex items-center justify-between text-sm rounded-lg bg-muted/30 px-3 py-2">
-                <span className="text-muted-foreground">В наличии</span>
+                <span className="text-muted-foreground">Доступно</span>
                 <span className="font-semibold text-primary">{totalAvailable} шт.</span>
               </div>
+              {reservedCount > 0 && (
+                <p className="text-xs text-amber-600 dark:text-amber-500 px-1">
+                  {reservedCount} шт. сейчас в резерве
+                </p>
+              )}
 
               {/* Количество */}
               <div className="space-y-1.5">

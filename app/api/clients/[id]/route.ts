@@ -95,6 +95,9 @@ export async function PUT(
     if (body.address !== undefined) updateData.address = body.address || null;
     if (body.priceAccessId !== undefined) updateData.priceAccessId = body.priceAccessId || null;
     if (body.warehouseAccessId !== undefined) updateData.warehouseAccessId = body.warehouseAccessId || null;
+    if (body.reservationDurationMinutes !== undefined) {
+      updateData.reservationDurationMinutes = body.reservationDurationMinutes || null;
+    }
 
     const client = await prisma.clients.update({
       where: { id },

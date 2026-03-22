@@ -62,7 +62,7 @@ export function MyReservationsModal({ onClose }: Props) {
   const handleCancel = async (id: string) => {
     setCancellingId(id);
     try {
-      const res = await fetch(`/api/reservations/${id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/reservations/${id}/cancel`, { method: 'POST' });
       if (!res.ok) {
         const data = await res.json();
         toast.error(data.error ?? 'Ошибка отмены');

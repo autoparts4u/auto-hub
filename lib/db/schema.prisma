@@ -133,8 +133,9 @@ model Clients {
     fullName          String
     phone             String? @unique
     address           String?
-    priceAccessId     Int?
-    warehouseAccessId Int?
+    priceAccessId              Int?
+    warehouseAccessId          Int?
+    reservationDurationMinutes Int? // null = использовать глобальные настройки
 
     user            User? // Опциональная обратная связь
     priceAccess     PriceTypes?              @relation("ClientPriceAccess", fields: [priceAccessId], references: [id])

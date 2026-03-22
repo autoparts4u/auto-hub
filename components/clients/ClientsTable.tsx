@@ -41,6 +41,7 @@ import {
   Pencil,
   Trash2,
   Truck,
+  Clock,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import ClientModal from './ClientModal';
@@ -60,6 +61,7 @@ interface UserItem {
   role: string;
   priceAccessId?: number | null;
   warehouseAccessId?: number | null;
+  reservationDurationMinutes?: number | null;
   isConfirmed: boolean;
 }
 
@@ -67,6 +69,7 @@ export default function ClientsTable({ priceTypes }: ClientsTableProps) {
   const [clients, setClients] = useState<Client[]>([]);
   const [users, setUsers] = useState<UserItem[]>([]);
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
+  const [defaultReservationDuration, setDefaultReservationDuration] = useState(1440);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -167,6 +170,7 @@ export default function ClientsTable({ priceTypes }: ClientsTableProps) {
           address?: string;
           priceAccessId?: number | null;
           warehouseAccessId?: number | null;
+          reservationDurationMinutes?: number | null;
         };
       }) => ({
         id: user.id,
@@ -177,6 +181,7 @@ export default function ClientsTable({ priceTypes }: ClientsTableProps) {
         role: user.role,
         priceAccessId: user.client?.priceAccessId ?? null,
         warehouseAccessId: user.client?.warehouseAccessId ?? null,
+        reservationDurationMinutes: user.client?.reservationDurationMinutes ?? null,
         isConfirmed: user.isConfirmed,
       }));
       setUsers(transformedUsers);
@@ -186,6 +191,15 @@ export default function ClientsTable({ priceTypes }: ClientsTableProps) {
       if (!warehousesResponse.ok) throw new Error('Failed to fetch warehouses');
       const warehousesData = await warehousesResponse.json();
       setWarehouses(warehousesData);
+
+      // Загружаем глобальные настройки для дефолтного времени резервации
+      const settingsResponse = await fetch('/api/settings');
+      if (settingsResponse.ok) {
+        const settingsData = await settingsResponse.json();
+        if (settingsData.reservationDurationMinutes) {
+          setDefaultReservationDuration(settingsData.reservationDurationMinutes);
+        }
+      }
       
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -385,6 +399,7 @@ export default function ClientsTable({ priceTypes }: ClientsTableProps) {
                       База
                     </div>
                   </TableHead>
+                  <TableHead>Резервация (мин.)</TableHead>
                   <TableHead>Подтвержден</TableHead>
                 </TableRow>
               </TableHeader>
@@ -491,6 +506,33 @@ export default function ClientsTable({ priceTypes }: ClientsTableProps) {
                             ))}
                           </SelectContent>
                         </Select>
+                      </TableCell>
+                      <TableCell>
+                        <Input
+                          type="number"
+                          inputMode="numeric"
+                          min={1}
+                          value={user.reservationDurationMinutes?.toString() ?? ""}
+                          onChange={(e) =>
+                            setUsers((prev) =>
+                              prev.map((u) =>
+                                u.id === user.id
+                                  ? { ...u, reservationDurationMinutes: e.target.value ? Number(e.target.value) : null }
+                                  : u
+                              )
+                            )
+                          }
+                          onFocus={(e) => e.target.select()}
+                          onBlur={(e) =>
+                            handleUserChange(
+                              user.id,
+                              "reservationDurationMinutes",
+                              e.target.value ? Number(e.target.value) : null
+                            )
+                          }
+                          placeholder={`${defaultReservationDuration}`}
+                          className="w-[110px]"
+                        />
                       </TableCell>
                       <TableCell>
                         <Switch
@@ -643,6 +685,37 @@ export default function ClientsTable({ priceTypes }: ClientsTableProps) {
                             ))}
                           </SelectContent>
                         </Select>
+                      </div>
+
+                      <div>
+                        <Label className="text-xs text-muted-foreground flex items-center gap-1 mb-1.5">
+                          <Clock className="h-3 w-3" />
+                          Резервация (мин.)
+                        </Label>
+                        <Input
+                          type="number"
+                          inputMode="numeric"
+                          min={1}
+                          value={user.reservationDurationMinutes?.toString() ?? ""}
+                          onChange={(e) =>
+                            setUsers((prev) =>
+                              prev.map((u) =>
+                                u.id === user.id
+                                  ? { ...u, reservationDurationMinutes: e.target.value ? Number(e.target.value) : null }
+                                  : u
+                              )
+                            )
+                          }
+                          onFocus={(e) => e.target.select()}
+                          onBlur={(e) =>
+                            handleUserChange(
+                              user.id,
+                              "reservationDurationMinutes",
+                              e.target.value ? Number(e.target.value) : null
+                            )
+                          }
+                          placeholder={`По умолчанию: ${defaultReservationDuration}`}
+                        />
                       </div>
                     </div>
                   </div>
@@ -1136,6 +1209,7 @@ export default function ClientsTable({ priceTypes }: ClientsTableProps) {
         }}
         priceTypes={priceTypes}
         warehouses={warehouses}
+        defaultReservationDuration={defaultReservationDuration}
       />
 
       {/* Модальное окно редактирования клиента */}
@@ -1149,6 +1223,7 @@ export default function ClientsTable({ priceTypes }: ClientsTableProps) {
         priceTypes={priceTypes}
         warehouses={warehouses}
         client={selectedClient}
+        defaultReservationDuration={defaultReservationDuration}
       />
 
       {/* Модальное окно редактирования пользователя */}

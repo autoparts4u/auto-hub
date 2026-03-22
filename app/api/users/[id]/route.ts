@@ -25,6 +25,7 @@ export async function PATCH(
     const clientData: {
       priceAccessId?: number | null;
       warehouseAccessId?: number | null;
+      reservationDurationMinutes?: number | null;
       name?: string;
       phone?: string | null;
       address?: string | null;
@@ -51,6 +52,12 @@ export async function PATCH(
     if ("warehouseAccessId" in body) {
       clientData.warehouseAccessId = body.warehouseAccessId
         ? Number(body.warehouseAccessId)
+        : null;
+    }
+
+    if ("reservationDurationMinutes" in body) {
+      clientData.reservationDurationMinutes = body.reservationDurationMinutes
+        ? Number(body.reservationDurationMinutes)
         : null;
     }
 
