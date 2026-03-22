@@ -11,7 +11,7 @@ export async function GET() {
     }
 
     const settings = await prisma.appSettings.findUnique({ where: { id: 1 } });
-    return NextResponse.json(settings ?? { defaultOrderStatusId: null, defaultDeliveryMethodId: null, defaultPurchaseStatusId: null, usdRateOffset: 0, reservationDurationMinutes: 1440 });
+    return NextResponse.json(settings ?? { defaultOrderStatusId: null, defaultDeliveryMethodId: null, defaultPurchaseStatusId: null, usdRateOffset: 0, reservationDurationMinutes: 1440, tickerText: null });
   } catch (error) {
     console.error('Error fetching settings:', error);
     return NextResponse.json({ error: 'Failed to fetch settings' }, { status: 500 });
@@ -42,6 +42,7 @@ export async function PUT(request: NextRequest) {
           : { disconnect: true },
         usdRateOffset: body.usdRateOffset ?? 0,
         reservationDurationMinutes: body.reservationDurationMinutes ?? 1440,
+        tickerText: body.tickerText ?? null,
       },
       create: {
         id: 1,
@@ -56,6 +57,7 @@ export async function PUT(request: NextRequest) {
           : undefined,
         usdRateOffset: body.usdRateOffset ?? 0,
         reservationDurationMinutes: body.reservationDurationMinutes ?? 1440,
+        tickerText: body.tickerText ?? null,
       },
     });
 

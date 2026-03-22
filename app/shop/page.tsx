@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import db from "@/lib/db/db";
 import { AutopartsTable } from "@/components/autoparts/AutopartsTable";
 import { SignOut } from "@/components/sign-out";
+import { Ticker } from "@/components/general/Ticker";
 import { redirect } from "next/navigation";
 
 export const revalidate = 300;
@@ -121,6 +122,8 @@ const ShopPage = async () => {
     }
   });
 
+  const settings = await db.appSettings.findUnique({ where: { id: 1 } });
+
   const formatted = autoparts.map((part) => {
     const analoguesFromA = part.analoguesA.map((a) => a.partB);
     const analoguesFromB = part.analoguesB.map((a) => a.partA);
@@ -160,7 +163,9 @@ const ShopPage = async () => {
   });
 
   return (
-    <div className="p-4">
+    <div>
+      <Ticker text={settings?.tickerText ?? ''} />
+      <div className="p-4">
       <div className="flex justify-between">
         <h1 className="text-2xl font-bold mb-4"></h1>
         <SignOut />
@@ -179,6 +184,7 @@ const ShopPage = async () => {
         warehouseAccessId={user?.client?.warehouseAccessId ?? null}
         clientId={currentUser?.client?.id ?? null}
       />
+    </div>
     </div>
   );
 };

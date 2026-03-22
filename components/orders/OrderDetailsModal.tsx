@@ -30,7 +30,7 @@ import {
   Package,
   Truck,
   Calendar,
-  DollarSign,
+  Wallet,
   User,
   MapPin,
   FileText,
@@ -281,7 +281,7 @@ export default function OrderDetailsModal({
               </div>
 
               <div className="flex items-start gap-2">
-                <DollarSign className="h-4 w-4 mt-1 text-muted-foreground" />
+                <Wallet className="h-4 w-4 mt-1 text-muted-foreground" />
                 <div>
                   <div className="text-sm font-medium">Сумма заказа</div>
                   <div className="text-lg font-bold">

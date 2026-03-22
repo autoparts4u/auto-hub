@@ -30,7 +30,7 @@ import {
   Package,
   Truck,
   Calendar,
-  DollarSign,
+  Wallet,
   Filter,
   X,
   LayoutGrid,
@@ -399,7 +399,7 @@ export default function OrdersTable() {
           variant={unpaidIssuedFilter ? "default" : "outline"}
           className={unpaidIssuedFilter ? "bg-orange-500 hover:bg-orange-600" : ""}
         >
-          <DollarSign className="mr-2 h-4 w-4" />
+          <Wallet className="mr-2 h-4 w-4" />
           Неоплаченные
         </Button>
         <Button onClick={handleSearch} variant="secondary">
@@ -444,7 +444,7 @@ export default function OrdersTable() {
               </TableHead>
               <TableHead>
                 <div className="flex items-center gap-1">
-                  <DollarSign className="h-4 w-4" />
+                  <Wallet className="h-4 w-4" />
                   Сумма
                 </div>
               </TableHead>
@@ -561,7 +561,7 @@ export default function OrdersTable() {
                         onClick={() => handleOpenPayment(order)}
                         title="Оплата"
                       >
-                        <DollarSign className="h-4 w-4" />
+                        <Wallet className="h-4 w-4" />
                       </Button>
                       {!order.orderStatus?.isLast && ordersTab === 'active' && (
                         <Button
@@ -636,7 +636,7 @@ export default function OrdersTable() {
 
                   <div className="space-y-1">
                     <div className="flex items-center gap-1 text-muted-foreground">
-                      <DollarSign className="h-3.5 w-3.5" />
+                      <Wallet className="h-3.5 w-3.5" />
                       <span className="text-xs">Сумма</span>
                     </div>
                     <div className="font-semibold">{formatCurrency(order.totalAmount)}</div>
@@ -703,7 +703,7 @@ export default function OrdersTable() {
                   onClick={() => handleOpenPayment(order)}
                   title="Оплата"
                 >
-                  <DollarSign className="h-4 w-4 mr-1.5" />
+                  <Wallet className="h-4 w-4 mr-1.5" />
                   Оплата
                 </Button>
                 </>
@@ -889,7 +889,7 @@ export default function OrdersTable() {
                   />
                   <div className="flex-1">
                     <p className="text-sm font-medium leading-none flex items-center gap-2">
-                      <DollarSign className="h-4 w-4" />
+                      <Wallet className="h-4 w-4" />
                       Неоплаченные
                     </p>
                     <p className="text-xs text-muted-foreground mt-1">Показать только неоплаченные заказы</p>

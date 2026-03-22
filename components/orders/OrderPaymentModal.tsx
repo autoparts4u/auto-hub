@@ -15,7 +15,7 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Separator } from '@/components/ui/separator';
 import {
-  DollarSign,
+  Wallet,
   CreditCard,
   CheckCircle2,
   AlertCircle,
@@ -186,7 +186,7 @@ export default function OrderPaymentModal({
       <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <DollarSign className="h-5 w-5" />
+            <Wallet className="h-5 w-5" />
             Оплата заказа #{orderId.slice(-8)}
           </DialogTitle>
           <DialogDescription>

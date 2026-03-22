@@ -386,6 +386,7 @@ model AppSettings {
     defaultPurchaseStatusId   Int?
     usdRateOffset             Float @default(0)
     reservationDurationMinutes Int @default(1440)
+    tickerText                String?
 
     defaultOrderStatus    OrderStatuses?   @relation(fields: [defaultOrderStatusId], references: [id])
     defaultDeliveryMethod DeliveryMethods? @relation(fields: [defaultDeliveryMethodId], references: [id])

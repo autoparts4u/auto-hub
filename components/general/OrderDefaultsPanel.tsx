@@ -45,6 +45,7 @@ export function OrderDefaultsPanel({ orderStatuses, deliveryMethods }: OrderDefa
   const [usdRate, setUsdRate] = useState<number | null>(null);
   const [usdRateOffset, setUsdRateOffset] = useState<string>('0');
   const [reservationDurationMinutes, setReservationDurationMinutes] = useState<string>('1440');
+  const [tickerText, setTickerText] = useState<string>('');
 
   useEffect(() => {
     fetch('/api/settings')
@@ -55,6 +56,7 @@ export function OrderDefaultsPanel({ orderStatuses, deliveryMethods }: OrderDefa
         if (data.defaultPurchaseStatusId) setDefaultPurchaseStatusId(data.defaultPurchaseStatusId.toString());
         setUsdRateOffset((data.usdRateOffset ?? 0).toString());
         setReservationDurationMinutes((data.reservationDurationMinutes ?? 1440).toString());
+        setTickerText(data.tickerText ?? '');
       })
       .catch(() => {});
     fetch('/api/purchase-statuses')
@@ -79,6 +81,7 @@ export function OrderDefaultsPanel({ orderStatuses, deliveryMethods }: OrderDefa
           defaultPurchaseStatusId: defaultPurchaseStatusId !== 'none' ? parseInt(defaultPurchaseStatusId) : null,
           usdRateOffset: parseFloat(usdRateOffset) || 0,
           reservationDurationMinutes: parseInt(reservationDurationMinutes) || 1440,
+          tickerText: tickerText.trim() || null,
         }),
       });
       if (res.ok) {
@@ -217,6 +220,23 @@ export function OrderDefaultsPanel({ orderStatuses, deliveryMethods }: OrderDefa
           />
           <p className="text-xs text-muted-foreground">
             Через указанное время резервация автоматически отменяется (1440 мин = 24 ч)
+          </p>
+        </div>
+      </div>
+
+      <div className="space-y-3 rounded-lg border p-4 bg-muted/30">
+        <div className="text-sm font-medium">Бегущая строка</div>
+        <div className="space-y-1.5">
+          <Label htmlFor="ticker-text">Текст</Label>
+          <Input
+            id="ticker-text"
+            value={tickerText}
+            onChange={e => setTickerText(e.target.value)}
+            placeholder="Введите текст бегущей строки... (пусто — строка скрыта)"
+            maxLength={500}
+          />
+          <p className="text-xs text-muted-foreground">
+            Отображается на странице пользователя. Оставьте пустым, чтобы скрыть.
           </p>
         </div>
       </div>
