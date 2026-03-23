@@ -298,7 +298,11 @@ export function AutopartsTable({
   const handleConfirmDelete = async (id: string) => {
     try {
       const res = await fetch(`/api/autoparts/${id}`, { method: 'DELETE' });
-      if (!res.ok) throw new Error('Ошибка удаления');
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        toast.error(data.error ?? 'Не удалось удалить деталь');
+        return;
+      }
       toast.success('Деталь удалена');
       setDeletingId(null);
       setLocalParts((prev) => prev.filter((p) => p.id !== id));

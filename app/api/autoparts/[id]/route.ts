@@ -10,6 +10,26 @@ export async function DELETE(
   const { id } = await params;
 
   try {
+    const stock = await db.autopartsWarehouses.aggregate({
+      where: { autopart_id: id },
+      _sum: { quantity: true },
+    });
+
+    if ((stock._sum.quantity ?? 0) > 0) {
+      return NextResponse.json(
+        { error: "Нельзя удалить деталь с ненулевым остатком на складе" },
+        { status: 400 }
+      );
+    }
+
+    await db.reservations.deleteMany({ where: { autopart_id: id } });
+    await db.autopartsWarehouses.deleteMany({ where: { autopart_id: id } });
+    await db.autopartsAutos.deleteMany({ where: { autopart_id: id } });
+    await db.autopartsEngineVolumes.deleteMany({ where: { autopart_id: id } });
+    await db.analogues.deleteMany({
+      where: { OR: [{ partAId: id }, { partBId: id }] },
+    });
+
     await db.autoparts.delete({
       where: { id },
     });
