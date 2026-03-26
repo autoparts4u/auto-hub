@@ -79,7 +79,7 @@ export function MyReservationsModal({ onClose }: Props) {
 
   const formatDate = (iso: string) =>
     new Date(iso).toLocaleString('ru-RU', {
-      day: '2-digit', month: '2-digit', year: 'numeric',
+      day: '2-digit', month: '2-digit', year: '2-digit',
       hour: '2-digit', minute: '2-digit',
     });
 
@@ -98,7 +98,7 @@ export function MyReservationsModal({ onClose }: Props) {
   return (
     <Dialog open onOpenChange={onClose}>
       <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
-        <DialogTitle>Мои бронирования</DialogTitle>
+        <DialogTitle>Бронирования</DialogTitle>
 
         {loading ? (
           <div className="text-center py-8 text-muted-foreground">Загрузка...</div>

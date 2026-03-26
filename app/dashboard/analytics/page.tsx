@@ -1,7 +1,7 @@
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import db from "@/lib/db/db";
-import { ActivityOverviewTable } from "@/components/analytics/ActivityOverviewTable";
+import { AnalyticsTabs } from "@/components/analytics/AnalyticsTabs";
 
 export default async function AnalyticsPage() {
   const session = await auth();
@@ -41,12 +41,9 @@ export default async function AnalyticsPage() {
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-2xl font-bold">Активность пользователей</h1>
-        <p className="text-muted-foreground text-sm">
-          Сессии, поиски и действия пользователей
-        </p>
+        <h1 className="text-2xl font-bold">Аналитика</h1>
       </div>
-      <ActivityOverviewTable users={usersWithTotalEvents} />
+      <AnalyticsTabs users={usersWithTotalEvents} />
     </div>
   );
 }

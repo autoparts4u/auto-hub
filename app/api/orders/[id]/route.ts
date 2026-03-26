@@ -221,6 +221,7 @@ export async function PUT(
           where: { id },
           data: {
             client_id: body.client_id,
+            orderStatus_id: body.orderStatus_id,
             deliveryMethod_id: body.deliveryMethod_id,
             notes: body.notes,
             deliveryAddress: body.deliveryAddress,
@@ -257,6 +258,7 @@ export async function PUT(
         where: { id },
         data: {
           client_id: body.client_id,
+          orderStatus_id: body.orderStatus_id,
           deliveryMethod_id: body.deliveryMethod_id,
           notes: body.notes,
           deliveryAddress: body.deliveryAddress,

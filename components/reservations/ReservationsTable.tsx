@@ -4,8 +4,9 @@ import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
-import { Ban, Package, RefreshCw, Search, ShoppingCart, Trash2 } from 'lucide-react';
+import { Ban, Package, RefreshCw, Search, ShoppingCart, Trash2, SlidersHorizontal, X } from 'lucide-react';
 import { ClientBulkOrderModal } from './ClientBulkOrderModal';
 import { RESERVATIONS_READ_EVENT } from '@/lib/hooks/useReservationBadge';
 import {
@@ -21,12 +22,25 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 
 type ReservationStatus = 'active' | 'cancelled' | 'expired' | 'converted';
+
+type DatePreset = 'all' | 'today' | 'week' | 'month';
 
 interface Warehouse {
   id: number;
   name: string;
+}
+
+interface Client {
+  id: string;
+  name: string;
+  fullName: string; // для совместимости, здесь = name
 }
 
 interface Reservation {
@@ -39,6 +53,30 @@ interface Reservation {
   client: { id: string; name: string; phone: string | null };
   autopart: { id: string; article: string; description: string; brand: { name: string } | null };
   warehouse: { id: number; name: string } | null;
+}
+
+const DATE_PRESETS: { value: DatePreset; label: string }[] = [
+  { value: 'all', label: 'Всё время' },
+  { value: 'today', label: 'Сегодня' },
+  { value: 'week', label: '7 дней' },
+  { value: 'month', label: '30 дней' },
+];
+
+function getPresetRange(preset: DatePreset): { from: Date | null; to: Date | null } {
+  const now = new Date();
+  if (preset === 'today') {
+    const start = new Date(now); start.setHours(0, 0, 0, 0);
+    return { from: start, to: now };
+  }
+  if (preset === 'week') {
+    const start = new Date(now); start.setDate(now.getDate() - 7); start.setHours(0, 0, 0, 0);
+    return { from: start, to: now };
+  }
+  if (preset === 'month') {
+    const start = new Date(now); start.setDate(now.getDate() - 30); start.setHours(0, 0, 0, 0);
+    return { from: start, to: now };
+  }
+  return { from: null, to: null };
 }
 
 const STATUS_LABELS: Record<ReservationStatus, string> = {
@@ -66,15 +104,25 @@ const STATUS_FILTER_OPTIONS = [
 export function ReservationsTable() {
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
+  const [uniqueClients, setUniqueClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('active');
   const [search, setSearch] = useState('');
+  const [clientFilter, setClientFilter] = useState('all');
+  const [datePreset, setDatePreset] = useState<DatePreset>('all');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
   const [cancellingId, setCancellingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [convertingId, setConvertingId] = useState<string | null>(null);
   const [bulkOrderClientId, setBulkOrderClientId] = useState<string | null>(null);
   // warehouseSelections: reservationId → warehouseId string
   const [warehouseSelections, setWarehouseSelections] = useState<Record<string, string>>({});
+
+  const activeFiltersCount = [
+    clientFilter !== 'all',
+    datePreset !== 'all' || dateFrom || dateTo,
+  ].filter(Boolean).length;
 
   const fetchReservations = useCallback(async () => {
     setLoading(true);
@@ -115,7 +163,33 @@ export function ReservationsTable() {
       .then(r => r.json())
       .then(data => { if (Array.isArray(data)) setWarehouses(data); })
       .catch(() => {});
+
+    // Загружаем все бронирования (без фильтра) один раз для списка клиентов
+    fetch('/api/reservations')
+      .then(r => r.json())
+      .then((data: Reservation[]) => {
+        if (!Array.isArray(data)) return;
+        const seen = new Set<string>();
+        const clients: Client[] = [];
+        for (const r of data) {
+          if (!seen.has(r.client.id)) {
+            seen.add(r.client.id);
+            clients.push({ id: r.client.id, name: r.client.name, fullName: r.client.name });
+          }
+        }
+        clients.sort((a, b) => a.name.localeCompare(b.name));
+        setUniqueClients(clients);
+      })
+      .catch(() => {});
   }, []);
+
+  const resetFilters = () => {
+    setClientFilter('all');
+    setDatePreset('all');
+    setDateFrom('');
+    setDateTo('');
+    setSearch('');
+  };
 
   const handleWarehouseAssign = async (reservationId: string, warehouseId: string) => {
     setWarehouseSelections(prev => ({ ...prev, [reservationId]: warehouseId }));
@@ -196,19 +270,43 @@ export function ReservationsTable() {
   const bulkOrderClient = bulkOrderClientId ? activeByClient.get(bulkOrderClientId) : undefined;
 
   const filtered = reservations.filter(r => {
-    if (!search) return true;
-    const q = search.toLowerCase();
-    return (
-      r.autopart.article.toLowerCase().includes(q) ||
-      r.autopart.description.toLowerCase().includes(q) ||
-      r.client.name.toLowerCase().includes(q) ||
-      (r.client.phone ?? '').includes(q)
-    );
+    // Текстовый поиск
+    if (search) {
+      const q = search.toLowerCase();
+      const match =
+        r.autopart.article.toLowerCase().includes(q) ||
+        r.autopart.description.toLowerCase().includes(q) ||
+        r.client.name.toLowerCase().includes(q) ||
+        (r.client.phone ?? '').includes(q);
+      if (!match) return false;
+    }
+
+    // Фильтр по клиенту
+    if (clientFilter !== 'all' && r.client.id !== clientFilter) return false;
+
+    // Фильтр по периоду (преднастройка или произвольный диапазон)
+    const reservedAt = new Date(r.reservedAt);
+    if (datePreset !== 'all') {
+      const { from, to } = getPresetRange(datePreset);
+      if (from && reservedAt < from) return false;
+      if (to && reservedAt > to) return false;
+    } else {
+      if (dateFrom) {
+        const from = new Date(dateFrom); from.setHours(0, 0, 0, 0);
+        if (reservedAt < from) return false;
+      }
+      if (dateTo) {
+        const to = new Date(dateTo); to.setHours(23, 59, 59, 999);
+        if (reservedAt > to) return false;
+      }
+    }
+
+    return true;
   });
 
   const formatDate = (iso: string) =>
     new Date(iso).toLocaleString('ru-RU', {
-      day: '2-digit', month: '2-digit', year: 'numeric',
+      day: '2-digit', month: '2-digit', year: '2-digit',
       hour: '2-digit', minute: '2-digit',
     });
 
@@ -220,36 +318,125 @@ export function ReservationsTable() {
   return (
     <div className="space-y-4">
       {/* Фильтры */}
-      <div className="flex flex-wrap gap-3 items-center">
-        <div className="flex gap-1 border rounded-lg p-1 bg-muted/30">
-          {STATUS_FILTER_OPTIONS.map(opt => (
-            <button
-              key={opt.value}
-              className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
-                statusFilter === opt.value
-                  ? 'bg-primary text-primary-foreground'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
-              onClick={() => setStatusFilter(opt.value)}
-            >
-              {opt.label}
-            </button>
-          ))}
-        </div>
+      <div className="space-y-2">
+        {/* Строка 1: статус + поиск + доп. фильтры + обновить */}
+        <div className="flex flex-wrap gap-2 items-center">
+          {/* Статус */}
+          <div className="flex gap-1 border rounded-lg p-1 bg-muted/30">
+            {STATUS_FILTER_OPTIONS.map(opt => (
+              <button
+                key={opt.value}
+                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                  statusFilter === opt.value
+                    ? 'bg-primary text-primary-foreground'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+                onClick={() => setStatusFilter(opt.value)}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
 
-        <div className="relative flex-1 min-w-[220px] max-w-xs">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-          <Input
-            placeholder="Поиск по артикулу, клиенту..."
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            className="pl-9 h-9"
-          />
-        </div>
+          {/* Поиск */}
+          <div className="relative flex-1 min-w-[200px] max-w-xs">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              placeholder="Артикул, деталь, клиент..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              className="pl-9 h-9"
+            />
+          </div>
 
-        <Button variant="outline" size="sm" onClick={fetchReservations} disabled={loading}>
-          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-        </Button>
+          {/* Клиент */}
+          <Select value={clientFilter} onValueChange={setClientFilter}>
+            <SelectTrigger className="h-9 w-[180px]">
+              <SelectValue placeholder="Все клиенты" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Все клиенты</SelectItem>
+              {uniqueClients.map(c => (
+                <SelectItem key={c.id} value={c.id}>
+                  {c.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {/* Период — быстрые кнопки */}
+          <div className="flex gap-1 border rounded-lg p-1 bg-muted/30">
+            {DATE_PRESETS.map(p => (
+              <button
+                key={p.value}
+                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                  datePreset === p.value && !dateFrom && !dateTo
+                    ? 'bg-primary text-primary-foreground'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
+                onClick={() => { setDatePreset(p.value); setDateFrom(''); setDateTo(''); }}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Произвольный диапазон дат */}
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                className={`h-9 gap-1.5 ${(dateFrom || dateTo) ? 'border-primary text-primary' : ''}`}
+              >
+                <SlidersHorizontal className="w-3.5 h-3.5" />
+                {dateFrom || dateTo ? `${dateFrom || '…'} — ${dateTo || '…'}` : 'Диапазон'}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-64 space-y-3 p-4" align="end">
+              <div className="space-y-1.5">
+                <Label className="text-xs">С</Label>
+                <Input
+                  type="date"
+                  value={dateFrom}
+                  onChange={e => { setDateFrom(e.target.value); setDatePreset('all'); }}
+                  className="h-8 text-sm"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs">По</Label>
+                <Input
+                  type="date"
+                  value={dateTo}
+                  onChange={e => { setDateTo(e.target.value); setDatePreset('all'); }}
+                  className="h-8 text-sm"
+                />
+              </div>
+              {(dateFrom || dateTo) && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-full text-muted-foreground"
+                  onClick={() => { setDateFrom(''); setDateTo(''); }}
+                >
+                  Сбросить даты
+                </Button>
+              )}
+            </PopoverContent>
+          </Popover>
+
+          {/* Сброс всех фильтров */}
+          {activeFiltersCount > 0 && (
+            <Button variant="ghost" size="sm" onClick={resetFilters} className="gap-1.5 text-muted-foreground h-9">
+              <X className="w-3.5 h-3.5" />
+              Сбросить ({activeFiltersCount})
+            </Button>
+          )}
+
+          <Button variant="outline" size="sm" onClick={fetchReservations} disabled={loading} className="h-9 ml-auto">
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+          </Button>
+        </div>
       </div>
 
       {/* Десктопная таблица */}

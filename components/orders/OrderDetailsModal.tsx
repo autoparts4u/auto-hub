@@ -6,6 +6,7 @@ import {
   OrderStatus,
   OrderStatusHistoryItem,
   UpdateOrderStatusDTO,
+  Return,
 } from '@/app/types/orders';
 import {
   Dialog,
@@ -37,9 +38,11 @@ import {
   Clock,
   CheckCircle2,
   Pencil,
+  RotateCcw,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { getContrastTextColor } from '@/lib/utils';
+import ReturnModal from './ReturnModal';
 
 interface OrderDetailsModalProps {
   open: boolean;
@@ -58,8 +61,11 @@ export default function OrderDetailsModal({
 }: OrderDetailsModalProps) {
   const [order, setOrder] = useState<Order | null>(null);
   const [history, setHistory] = useState<OrderStatusHistoryItem[]>([]);
+  const [returns, setReturns] = useState<Return[]>([]);
   const [loading, setLoading] = useState(true);
   const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [showReturnModal, setShowReturnModal] = useState(false);
+  const [bottomTab, setBottomTab] = useState<'history' | 'returns'>('history');
 
   const [newStatusId, setNewStatusId] = useState('');
   const [comment, setComment] = useState('');
@@ -69,6 +75,7 @@ export default function OrderDetailsModal({
     if (open && orderId) {
       fetchOrderDetails();
       fetchHistory();
+      fetchReturns();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, orderId]);
@@ -101,6 +108,38 @@ export default function OrderDetailsModal({
       }
     } catch (error) {
       console.error('Error fetching history:', error);
+    }
+  };
+
+  const fetchReturns = async () => {
+    try {
+      const res = await fetch(`/api/returns?order_id=${orderId}`);
+      if (res.ok) {
+        const data = await res.json();
+        setReturns(data);
+      }
+    } catch (error) {
+      console.error('Error fetching returns:', error);
+    }
+  };
+
+  const handleReturnStatusUpdate = async (returnId: string, returnStatus_id: number) => {
+    try {
+      const res = await fetch(`/api/returns/${returnId}/status`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ returnStatus_id }),
+      });
+
+      if (res.ok) {
+        toast.success('Статус возврата обновлён');
+        fetchReturns();
+      } else {
+        const error = await res.json();
+        toast.error(error.error || 'Ошибка обновления статуса возврата');
+      }
+    } catch {
+      toast.error('Ошибка обновления статуса возврата');
     }
   };
 
@@ -150,7 +189,7 @@ export default function OrderDetailsModal({
     return new Date(date).toLocaleDateString('ru-RU', {
       day: '2-digit',
       month: '2-digit',
-      year: 'numeric',
+      year: '2-digit',
       hour: '2-digit',
       minute: '2-digit',
     });
@@ -198,6 +237,7 @@ export default function OrderDetailsModal({
   }
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader className="pr-8">
@@ -445,50 +485,167 @@ export default function OrderDetailsModal({
 
           <Separator />
 
-          {/* История статусов */}
+          {/* Вкладки: История / Возвраты */}
           <div>
-            <h3 className="font-semibold mb-3 flex items-center gap-2">
-              <Clock className="h-4 w-4" />
-              История изменений ({history.length})
-            </h3>
-            <div className="space-y-3">
-              {history.map((item, index) => (
-                <div key={item.id} className="flex gap-3">
-                  <div className="flex flex-col items-center">
-                    <div
-                      className="w-3 h-3 rounded-full border-2"
-                      style={{
-                        backgroundColor: item.orderStatus?.hexColor,
-                        borderColor: item.orderStatus?.hexColor,
-                      }}
-                    />
-                    {index < history.length - 1 && (
-                      <div className="w-0.5 flex-1 bg-border mt-1" />
-                    )}
-                  </div>
-                  <div className="flex-1 pb-4">
-                    <div className="flex items-center gap-2">
-                      {item.orderStatus && getStatusBadge(item.orderStatus)}
-                      <span className="text-xs text-muted-foreground">
-                        {formatDate(item.createdAt)}
-                      </span>
-                    </div>
-                    {item.user && (
-                      <div className="text-xs text-muted-foreground mt-1">
-                        {item.user.client?.name || item.user.email}
-                      </div>
-                    )}
-                    {item.comment && (
-                      <div className="text-sm mt-1">{item.comment}</div>
-                    )}
-                  </div>
-                </div>
-              ))}
+            {/* Tab bar */}
+            <div className="flex gap-0 border-b mb-4">
+              <button
+                onClick={() => setBottomTab('history')}
+                className={`flex items-center gap-1.5 px-3 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
+                  bottomTab === 'history'
+                    ? 'border-primary text-primary'
+                    : 'border-transparent text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                <Clock className="h-3.5 w-3.5" />
+                История
+                <span className="text-xs text-muted-foreground">({history.length})</span>
+              </button>
+              <button
+                onClick={() => setBottomTab('returns')}
+                className={`flex items-center gap-1.5 px-3 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
+                  bottomTab === 'returns'
+                    ? 'border-primary text-primary'
+                    : 'border-transparent text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                <RotateCcw className="h-3.5 w-3.5" />
+                Возвраты
+                {returns.length > 0 && (
+                  <span className="text-xs text-muted-foreground">({returns.length})</span>
+                )}
+              </button>
             </div>
+
+            {/* История */}
+            {bottomTab === 'history' && (
+              <div className="space-y-3">
+                {history.map((item, index) => (
+                  <div key={item.id} className="flex gap-3">
+                    <div className="flex flex-col items-center">
+                      <div
+                        className="w-3 h-3 rounded-full border-2"
+                        style={{
+                          backgroundColor: item.orderStatus?.hexColor,
+                          borderColor: item.orderStatus?.hexColor,
+                        }}
+                      />
+                      {index < history.length - 1 && (
+                        <div className="w-0.5 flex-1 bg-border mt-1" />
+                      )}
+                    </div>
+                    <div className="flex-1 pb-4">
+                      <div className="flex items-center gap-2">
+                        {item.orderStatus && getStatusBadge(item.orderStatus)}
+                        <span className="text-xs text-muted-foreground">
+                          {formatDate(item.createdAt)}
+                        </span>
+                      </div>
+                      {item.user && (
+                        <div className="text-xs text-muted-foreground mt-1">
+                          {item.user.client?.name || item.user.email}
+                        </div>
+                      )}
+                      {item.comment && (
+                        <div className="text-sm mt-1">{item.comment}</div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Возвраты */}
+            {bottomTab === 'returns' && (
+              <div className="space-y-3">
+                <div className="flex justify-end">
+                  {order.orderStatus?.isLast && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setShowReturnModal(true)}
+                      className="gap-2"
+                    >
+                      <RotateCcw className="h-3 w-3" />
+                      Создать возврат
+                    </Button>
+                  )}
+                </div>
+
+                {returns.length === 0 ? (
+                  <div className="text-sm text-muted-foreground py-4 text-center">Возвратов нет</div>
+                ) : (
+                  returns.map((ret) => (
+                    <div key={ret.id} className="border rounded-lg p-3 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Badge
+                            style={{
+                              backgroundColor: ret.returnStatus.hexColor,
+                              color: getContrastTextColor(ret.returnStatus.hexColor),
+                            }}
+                          >
+                            {ret.returnStatus.name}
+                          </Badge>
+                          <span className="text-xs text-muted-foreground">
+                            {formatDate(ret.createdAt)}
+                          </span>
+                        </div>
+                        {!ret.resolvedAt && (
+                          <div className="flex gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-green-600 border-green-600 hover:bg-green-50 h-7 px-2 text-xs"
+                              onClick={() => handleReturnStatusUpdate(ret.id, 2)}
+                            >
+                              Принять
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-red-600 border-red-600 hover:bg-red-50 h-7 px-2 text-xs"
+                              onClick={() => handleReturnStatusUpdate(ret.id, 3)}
+                            >
+                              Отклонить
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+
+                      {ret.reason && (
+                        <div className="text-sm text-muted-foreground">
+                          Причина: {ret.reason}
+                        </div>
+                      )}
+
+                      <div className="space-y-1 border-t pt-2">
+                        {ret.items.map((item) => (
+                          <div key={item.id} className="text-xs flex justify-between">
+                            <span className="font-mono">{item.article}</span>
+                            <span className="text-muted-foreground">{item.quantity} шт.</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
           </div>
         </div>
       </DialogContent>
     </Dialog>
+
+    {order && (
+      <ReturnModal
+        open={showReturnModal}
+        onClose={() => setShowReturnModal(false)}
+        order={order}
+        onSuccess={() => fetchReturns()}
+      />
+    )}
+  </>
   );
 }
 

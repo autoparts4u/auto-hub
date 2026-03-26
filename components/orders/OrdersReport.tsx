@@ -127,7 +127,7 @@ function ReportSkeleton() {
 // ---- Main Component ----
 
 interface OrdersReportProps {
-  onClose: () => void;
+  onClose?: () => void;
 }
 
 export default function OrdersReport({ onClose }: OrdersReportProps) {
@@ -192,9 +192,11 @@ export default function OrdersReport({ onClose }: OrdersReportProps) {
               </button>
             ))}
           </div>
-          <Button variant="ghost" size="icon" onClick={onClose} title="Закрыть отчёт">
-            <X className="h-4 w-4" />
-          </Button>
+          {onClose && (
+            <Button variant="ghost" size="icon" onClick={onClose} title="Закрыть отчёт">
+              <X className="h-4 w-4" />
+            </Button>
+          )}
         </div>
       </div>
 

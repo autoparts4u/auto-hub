@@ -141,7 +141,7 @@ export default function OrderPaymentModal({
 
   const formatDate = (dateString: string | Date) => {
     return new Date(dateString).toLocaleString('ru-RU', {
-      year: 'numeric',
+      year: '2-digit',
       month: 'long',
       day: 'numeric',
       hour: '2-digit',

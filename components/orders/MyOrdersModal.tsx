@@ -3,7 +3,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
-import { ChevronDown, ChevronUp, ClipboardList } from 'lucide-react';
+import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
+import { Badge } from '@/components/ui/badge';
+import { ChevronDown, ChevronUp, ClipboardList, RotateCcw } from 'lucide-react';
+import { getContrastTextColor } from '@/lib/utils';
+import { Return } from '@/app/types/orders';
 
 interface OrderItem {
   id: number;
@@ -35,13 +39,18 @@ const formatDate = (iso: string) =>
   new Date(iso).toLocaleDateString('ru-RU', {
     day: '2-digit',
     month: '2-digit',
-    year: 'numeric',
+    year: '2-digit',
   });
 
 export function MyOrdersModal({ onClose }: Props) {
+  const [tab, setTab] = useState<'orders' | 'returns'>('orders');
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  const [allReturns, setAllReturns] = useState<Return[]>([]);
+  const [returnsLoading, setReturnsLoading] = useState(false);
+  const [returnsFetched, setReturnsFetched] = useState(false);
 
   const fetchOrders = useCallback(async () => {
     setLoading(true);
@@ -50,7 +59,6 @@ export function MyOrdersModal({ onClose }: Props) {
       if (!res.ok) throw new Error();
       const data: Order[] = await res.json();
       setOrders(data);
-      // Автоматически раскрываем первый заказ
       if (data.length > 0) setExpandedId(data[0].id);
     } catch {
       toast.error('Ошибка загрузки заказов');
@@ -59,9 +67,34 @@ export function MyOrdersModal({ onClose }: Props) {
     }
   }, []);
 
+  const fetchAllReturns = useCallback(async (orderList: Order[]) => {
+    if (returnsFetched || orderList.length === 0) return;
+    setReturnsLoading(true);
+    try {
+      const results = await Promise.all(
+        orderList.map((o) =>
+          fetch(`/api/returns?order_id=${o.id}`)
+            .then((r) => (r.ok ? r.json() : []))
+            .catch(() => [])
+        )
+      );
+      setAllReturns(results.flat());
+      setReturnsFetched(true);
+    } finally {
+      setReturnsLoading(false);
+    }
+  }, [returnsFetched]);
+
   useEffect(() => {
     fetchOrders();
   }, [fetchOrders]);
+
+  // Подгружаем возвраты при переключении на вкладку
+  useEffect(() => {
+    if (tab === 'returns' && !returnsFetched && orders.length > 0) {
+      fetchAllReturns(orders);
+    }
+  }, [tab, returnsFetched, orders, fetchAllReturns]);
 
   const toggleExpand = (id: string) => {
     setExpandedId((prev) => (prev === id ? null : id));
@@ -71,127 +104,210 @@ export function MyOrdersModal({ onClose }: Props) {
     <Dialog open onOpenChange={onClose}>
       <DialogContent className="max-w-lg max-h-[85vh] flex flex-col gap-0 p-0">
         {/* Header */}
-        <div className="px-6 pt-6 pb-4 border-b flex-shrink-0">
-          <DialogTitle className="flex items-center gap-2">
+        <div className="px-6 pt-6 pb-0 border-b flex-shrink-0">
+          <DialogTitle className="flex items-center gap-2 mb-3">
             <ClipboardList className="w-5 h-5 text-blue-600" />
             Мои заказы
           </DialogTitle>
+
+          {/* Tabs */}
+          <div className="flex gap-0">
+            <button
+              onClick={() => setTab('orders')}
+              className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                tab === 'orders'
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              Заказы
+              {orders.length > 0 && (
+                <span className="ml-1.5 text-xs text-muted-foreground">({orders.length})</span>
+              )}
+            </button>
+            <button
+              onClick={() => setTab('returns')}
+              className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors flex items-center gap-1.5 ${
+                tab === 'returns'
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              Возвраты
+              {returnsFetched && allReturns.length > 0 && (
+                <span className="ml-0.5 text-xs text-muted-foreground">({allReturns.length})</span>
+              )}
+            </button>
+          </div>
         </div>
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto px-6 py-4">
-          {loading ? (
-            <div className="text-center py-10 text-muted-foreground">Загрузка...</div>
-          ) : orders.length === 0 ? (
-            <div className="text-center py-10 text-muted-foreground">
-              У вас пока нет заказов
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {orders.map((order) => {
-                const isExpanded = expandedId === order.id;
-                const itemsTotal = order.orderItems.reduce(
-                  (sum, i) => sum + i.item_final_price * i.quantity,
-                  0
-                );
-                const total = order.totalAmount ?? itemsTotal;
-                const hasPrices = order.orderItems.some((i) => i.item_final_price > 0);
+          {/* --- Вкладка Заказы --- */}
+          {tab === 'orders' && (
+            loading ? (
+              <div className="text-center py-10 text-muted-foreground">Загрузка...</div>
+            ) : orders.length === 0 ? (
+              <div className="text-center py-10 text-muted-foreground">У вас пока нет заказов</div>
+            ) : (
+              <div className="space-y-3">
+                {orders.map((order) => {
+                  const isExpanded = expandedId === order.id;
+                  const itemsTotal = order.orderItems.reduce(
+                    (sum, i) => sum + i.item_final_price * i.quantity,
+                    0
+                  );
+                  const total = order.totalAmount ?? itemsTotal;
+                  const hasPrices = order.orderItems.some((i) => i.item_final_price > 0);
 
-                return (
-                  <div key={order.id} className="border rounded-lg overflow-hidden">
-                    {/* Order header — clickable */}
-                    <button
-                      className="w-full flex items-center justify-between px-4 py-3 bg-muted/30 hover:bg-muted/50 transition-colors text-left"
-                      onClick={() => toggleExpand(order.id)}
-                    >
-                      <div className="flex items-center gap-3 min-w-0">
-                        {order.orderStatus.hexColor && (
-                          <span
-                            className="shrink-0 w-2.5 h-2.5 rounded-full"
-                            style={{ backgroundColor: order.orderStatus.hexColor }}
-                          />
-                        )}
-                        <div className="min-w-0">
-                          <div className="text-sm font-semibold">
-                            {order.orderStatus.name}
-                          </div>
-                          <div className="text-xs text-muted-foreground">
-                            от {formatDate(order.createdAt)} ·{' '}
-                            {order.orderItems.length}{' '}
-                            {order.orderItems.length === 1
-                              ? 'позиция'
-                              : order.orderItems.length < 5
-                                ? 'позиции'
-                                : 'позиций'}
+                  return (
+                    <div key={order.id} className="border rounded-lg overflow-hidden">
+                      <button
+                        className="w-full flex items-center justify-between px-4 py-3 bg-muted/30 hover:bg-muted/50 transition-colors text-left"
+                        onClick={() => toggleExpand(order.id)}
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          {order.orderStatus.hexColor && (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span
+                                  className="shrink-0 w-2.5 h-2.5 rounded-full cursor-default"
+                                  style={{ backgroundColor: order.orderStatus.hexColor }}
+                                />
+                              </TooltipTrigger>
+                              <TooltipContent>{order.orderStatus.name}</TooltipContent>
+                            </Tooltip>
+                          )}
+                          <div className="min-w-0">
+                            <div className="text-sm font-semibold">{formatDate(order.createdAt)}</div>
                           </div>
                         </div>
-                      </div>
-                      <div className="flex items-center gap-3 shrink-0">
-                        {hasPrices && (
-                          <span className="text-sm font-semibold text-primary">
-                            {formatCurrency(total)}
-                          </span>
-                        )}
-                        {isExpanded ? (
-                          <ChevronUp className="w-4 h-4 text-muted-foreground" />
-                        ) : (
-                          <ChevronDown className="w-4 h-4 text-muted-foreground" />
-                        )}
-                      </div>
-                    </button>
+                        <div className="flex items-center gap-3 shrink-0">
+                          {hasPrices && (
+                            <span className="text-sm font-semibold text-primary">
+                              {formatCurrency(total)}
+                            </span>
+                          )}
+                          {isExpanded ? (
+                            <ChevronUp className="w-4 h-4 text-muted-foreground" />
+                          ) : (
+                            <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                          )}
+                        </div>
+                      </button>
 
-                    {/* Order items */}
-                    {isExpanded && (
-                      <div className="divide-y">
-                        {order.orderItems.map((item) => (
-                          <div key={item.id} className="px-4 py-2.5 flex items-center justify-between gap-3">
-                            <div className="min-w-0">
-                              <div className="font-mono text-xs font-semibold">{item.article}</div>
-                              <div className="text-xs text-muted-foreground truncate">
-                                {item.description}
-                              </div>
-                            </div>
-                            <div className="shrink-0 text-right">
-                              <div className="text-xs font-semibold text-primary">
-                                {item.quantity} шт.
-                              </div>
-                              {item.item_final_price > 0 && (
-                                <div className="text-xs text-muted-foreground">
-                                  {formatCurrency(item.item_final_price)} / шт.
+                      {isExpanded && (
+                        <div className="divide-y">
+                          {order.orderItems.map((item) => (
+                            <div key={item.id} className="px-4 py-2.5 flex items-center justify-between gap-3">
+                              <div className="min-w-0">
+                                <div className="font-mono text-xs font-semibold">{item.article}</div>
+                                <div className="text-xs text-muted-foreground truncate">
+                                  {item.description}
                                 </div>
-                              )}
+                              </div>
+                              <div className="shrink-0 text-right">
+                                <div className="text-xs font-semibold text-primary">
+                                  {item.quantity} шт.
+                                </div>
+                                {item.item_final_price > 0 && (
+                                  <div className="text-xs text-muted-foreground">
+                                    {formatCurrency(item.item_final_price)} / шт.
+                                  </div>
+                                )}
+                              </div>
                             </div>
+                          ))}
+
+                          <div className="px-4 py-2.5 bg-muted/20 space-y-1.5">
+                            {hasPrices && (
+                              <div className="flex justify-between items-center text-sm">
+                                <span className="text-muted-foreground">Итого:</span>
+                                <span className="font-semibold text-primary">
+                                  {formatCurrency(total)}
+                                </span>
+                              </div>
+                            )}
+                            {order.paidAmount > 0 && (
+                              <div className="flex justify-between items-center text-xs text-muted-foreground">
+                                <span>Оплачено:</span>
+                                <span>{formatCurrency(order.paidAmount)}</span>
+                              </div>
+                            )}
+                            {order.notes && (
+                              <div className="text-xs text-muted-foreground italic border-t pt-1.5 mt-1.5">
+                                {order.notes}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )
+          )}
+
+          {/* --- Вкладка Возвраты --- */}
+          {tab === 'returns' && (
+            returnsLoading ? (
+              <div className="text-center py-10 text-muted-foreground">Загрузка...</div>
+            ) : allReturns.length === 0 ? (
+              <div className="text-center py-10 text-muted-foreground">Возвратов нет</div>
+            ) : (
+              <div className="space-y-3">
+                {allReturns.map((ret) => {
+                  const order = orders.find((o) => o.id === ret.order_id);
+                  return (
+                    <div key={ret.id} className="border rounded-lg p-4 space-y-2.5">
+                      {/* Шапка: статус + дата */}
+                      <div className="flex items-center justify-between">
+                        <Badge
+                          style={{
+                            backgroundColor: ret.returnStatus.hexColor,
+                            color: getContrastTextColor(ret.returnStatus.hexColor),
+                          }}
+                        >
+                          {ret.returnStatus.name}
+                        </Badge>
+                        <span className="text-xs text-muted-foreground">
+                          {formatDate(ret.createdAt)}
+                        </span>
+                      </div>
+
+                      {/* Заказ */}
+                      {order && (
+                        <div className="text-xs text-muted-foreground">
+                          Заказ от {formatDate(order.createdAt)}
+                        </div>
+                      )}
+
+                      {/* Причина */}
+                      {ret.reason && (
+                        <div className="text-sm">{ret.reason}</div>
+                      )}
+
+                      {/* Позиции */}
+                      <div className="space-y-1 border-t pt-2">
+                        {ret.items.map((item) => (
+                          <div key={item.id} className="flex justify-between text-xs">
+                            <div>
+                              <span className="font-mono font-semibold">{item.article}</span>
+                              <span className="text-muted-foreground ml-2">{item.description}</span>
+                            </div>
+                            <span className="text-muted-foreground shrink-0 ml-2">
+                              {item.quantity} шт.
+                            </span>
                           </div>
                         ))}
-
-                        {/* Footer: total + notes */}
-                        <div className="px-4 py-2.5 bg-muted/20 space-y-1.5">
-                          {hasPrices && (
-                            <div className="flex justify-between items-center text-sm">
-                              <span className="text-muted-foreground">Итого:</span>
-                              <span className="font-semibold text-primary">
-                                {formatCurrency(total)}
-                              </span>
-                            </div>
-                          )}
-                          {order.paidAmount > 0 && (
-                            <div className="flex justify-between items-center text-xs text-muted-foreground">
-                              <span>Оплачено:</span>
-                              <span>{formatCurrency(order.paidAmount)}</span>
-                            </div>
-                          )}
-                          {order.notes && (
-                            <div className="text-xs text-muted-foreground italic border-t pt-1.5 mt-1.5">
-                              {order.notes}
-                            </div>
-                          )}
-                        </div>
                       </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )
           )}
         </div>
       </DialogContent>

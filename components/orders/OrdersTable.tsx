@@ -35,7 +35,6 @@ import {
   X,
   LayoutGrid,
   List,
-  BarChart2,
   Ban,
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -45,7 +44,6 @@ import OrdersKanban from './OrdersKanban';
 import OrderEditModal from './OrderEditModal';
 import OrderDetailsModal from './OrderDetailsModal';
 import OrderPaymentModal from './OrderPaymentModal';
-import OrdersReport from './OrdersReport';
 
 export default function OrdersTable() {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -69,7 +67,6 @@ export default function OrdersTable() {
   const [showFilters, setShowFilters] = useState(true);
   const [showFiltersModal, setShowFiltersModal] = useState(false);
   const [viewMode, setViewMode] = useState<'table' | 'kanban'>('table');
-  const [showReport, setShowReport] = useState(false);
   
   const lastScrollY = useRef(0);
   const filtersModalContentRef = useRef<HTMLDivElement>(null);
@@ -227,7 +224,7 @@ export default function OrdersTable() {
     return new Date(date).toLocaleDateString('ru-RU', {
       day: '2-digit',
       month: '2-digit',
-      year: 'numeric',
+      year: '2-digit',
       hour: '2-digit',
       minute: '2-digit',
     });
@@ -295,16 +292,6 @@ export default function OrdersTable() {
           </p>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
-          <Button
-            variant={showReport ? 'default' : 'outline'}
-            size="sm"
-            className="hidden md:flex items-center gap-1.5"
-            onClick={() => setShowReport((v) => !v)}
-            title="Отчёты"
-          >
-            <BarChart2 className="h-4 w-4" />
-            Отчёты
-          </Button>
           <div className="hidden md:flex items-center gap-1 border rounded-md p-1">
             <Button
               variant={viewMode === 'table' ? 'default' : 'ghost'}
@@ -346,13 +333,6 @@ export default function OrdersTable() {
           </button>
         ))}
       </div>
-
-      {/* Отчёты - только десктоп */}
-      {showReport && (
-        <div className="border rounded-xl p-6 bg-background shadow-sm">
-          <OrdersReport onClose={() => setShowReport(false)} />
-        </div>
-      )}
 
       {/* Фильтры - только десктоп */}
       <div className={`hidden md:flex gap-4 transition-all duration-300 ${showFilters ? '' : 'hidden'}`}>

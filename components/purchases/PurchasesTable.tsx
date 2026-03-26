@@ -131,7 +131,7 @@ export default function PurchasesTable() {
   };
 
   const formatDate = (d: string) =>
-    new Date(d).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    new Date(d).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: '2-digit' });
 
   const formatCurrency = (v: number) =>
     new Intl.NumberFormat('ru-RU', { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(v);

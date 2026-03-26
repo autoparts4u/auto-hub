@@ -749,7 +749,7 @@ export function AutopartsTable({
             <Button
               size="sm"
               className="bg-amber-600 hover:bg-amber-700 text-white"
-              onClick={() => setShowBulkReservation(true)}
+              onClick={() => { setShowBulkReservation(true); logEvent('modal_open', { modal: 'cart', itemCount: cart.length }); }}
             >
               <ShoppingCart className="w-4 h-4 mr-2" />
               Корзина
@@ -761,18 +761,18 @@ export function AutopartsTable({
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setShowMyOrders(true)}
+            onClick={() => { setShowMyOrders(true); logEvent('modal_open', { modal: 'my_orders' }); }}
           >
             <ClipboardList className="w-4 h-4 mr-2" />
-            Мои заказы
+            Заказы
           </Button>
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setShowMyReservations(true)}
+            onClick={() => { setShowMyReservations(true); logEvent('modal_open', { modal: 'my_reservations' }); }}
           >
             <BookmarkCheck className="w-4 h-4 mr-2" />
-            Мои бронирования
+            Бронирования
           </Button>
         </div>
       )}
@@ -1676,16 +1676,11 @@ export function AutopartsTable({
                                     className={`h-7 w-7 ${inCart ? 'text-amber-600' : ''}`}
                                     onClick={() => {
                                       if (inCart) {
-                                        setCart((prev) =>
-                                          prev.filter(
-                                            (c) => c.part.id !== p.id,
-                                          ),
-                                        );
+                                        setCart((prev) => prev.filter((c) => c.part.id !== p.id));
+                                        logEvent('cart_remove', { article: p.article, description: p.description });
                                       } else {
-                                        setCart((prev) => [
-                                          ...prev,
-                                          { part: p, quantity: 1 },
-                                        ]);
+                                        setCart((prev) => [...prev, { part: p, quantity: 1 }]);
+                                        logEvent('cart_add', { article: p.article, description: p.description });
                                       }
                                     }}
                                   >
@@ -1981,14 +1976,11 @@ export function AutopartsTable({
                       }`}
                       onClick={() => {
                         if (inCart) {
-                          setCart((prev) =>
-                            prev.filter((c) => c.part.id !== p.id),
-                          );
+                          setCart((prev) => prev.filter((c) => c.part.id !== p.id));
+                          logEvent('cart_remove', { article: p.article, description: p.description });
                         } else {
-                          setCart((prev) => [
-                            ...prev,
-                            { part: p, quantity: 1 },
-                          ]);
+                          setCart((prev) => [...prev, { part: p, quantity: 1 }]);
+                          logEvent('cart_add', { article: p.article, description: p.description });
                         }
                       }}
                     >
@@ -2404,9 +2396,12 @@ export function AutopartsTable({
           reservationSummary={reservationSummary}
           onClose={() => setShowBulkReservation(false)}
           onSuccess={(succeededIds) => {
-            setCart((prev) =>
-              prev.filter((c) => !succeededIds.includes(c.part.id)),
-            );
+            logEvent('cart_checkout', {
+              itemCount: cart.length,
+              successCount: succeededIds.length,
+              items: cart.map((c) => ({ article: c.part.article, quantity: c.quantity })),
+            });
+            setCart((prev) => prev.filter((c) => !succeededIds.includes(c.part.id)));
             setShowBulkReservation(false);
           }}
           onItemRemoved={(partId) =>

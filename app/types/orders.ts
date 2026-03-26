@@ -168,4 +168,58 @@ export interface OrderFilters {
   unpaidIssued?: boolean; // Неоплаченные выданные заказы
 }
 
+// Возвраты
+export interface ReturnStatus {
+  id: number;
+  name: string;
+  hexColor: string;
+  isAccepted: boolean;
+}
+
+export interface ReturnItem {
+  id: number;
+  return_id: string;
+  order_item_id: number | null;
+  autopart_id: string | null;
+  warehouse_id: number;
+  quantity: number;
+  article: string;
+  description: string;
+}
+
+export interface Return {
+  id: string;
+  order_id: string | null;
+  client_id: string | null;
+  reason: string | null;
+  adminComment: string | null;
+  createdAt: string;
+  resolvedAt: string | null;
+  returnStatus: ReturnStatus;
+  items: ReturnItem[];
+  client?: { id: string; name: string; fullName: string } | null;
+}
+
+// Возврат по заказу
+export interface CreateReturnFromOrderDTO {
+  order_id: string;
+  reason?: string;
+  items: { order_item_id: number; quantity: number }[];
+}
+
+// Произвольный возврат (без заказа)
+export interface CreateFreeReturnDTO {
+  client_id?: string;
+  reason?: string;
+  items: {
+    article: string;
+    description: string;
+    quantity: number;
+    warehouse_id: number;
+    autopart_id?: string;
+  }[];
+}
+
+export type CreateReturnDTO = CreateReturnFromOrderDTO | CreateFreeReturnDTO;
+
 

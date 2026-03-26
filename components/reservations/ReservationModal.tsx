@@ -74,7 +74,7 @@ export function ReservationModal({ part, warehouseAccessId, reservedCount = 0, o
       const { reservation } = data;
       const expiresAt = new Date(reservation.expiresAt);
       const formatted = expiresAt.toLocaleString('ru-RU', {
-        day: '2-digit', month: '2-digit', year: 'numeric',
+        day: '2-digit', month: '2-digit', year: '2-digit',
         hour: '2-digit', minute: '2-digit',
       });
 
