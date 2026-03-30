@@ -674,8 +674,8 @@ export default function OrdersTable() {
                   onClick={() => { setSelectedOrder(order); setIsEditModalOpen(true); }}
                   title="Редактировать"
                 >
-                  <Pencil className="h-4 w-4 mr-1.5" />
-                  Редактировать
+                  <Pencil className="h-4 w-4 sm:mr-1.5" />
+                  <span className="hidden sm:inline">Редактировать</span>
                 </Button>
                 <Button
                   variant="ghost"
@@ -683,8 +683,8 @@ export default function OrdersTable() {
                   onClick={() => handleOpenPayment(order)}
                   title="Оплата"
                 >
-                  <Wallet className="h-4 w-4 mr-1.5" />
-                  Оплата
+                  <Wallet className="h-4 w-4 sm:mr-1.5" />
+                  <span className="hidden sm:inline">Оплата</span>
                 </Button>
                 </>
                 )}
@@ -696,8 +696,8 @@ export default function OrdersTable() {
                     title="Отменить заказ"
                     className="text-destructive hover:text-destructive hover:bg-destructive/10"
                   >
-                    <Ban className="h-4 w-4 mr-1.5" />
-                    Отменить
+                    <Ban className="h-4 w-4 sm:mr-1.5" />
+                    <span className="hidden sm:inline">Отменить</span>
                   </Button>
                 )}
                 <Button

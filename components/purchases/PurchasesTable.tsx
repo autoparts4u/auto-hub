@@ -348,7 +348,7 @@ function PurchaseDetailsModal({ purchase, statuses, onClose, onStatusChange, onE
             </div>
             {!purchase.purchaseStatus.isLast && (
               <Button variant="outline" size="sm" onClick={onEdit} className="flex-shrink-0">
-                <Pencil className="h-3.5 w-3.5 mr-1" /> Изменить
+                <Pencil className="h-3.5 w-3.5 sm:mr-1" /><span className="hidden sm:inline">Изменить</span>
               </Button>
             )}
           </div>

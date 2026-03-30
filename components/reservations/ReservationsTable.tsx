@@ -681,8 +681,8 @@ export function ReservationsTable() {
                       disabled={convertingId === r.id || !warehouseSelections[r.id]}
                       onClick={() => handleConvert(r.id)}
                     >
-                      <ShoppingCart className="w-4 h-4 mr-2" />
-                      Создать заказ
+                      <ShoppingCart className="w-4 h-4 sm:mr-2" />
+                      <span className="hidden sm:inline">Создать заказ</span>
                     </Button>
                     <Button
                       variant="outline"
