@@ -1,38 +1,38 @@
 import { NextResponse } from "next/server"
-import type { NextRequest } from "next/server";
+import type { NextRequest } from "next/server"
+import { neon } from "@neondatabase/serverless"
 
 export async function middleware(req: NextRequest) {
-  // const token = await getToken({
-  //   req,
-  //   secret: process.env.AUTH_SECRET,
-  //   cookieName: "authjs.session-token", // 👈 это важно!
-  // });
+  const pathname = req.nextUrl.pathname
 
-  console.log("🧠 Token from middleware:", req.nextUrl.pathname);
-  // const pathname = req.nextUrl.pathname;
+  if (!pathname.startsWith('/api/auth')) {
+    try {
+      const sql = neon(process.env.DATABASE_URL!, { fetchOptions: { cache: 'no-store' } })
+      const result = await sql`SELECT "dbAccessEnabled" FROM "AppSettings" WHERE id = 1 LIMIT 1`
+      const dbEnabled = result[0]?.dbAccessEnabled ?? true
 
-  // // Если пользователь не авторизован — пускаем только на публичные страницы
-  // if (!token) {
-  //   if (pathname === "/" || pathname.startsWith("/sign-in")) {
-  //     return NextResponse.next();
-  //   }
-  //   return NextResponse.redirect(new URL("/sign-in", req.url));
-  // }
+      if (!dbEnabled) {
+        if (pathname.startsWith('/api/')) {
+          return new NextResponse(JSON.stringify({ error: 'Service unavailable' }), {
+            status: 503,
+            headers: { 'Content-Type': 'application/json' },
+          })
+        }
+        return new NextResponse(
+          '<!DOCTYPE html><html><head><title>Service Unavailable</title></head><body><h1>503 — Service Unavailable</h1><p>The service is temporarily unavailable. Please try again later.</p></body></html>',
+          {
+            status: 503,
+            headers: { 'Content-Type': 'text/html' },
+          }
+        )
+      }
+    } catch {
+    }
+  }
 
-  // // Если пользователь зашел на "/", делаем redirect по роли
-  // if (pathname === "/") {
-  //   if (token.role === "admin") {
-  //     return NextResponse.redirect(new URL("/dashboard", req.url));
-  //   }
-  //   if (token.role === "user") {
-  //     return NextResponse.redirect(new URL("/shop", req.url));
-  //   }
-  // }
-
-  return NextResponse.next();
+  return NextResponse.next()
 }
 
-// Применяем middleware ко всем страницам
 export const config = {
-  matcher: ["/", "/dashboard/:path*", "/shop/:path*"],
-};
+  matcher: ["/", "/dashboard/:path*", "/shop/:path*", "/api/:path*"],
+}

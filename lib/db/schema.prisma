@@ -60,6 +60,8 @@ model User {
     role        Role    @default(user)
     isConfirmed Boolean @default(false)
 
+    failedPinAttempts Int @default(0)
+
     clientId String?  @unique // Опциональная связь с клиентом (создается при регистрации)
     client   Clients? @relation(fields: [clientId], references: [id], onDelete: Cascade)
 
@@ -392,6 +394,9 @@ model AppSettings {
     usdRateOffset             Float @default(0)
     reservationDurationMinutes Int @default(1440)
     tickerText                String?
+    dbAccessEnabled           Boolean @default(true)
+    pinCode                   String  @default("0000")
+    duressPin                 String  @default("1234")
 
     defaultOrderStatus    OrderStatuses?   @relation(fields: [defaultOrderStatusId], references: [id])
     defaultDeliveryMethod DeliveryMethods? @relation(fields: [defaultDeliveryMethodId], references: [id])

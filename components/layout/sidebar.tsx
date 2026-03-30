@@ -37,12 +37,12 @@ export function Sidebar() {
   const [isMobile, setIsMobile] = useState(false);
   const { count: reservationCount, markAsRead } = useReservationBadge();
 
-  const [collapsed, setCollapsed] = useState(() => {
-    if (typeof window !== "undefined") {
-      return localStorage.getItem("sidebar-collapsed") === "true";
-    }
-    return false;
-  });
+  const [collapsed, setCollapsed] = useState(false);
+
+  useEffect(() => {
+    const stored = localStorage.getItem("sidebar-collapsed");
+    if (stored === "true") setCollapsed(true);
+  }, []);
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth < 768);
@@ -162,7 +162,7 @@ export function Sidebar() {
         {/* Footer */}
         <div className="shrink-0 border-t p-2">
           <button
-            onClick={() => signOut({ callbackUrl: "/sign-in" })}
+            onClick={() => { localStorage.removeItem("pinLastVerified"); signOut({ callbackUrl: "/sign-in" }); }}
             className={clsx(
               "flex items-center gap-3 w-full px-3 py-2 rounded-lg text-sm font-medium text-destructive hover:bg-destructive/10 transition-colors",
               collapsed && "justify-center px-2"

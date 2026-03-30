@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import prisma from '@/lib/db/db';
 
-// GET /api/settings
 export async function GET() {
   try {
     const session = await auth();
@@ -10,7 +9,17 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const settings = await prisma.appSettings.findUnique({ where: { id: 1 } });
+    const settings = await prisma.appSettings.findUnique({
+      where: { id: 1 },
+      select: {
+        defaultOrderStatusId: true,
+        defaultDeliveryMethodId: true,
+        defaultPurchaseStatusId: true,
+        usdRateOffset: true,
+        reservationDurationMinutes: true,
+        tickerText: true,
+      },
+    });
     return NextResponse.json(settings ?? { defaultOrderStatusId: null, defaultDeliveryMethodId: null, defaultPurchaseStatusId: null, usdRateOffset: 0, reservationDurationMinutes: 1440, tickerText: null });
   } catch (error) {
     console.error('Error fetching settings:', error);
@@ -58,6 +67,14 @@ export async function PUT(request: NextRequest) {
         usdRateOffset: body.usdRateOffset ?? 0,
         reservationDurationMinutes: body.reservationDurationMinutes ?? 1440,
         tickerText: body.tickerText ?? null,
+      },
+      select: {
+        defaultOrderStatusId: true,
+        defaultDeliveryMethodId: true,
+        defaultPurchaseStatusId: true,
+        usdRateOffset: true,
+        reservationDurationMinutes: true,
+        tickerText: true,
       },
     });
 
