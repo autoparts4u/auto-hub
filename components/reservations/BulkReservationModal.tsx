@@ -21,9 +21,10 @@ interface Props {
   onClose: () => void;
   onSuccess: (succeededIds: string[]) => void;
   onItemRemoved?: (partId: string) => void;
+  onQuantityChange?: (partId: string, quantity: number) => void;
 }
 
-export function BulkReservationModal({ cart: initialCart, warehouseAccessId, priceAccessId, reservationSummary, onClose, onSuccess, onItemRemoved }: Props) {
+export function BulkReservationModal({ cart: initialCart, warehouseAccessId, priceAccessId, reservationSummary, onClose, onSuccess, onItemRemoved, onQuantityChange }: Props) {
   const [items, setItems] = useState<CartItem[]>(() => initialCart.map((i) => ({ ...i })));
   const [notes, setNotes] = useState('');
   const [saving, setSaving] = useState(false);
@@ -184,8 +185,11 @@ export function BulkReservationModal({ cart: initialCart, warehouseAccessId, pri
                         if (val === '' || /^\d*$/.test(val)) updateQty(item.part.id, val);
                       }}
                       onBlur={() => {
-                        if (!item.quantity || item.quantity < 1) updateQty(item.part.id, '1');
-                        else if (item.quantity > available) updateQty(item.part.id, String(available));
+                        let finalQty = item.quantity;
+                        if (!finalQty || finalQty < 1) finalQty = 1;
+                        else if (finalQty > available) finalQty = available;
+                        updateQty(item.part.id, String(finalQty));
+                        onQuantityChange?.(item.part.id, finalQty);
                       }}
                       className="w-16 h-8 text-center text-sm"
                     />

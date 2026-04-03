@@ -40,6 +40,7 @@ import {
 } from '@/components/reservations/BulkReservationModal';
 import {
   Plus,
+  Minus,
   Pencil,
   Trash,
   ArrowRightLeft,
@@ -50,6 +51,7 @@ import {
   RotateCcw,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   ChevronsLeft,
   ChevronsRight,
   Filter,
@@ -94,6 +96,42 @@ type SortKey =
   | 'auto';
 
 const RE_NORM = /[/,.\-\s]/g;
+
+function AdminCardExpander({
+  article,
+  description,
+  quantityBadge,
+  details,
+}: {
+  article: string;
+  description: string | null;
+  quantityBadge: React.ReactNode;
+  details: React.ReactNode;
+}) {
+  const [expanded, setExpanded] = useState(false);
+  return (
+    <>
+      <div
+        className="flex justify-between items-start gap-3 cursor-pointer select-none"
+        onPointerDown={() => setExpanded((v) => !v)}
+      >
+        <div className="flex-1 min-w-0 space-y-1">
+          <h3 className="font-mono font-semibold text-sm" title={article}>{article}</h3>
+          {description && (
+            <p className="text-sm text-muted-foreground line-clamp-2" title={description}>{description}</p>
+          )}
+        </div>
+        <div className="flex-shrink-0 flex flex-col items-center gap-0.5">
+          {quantityBadge}
+          <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform flex-shrink-0 mt-1 ${expanded ? 'rotate-180' : ''}`} />
+        </div>
+      </div>
+      <div className={`grid transition-[grid-template-rows] duration-200 ease-out ${expanded ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}>
+        <div className="overflow-hidden">{details}</div>
+      </div>
+    </>
+  );
+}
 
 export function AutopartsTable({
   parts,
@@ -179,6 +217,8 @@ export function AutopartsTable({
     null,
   );
   const [cart, setCart] = useState<CartItem[]>([]);
+  const [addingToCartPart, setAddingToCartPart] = useState<AutopartWithStock | null>(null);
+  const [addingQty, setAddingQty] = useState('1');
   const [showBulkReservation, setShowBulkReservation] = useState(false);
   const [showMyReservations, setShowMyReservations] = useState(false);
   const [showMyOrders, setShowMyOrders] = useState(false);
@@ -1679,8 +1719,8 @@ export function AutopartsTable({
                                         setCart((prev) => prev.filter((c) => c.part.id !== p.id));
                                         logEvent('cart_remove', { article: p.article, description: p.description });
                                       } else {
-                                        setCart((prev) => [...prev, { part: p, quantity: 1 }]);
-                                        logEvent('cart_add', { article: p.article, description: p.description });
+                                        setAddingToCartPart(p);
+                                        setAddingQty('1');
                                       }
                                     }}
                                   >
@@ -1722,216 +1762,161 @@ export function AutopartsTable({
             }`}
           >
             <div className="p-4 space-y-3">
-              <div className="flex justify-between items-start gap-3">
-                <div className="flex-1 min-w-0 space-y-1">
-                  <h3
-                    className="font-mono font-semibold text-sm"
-                    title={p.article}
-                  >
-                    {p.article}
-                  </h3>
-                  <p
-                    className="text-sm text-muted-foreground line-clamp-2"
-                    title={p.description}
-                  >
-                    {p.description}
-                  </p>
-                </div>
-                <div className="flex-shrink-0 flex flex-col items-center gap-0.5">
-                  <div className="inline-flex items-center justify-center px-3 py-1.5 rounded-full text-sm font-semibold bg-primary/10 text-primary">
-                    {!onlyView ? (
-                      <>
-                        {p.totalQuantity}
-                        {(reservationSummary[p.id]?.reservedCount ?? 0) > 0 && (
-                          <span className="ml-1.5 text-xs font-normal text-amber-600 dark:text-amber-500">
-                            ({reservationSummary[p.id].reservedCount} рез.)
-                          </span>
-                        )}
-                      </>
-                    ) : warehouseAccessId ? (
-                      (() => {
-                        const avail = getAvailableQty(p);
-                        return avail > p.maxNumberShown
-                          ? `${p.maxNumberShown}+`
-                          : avail;
-                      })()
-                    ) : (
-                      (() => {
-                        const avail = getAvailableQty(p);
-                        return avail > p.maxNumberShown
-                          ? `${p.maxNumberShown}+`
-                          : avail;
-                      })()
-                    )}
-                  </div>
-                  {onlyView && warehouseAccessId && (
-                    <div className="text-xs text-center text-muted-foreground">
-                      (
-                      {p.totalQuantity > p.maxNumberShown
-                        ? `${p.maxNumberShown}+`
-                        : p.totalQuantity}
-                      )
+              {!onlyView ? (
+                <AdminCardExpander
+                  article={p.article}
+                  description={p.description}
+                  quantityBadge={
+                    <div className="inline-flex items-center justify-center px-3 py-1.5 rounded-full text-sm font-semibold bg-primary/10 text-primary">
+                      {p.totalQuantity}
+                      {(reservationSummary[p.id]?.reservedCount ?? 0) > 0 && (
+                        <span className="ml-1.5 text-xs font-normal text-amber-600 dark:text-amber-500">
+                          ({reservationSummary[p.id].reservedCount} рез.)
+                        </span>
+                      )}
                     </div>
-                  )}
-                  {onlyView && getReservationLabel(p.id) && (
-                    <div className="text-xs text-center text-amber-600 dark:text-amber-500 leading-tight max-w-[90px]">
-                      {getReservationLabel(p.id)}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3 text-xs">
-                {!onlyView && p.brand && (
-                  <div className="space-y-1">
-                    <span className="text-muted-foreground font-medium">
-                      Бренд
-                    </span>
-                    <div
-                      className="font-semibold truncate"
-                      title={p.brand.name}
-                    >
-                      {p.brand.name}
-                    </div>
-                  </div>
-                )}
-                {!onlyView && p.category && (
-                  <div className="space-y-1">
-                    <span className="text-muted-foreground font-medium">
-                      Группа
-                    </span>
-                    <div
-                      className="font-semibold truncate"
-                      title={p.category.name}
-                    >
-                      {p.category.name}
-                    </div>
-                  </div>
-                )}
-                {!onlyView && p.autos.length > 0 && (
-                  <div className="space-y-1">
-                    <span className="text-muted-foreground font-medium">
-                      Авто
-                    </span>
-                    <div
-                      className="font-semibold truncate"
-                      title={p.autos.map((a) => a.name).join(', ')}
-                    >
-                      {p.autos.map((a) => a.name).join(', ')}
-                    </div>
-                  </div>
-                )}
-                {!onlyView && (p.engineVolumes.length > 0 || p.fuelType) && (
-                  <div className="space-y-1">
-                    <span className="text-muted-foreground font-medium">
-                      Объем
-                    </span>
-                    <div
-                      className="font-semibold truncate"
-                      title={(() => {
-                        const volumes = p.engineVolumes
-                          .map((ev) => ev.name)
-                          .join(', ');
-                        const fuelType = p.fuelType?.name;
-                        if (volumes && fuelType) {
-                          return `${volumes} / ${fuelType}`;
-                        } else if (volumes) {
-                          return volumes;
-                        } else if (fuelType) {
-                          return `- / ${fuelType}`;
-                        }
-                        return '-';
-                      })()}
-                    >
-                      {(() => {
-                        const volumes = p.engineVolumes
-                          .map((ev) => ev.name)
-                          .join(', ');
-                        const fuelType = p.fuelType?.name;
-                        if (volumes && fuelType) {
-                          return `${volumes} / ${fuelType}`;
-                        } else if (volumes) {
-                          return volumes;
-                        } else if (fuelType) {
-                          return `- / ${fuelType}`;
-                        }
-                        return '-';
-                      })()}
-                    </div>
-                  </div>
-                )}
-                {!onlyView && (p.year_from != null || p.year_to != null) && (
-                  <div className="space-y-1">
-                    <span className="text-muted-foreground font-medium">
-                      Годы
-                    </span>
-                    <div className="font-semibold">
-                      {p.year_from && p.year_to
-                        ? `${p.year_from}-${p.year_to}`
-                        : p.year_from
-                          ? `от ${p.year_from}`
-                          : `до ${p.year_to}`}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Цены */}
-              <div className="pt-3 border-t">
-                <div className="text-xs text-muted-foreground font-medium mb-2">
-                  Цены
-                </div>
-                {!onlyView && !priceAccessId ? (
-                  <div className="flex flex-wrap gap-2">
-                    {p.prices.map((price) => (
-                      <TooltipProvider key={price.priceType.id}>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <div className="inline-flex items-center gap-1.5 bg-green-50 dark:bg-green-900/20 rounded-md px-2.5 py-1.5 text-xs cursor-default">
-                              <span className="font-medium text-muted-foreground">
-                                {price.priceType.name}:
-                              </span>
-                              <span className="font-semibold text-green-700 dark:text-green-400">
-                                {price.price.toFixed(2)}
-                              </span>
-                            </div>
-                          </TooltipTrigger>
-                          {usdRate !== null && (
-                            <TooltipContent side="top">
-                              <p>{(price.price * usdRate).toFixed(2)} BYN</p>
-                            </TooltipContent>
-                          )}
-                        </Tooltip>
-                      </TooltipProvider>
-                    ))}
-                  </div>
-                ) : (
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <div className="inline-flex items-center justify-center px-3 py-1.5 rounded-full text-sm font-semibold bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 cursor-default">
-                          {p.prices
-                            .find(
-                              (price) => price.priceType.id === priceAccessId,
-                            )
-                            ?.price.toFixed(2) ?? '-'}
+                  }
+                  details={
+                    <div className="grid grid-cols-2 gap-3 text-xs pt-1">
+                      {p.brand && (
+                        <div className="space-y-1">
+                          <span className="text-muted-foreground font-medium">Бренд</span>
+                          <div className="font-semibold truncate" title={p.brand.name}>{p.brand.name}</div>
                         </div>
-                      </TooltipTrigger>
-                      {usdRate !== null &&
+                      )}
+                      {p.category && (
+                        <div className="space-y-1">
+                          <span className="text-muted-foreground font-medium">Группа</span>
+                          <div className="font-semibold truncate" title={p.category.name}>{p.category.name}</div>
+                        </div>
+                      )}
+                      {p.autos.length > 0 && (
+                        <div className="space-y-1">
+                          <span className="text-muted-foreground font-medium">Авто</span>
+                          <div className="font-semibold truncate" title={p.autos.map((a) => a.name).join(', ')}>{p.autos.map((a) => a.name).join(', ')}</div>
+                        </div>
+                      )}
+                      {(p.engineVolumes.length > 0 || p.fuelType) && (
+                        <div className="space-y-1">
+                          <span className="text-muted-foreground font-medium">Объем</span>
+                          <div className="font-semibold truncate" title={(() => { const v = p.engineVolumes.map((ev) => ev.name).join(', '); const f = p.fuelType?.name; return v && f ? `${v} / ${f}` : v || (f ? `- / ${f}` : '-'); })()}>
+                            {(() => { const v = p.engineVolumes.map((ev) => ev.name).join(', '); const f = p.fuelType?.name; return v && f ? `${v} / ${f}` : v || (f ? `- / ${f}` : '-'); })()}
+                          </div>
+                        </div>
+                      )}
+                      {(p.year_from != null || p.year_to != null) && (
+                        <div className="space-y-1">
+                          <span className="text-muted-foreground font-medium">Годы</span>
+                          <div className="font-semibold">
+                            {p.year_from && p.year_to ? `${p.year_from}-${p.year_to}` : p.year_from ? `от ${p.year_from}` : `до ${p.year_to}`}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  }
+                />
+              ) : (
+                <div className="flex justify-between items-start gap-3">
+                  <div className="flex-1 min-w-0 space-y-1">
+                    <h3 className="font-mono font-semibold text-sm" title={p.article}>{p.article}</h3>
+                    <p className="text-sm text-muted-foreground line-clamp-2" title={p.description}>{p.description}</p>
+                  </div>
+                  <div className="flex-shrink-0 flex flex-col items-center gap-0.5">
+                    <div className="inline-flex items-center justify-center px-3 py-1.5 rounded-full text-sm font-semibold bg-primary/10 text-primary">
+                      {warehouseAccessId ? (
                         (() => {
-                          const found = p.prices.find(
-                            (price) => price.priceType.id === priceAccessId,
-                          );
-                          return found ? (
-                            <TooltipContent side="top">
-                              <p>{(found.price * usdRate).toFixed(2)} BYN</p>
-                            </TooltipContent>
-                          ) : null;
-                        })()}
-                    </Tooltip>
-                  </TooltipProvider>
-                )}
-              </div>
+                          const avail = getAvailableQty(p);
+                          const total = p.totalQuantity > p.maxNumberShown ? `${p.maxNumberShown}+` : p.totalQuantity;
+                          const availLabel = avail > p.maxNumberShown ? `${p.maxNumberShown}+` : avail;
+                          return (<>{availLabel}<span className="ml-1 text-xs font-normal text-muted-foreground">({total})</span></>);
+                        })()
+                      ) : (
+                        (() => { const avail = getAvailableQty(p); return avail > p.maxNumberShown ? `${p.maxNumberShown}+` : avail; })()
+                      )}
+                    </div>
+                    {getReservationLabel(p.id) && (
+                      <div className="text-xs text-center text-amber-600 dark:text-amber-500 leading-tight max-w-[90px]">{getReservationLabel(p.id)}</div>
+                    )}
+                    {priceAccessId && (() => {
+                      const price = p.prices.find((pr) => pr.priceType.id === priceAccessId);
+                      if (!price) return null;
+                      return (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className="inline-flex items-center justify-center px-2.5 py-1 rounded-full text-sm font-semibold bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 cursor-default mt-0.5">
+                                {price.price.toFixed(2)}
+                              </div>
+                            </TooltipTrigger>
+                            {usdRate !== null && (
+                              <TooltipContent side="top"><p>{(price.price * usdRate).toFixed(2)} BYN</p></TooltipContent>
+                            )}
+                          </Tooltip>
+                        </TooltipProvider>
+                      );
+                    })()}
+                  </div>
+                </div>
+              )}
+
+              {/* Цены (только для администратора) */}
+              {!onlyView && (
+                <div className="pt-3 border-t">
+                  <div className="text-xs text-muted-foreground font-medium mb-2">
+                    Цены
+                  </div>
+                  {!priceAccessId ? (
+                    <div className="flex flex-wrap gap-2">
+                      {p.prices.map((price) => (
+                        <TooltipProvider key={price.priceType.id}>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className="inline-flex items-center gap-1.5 bg-green-50 dark:bg-green-900/20 rounded-md px-2.5 py-1.5 text-xs cursor-default">
+                                <span className="font-medium text-muted-foreground">
+                                  {price.priceType.name}:
+                                </span>
+                                <span className="font-semibold text-green-700 dark:text-green-400">
+                                  {price.price.toFixed(2)}
+                                </span>
+                              </div>
+                            </TooltipTrigger>
+                            {usdRate !== null && (
+                              <TooltipContent side="top">
+                                <p>{(price.price * usdRate).toFixed(2)} BYN</p>
+                              </TooltipContent>
+                            )}
+                          </Tooltip>
+                        </TooltipProvider>
+                      ))}
+                    </div>
+                  ) : (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="inline-flex items-center justify-center px-3 py-1.5 rounded-full text-sm font-semibold bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 cursor-default">
+                            {p.prices
+                              .find(
+                                (price) => price.priceType.id === priceAccessId,
+                              )
+                              ?.price.toFixed(2) ?? '-'}
+                          </div>
+                        </TooltipTrigger>
+                        {usdRate !== null &&
+                          (() => {
+                            const found = p.prices.find(
+                              (price) => price.priceType.id === priceAccessId,
+                            );
+                            return found ? (
+                              <TooltipContent side="top">
+                                <p>{(found.price * usdRate).toFixed(2)} BYN</p>
+                              </TooltipContent>
+                            ) : null;
+                          })()}
+                      </Tooltip>
+                    </TooltipProvider>
+                  )}
+                </div>
+              )}
 
               {/* Склады */}
               {!onlyView && p.warehouses.some((w) => w.quantity > 0) && (
@@ -1979,8 +1964,8 @@ export function AutopartsTable({
                           setCart((prev) => prev.filter((c) => c.part.id !== p.id));
                           logEvent('cart_remove', { article: p.article, description: p.description });
                         } else {
-                          setCart((prev) => [...prev, { part: p, quantity: 1 }]);
-                          logEvent('cart_add', { article: p.article, description: p.description });
+                          setAddingToCartPart(p);
+                          setAddingQty('1');
                         }
                       }}
                     >
@@ -2407,7 +2392,83 @@ export function AutopartsTable({
           onItemRemoved={(partId) =>
             setCart((prev) => prev.filter((c) => c.part.id !== partId))
           }
+          onQuantityChange={(partId, qty) =>
+            setCart((prev) => prev.map((c) => c.part.id === partId ? { ...c, quantity: qty } : c))
+          }
         />
+      )}
+
+      {addingToCartPart && (
+        <Dialog open onOpenChange={() => setAddingToCartPart(null)}>
+          <DialogContent className="max-w-xs">
+            <DialogTitle>Добавить в корзину</DialogTitle>
+            <div className="space-y-3 pt-1">
+              <p className="text-sm">
+                <span className="font-mono font-semibold">{addingToCartPart.article}</span>
+                {addingToCartPart.description && (
+                  <span className="text-muted-foreground ml-1">— {addingToCartPart.description}</span>
+                )}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Доступно: <span className="font-semibold text-primary">{getAvailableQty(addingToCartPart)} шт.</span>
+              </p>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8 flex-shrink-0"
+                  onClick={() => setAddingQty((prev) => String(Math.max(1, (parseInt(prev) || 1) - 1)))}
+                >
+                  <Minus className="w-3.5 h-3.5" />
+                </Button>
+                <Input
+                  type="text"
+                  inputMode="numeric"
+                  value={addingQty}
+                  className="text-center"
+                  onFocus={(e) => e.target.select()}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === '' || /^\d*$/.test(val)) setAddingQty(val);
+                  }}
+                  onBlur={() => {
+                    const n = parseInt(addingQty);
+                    const avail = getAvailableQty(addingToCartPart);
+                    if (!n || n < 1) setAddingQty('1');
+                    else if (n > avail) setAddingQty(String(avail));
+                  }}
+                />
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8 flex-shrink-0"
+                  onClick={() => {
+                    const avail = getAvailableQty(addingToCartPart);
+                    setAddingQty((prev) => String(Math.min(avail, (parseInt(prev) || 1) + 1)));
+                  }}
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                </Button>
+              </div>
+              <div className="flex gap-2 pt-1">
+                <Button variant="outline" className="flex-1" onClick={() => setAddingToCartPart(null)}>
+                  Отмена
+                </Button>
+                <Button
+                  className="flex-1 bg-amber-600 hover:bg-amber-700 text-white"
+                  onClick={() => {
+                    const qty = Math.max(1, parseInt(addingQty) || 1);
+                    setCart((prev) => [...prev, { part: addingToCartPart!, quantity: qty }]);
+                    logEvent('cart_add', { article: addingToCartPart!.article, description: addingToCartPart!.description });
+                    setAddingToCartPart(null);
+                  }}
+                >
+                  В корзину
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       )}
 
       {showMyOrders && <MyOrdersModal onClose={() => setShowMyOrders(false)} />}
