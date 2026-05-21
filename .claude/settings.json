@@ -1,0 +1,82 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run dev:*)",
+      "Bash(npm run build)",
+      "Bash(npm run lint)",
+      "Bash(npm run db:migrate:*)",
+      "Bash(npm run db:studio)",
+      "Bash(npm run db:push)",
+      "Bash(npm run db:seed)",
+      "Bash(npx tsc --noEmit)",
+      "Bash(npx prisma generate)",
+      "Bash(npx prisma migrate dev:*)",
+      "Bash(npx prisma format)",
+      "Bash(npx prisma validate)",
+      "Bash(npx shadcn:*)",
+      "Bash(git status)",
+      "Bash(git status:*)",
+      "Bash(git diff)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git show:*)",
+      "Bash(git branch)",
+      "Bash(git branch:*)",
+      "Bash(ls:*)",
+      "Bash(find:*)",
+      "Bash(grep:*)",
+      "Bash(rg:*)",
+      "Bash(cat:*)",
+      "Bash(wc:*)",
+      "Bash(mkdir:*)"
+    ],
+    "deny": [
+      "Bash(rm -rf:*)",
+      "Bash(rm -fr:*)",
+      "Bash(git push --force:*)",
+      "Bash(git push -f:*)",
+      "Bash(git reset --hard:*)",
+      "Bash(git clean -f:*)",
+      "Bash(git branch -D:*)",
+      "Bash(npx prisma migrate deploy:*)",
+      "Bash(npx prisma migrate reset:*)",
+      "Bash(npm run db:reset)",
+      "Bash(*DROP TABLE*)",
+      "Bash(*DROP DATABASE*)",
+      "Bash(*TRUNCATE*)",
+      "Bash(curl * | sh:*)",
+      "Bash(curl * | bash:*)",
+      "Bash(wget * | sh:*)",
+      "Bash(wget * | bash:*)",
+      "Read(./.env)",
+      "Read(./.env.local)",
+      "Read(./.env.*.local)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "input=$(cat); if echo \"$input\" | grep -qE 'rm -rf|DROP TABLE|DROP DATABASE|TRUNCATE|git push --force|git push -f|prisma migrate deploy|prisma migrate reset|db:reset|curl[^|]*\\|[[:space:]]*(sh|bash)|wget[^|]*\\|[[:space:]]*(sh|bash)'; then echo 'BLOCKED: dangerous command detected — run manually if intentional' >&2; exit 2; fi; exit 0",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "input=$(cat); file=$(echo \"$input\" | sed -n 's/.*\"file_path\"[[:space:]]*:[[:space:]]*\"\\([^\"]*\\)\".*/\\1/p'); case \"$file\" in *.ts|*.tsx) (cd \"$CLAUDE_PROJECT_DIR\" 2>/dev/null && timeout 18 npx tsc --noEmit --pretty false 2>&1 | head -40) || true ;; esac; exit 0",
+            "timeout": 20
+          }
+        ]
+      }
+    ]
+  }
+}
