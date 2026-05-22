@@ -88,6 +88,7 @@ export async function POST(request: NextRequest) {
           purchaseStatus_id: body.purchaseStatus_id,
           notes: body.notes || null,
           orderedAt: body.orderedAt ? new Date(body.orderedAt) : new Date(),
+          expectedAt: body.expectedAt ? new Date(body.expectedAt) : null,
           totalAmount,
           items: {
             create: body.items.map((item: {

@@ -81,6 +81,12 @@ export async function PUT(
           purchaseStatus_id: body.purchaseStatus_id,
           notes: body.notes || null,
           orderedAt: body.orderedAt ? new Date(body.orderedAt) : undefined,
+          expectedAt:
+            'expectedAt' in body
+              ? body.expectedAt
+                ? new Date(body.expectedAt)
+                : null
+              : undefined,
           totalAmount,
           items: {
             create: (body.items ?? []).map((item: {

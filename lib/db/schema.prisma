@@ -1,529 +1,582 @@
 generator client {
-    provider        = "prisma-client-js"
-    previewFeatures = ["driverAdapters"]
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
 }
 
 datasource db {
-    provider  = "postgresql"
-    url       = env("DATABASE_URL")
-    directUrl = env("DIRECT_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 model health_check {
-    id         Int       @id @default(autoincrement())
-    updated_at DateTime? @default(now()) @db.Timestamptz(6)
+  id         Int       @id @default(autoincrement())
+  updated_at DateTime? @default(now()) @db.Timestamptz(6)
 }
 
 model UserActivitySession {
-    id        String    @id @default(cuid())
-    userId    String
-    startedAt DateTime  @default(now())
-    endedAt   DateTime?
-    userAgent String?
-    ipAddress String?
-    country   String?
-    city      String?
+  id        String    @id @default(cuid())
+  userId    String
+  startedAt DateTime  @default(now())
+  endedAt   DateTime?
+  userAgent String?
+  ipAddress String?
+  country   String?
+  city      String?
 
-    user   User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-    events UserActivityEvent[]
+  user   User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  events UserActivityEvent[]
 
-    @@index([userId])
-    @@index([startedAt])
+  @@index([userId])
+  @@index([startedAt])
 }
 
 model UserActivityEvent {
-    id        String   @id @default(cuid())
-    sessionId String
-    type      String   // "page_view" | "search" | "filter"
-    payload   Json?
-    createdAt DateTime @default(now())
+  id        String   @id @default(cuid())
+  sessionId String
+  type      String // "page_view" | "search" | "filter"
+  payload   Json?
+  createdAt DateTime @default(now())
 
-    session UserActivitySession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  session UserActivitySession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 
-    @@index([sessionId])
-    @@index([createdAt])
+  @@index([sessionId])
+  @@index([createdAt])
 }
 
 enum Role {
-    user
-    admin
+  user
+  admin
 }
 
 model User {
-    id            String    @id @default(cuid())
-    name          String?
-    email         String    @unique
-    password      String?
-    emailVerified DateTime?
-    image         String?
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  password      String?
+  emailVerified DateTime?
+  image         String?
 
-    role        Role    @default(user)
-    isConfirmed Boolean @default(false)
+  role        Role    @default(user)
+  isConfirmed Boolean @default(false)
 
-    failedPinAttempts Int @default(0)
+  failedPinAttempts Int @default(0)
 
-    clientId String?  @unique // Опциональная связь с клиентом (создается при регистрации)
-    client   Clients? @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  clientId String?  @unique // Опциональная связь с клиентом (создается при регистрации)
+  client   Clients? @relation(fields: [clientId], references: [id], onDelete: Cascade)
 
-    accounts           Account[]
-    sessions           Session[]
-    Authenticator      Authenticator[]
-    orderStatusHistory OrderStatusHistory[]
-    activitySessions   UserActivitySession[]
-    createdReturns     Returns[]
+  accounts           Account[]
+  sessions           Session[]
+  Authenticator      Authenticator[]
+  orderStatusHistory OrderStatusHistory[]
+  activitySessions   UserActivitySession[]
+  createdReturns     Returns[]
+  pickedOrderItems   OrderItems[]          @relation("PickedOrderItems")
+  dashboardSnoozes   DashboardSnooze[]     @relation("DashboardSnoozeBy")
+  pushSubscriptions  PushSubscription[]
+  pushDeliveryLogs   PushDeliveryLog[]
 
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model DashboardSnooze {
+  id               String   @id @default(cuid())
+  entityType       String // "order" | "purchase" | "reservation" | "return"
+  entityId         String
+  snoozedBy_userId String
+  snoozedUntil     DateTime
+  createdAt        DateTime @default(now())
+
+  snoozedBy User @relation("DashboardSnoozeBy", fields: [snoozedBy_userId], references: [id])
+
+  @@unique([entityType, entityId])
+  @@index([snoozedUntil])
+}
+
+model PushSubscription {
+  id         String   @id @default(cuid())
+  endpoint   String   @unique
+  p256dh     String
+  auth       String
+  userId     String
+  userAgent  String?
+  createdAt  DateTime @default(now())
+  lastSeenAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model PushDeliveryLog {
+  id         String   @id @default(cuid())
+  entityType String // "order" | "purchase" | "reservation"
+  entityId   String
+  kind       String // "handoverOverdue" | "handoverToday" | "purchaseOverdue" | "reservationExpiring"
+  userId     String
+  sentAt     DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([entityType, entityId, kind, userId])
+  @@index([sentAt])
 }
 
 model Account {
-    userId            String
-    type              String
-    provider          String
-    providerAccountId String
-    refresh_token     String?
-    access_token      String?
-    expires_at        Int?
-    token_type        String?
-    scope             String?
-    id_token          String?
-    session_state     String?
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
 
-    createdAt DateTime @default(now())
-    updatedAt DateTime @default(now())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now())
 
-    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-    @@id([provider, providerAccountId])
+  @@id([provider, providerAccountId])
 }
 
 model Session {
-    sessionToken String   @id
-    userId       String
-    expires      DateTime
-    user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sessionToken String   @id
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-    createdAt DateTime @default(now())
-    updatedAt DateTime @default(now())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now())
 }
 
 model VerificationToken {
-    identifier String
-    token      String
-    expires    DateTime
+  identifier String
+  token      String
+  expires    DateTime
 
-    @@id([identifier, token])
+  @@id([identifier, token])
 }
 
 model Authenticator {
-    credentialID         String  @unique
-    userId               String
-    providerAccountId    String
-    credentialPublicKey  String
-    counter              Int
-    credentialDeviceType String
-    credentialBackedUp   Boolean
-    transports           String?
+  credentialID         String  @unique
+  userId               String
+  providerAccountId    String
+  credentialPublicKey  String
+  counter              Int
+  credentialDeviceType String
+  credentialBackedUp   Boolean
+  transports           String?
 
-    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-    @@id([userId, credentialID])
+  @@id([userId, credentialID])
 }
 
 model Clients {
-    id                String  @id @default(cuid())
-    name              String
-    fullName          String
-    phone             String? @unique
-    address           String?
-    priceAccessId              Int?
-    warehouseAccessId          Int?
-    reservationDurationMinutes Int? // null = использовать глобальные настройки
+  id                         String  @id @default(cuid())
+  name                       String
+  fullName                   String
+  phone                      String? @unique
+  address                    String?
+  priceAccessId              Int?
+  warehouseAccessId          Int?
+  reservationDurationMinutes Int? // null = использовать глобальные настройки
 
-    user            User? // Опциональная обратная связь
-    priceAccess     PriceTypes?              @relation("ClientPriceAccess", fields: [priceAccessId], references: [id])
-    warehouseAccess Warehouses?              @relation("ClientWarehouseAccess", fields: [warehouseAccessId], references: [id])
-    orders          Orders[]
-    deliveryMethods ClientsDeliveryMethods[]
-    reservations    Reservations[]
-    returns         Returns[]
+  user            User? // Опциональная обратная связь
+  priceAccess     PriceTypes?              @relation("ClientPriceAccess", fields: [priceAccessId], references: [id])
+  warehouseAccess Warehouses?              @relation("ClientWarehouseAccess", fields: [warehouseAccessId], references: [id])
+  orders          Orders[]
+  deliveryMethods ClientsDeliveryMethods[]
+  reservations    Reservations[]
+  returns         Returns[]
 
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model ClientsDeliveryMethods {
-    client_id         String
-    deliveryMethod_id Int
+  client_id         String
+  deliveryMethod_id Int
 
-    client         Clients         @relation(fields: [client_id], references: [id])
-    deliveryMethod DeliveryMethods @relation(fields: [deliveryMethod_id], references: [id])
+  client         Clients         @relation(fields: [client_id], references: [id])
+  deliveryMethod DeliveryMethods @relation(fields: [deliveryMethod_id], references: [id])
 
-    @@id([client_id, deliveryMethod_id])
+  @@id([client_id, deliveryMethod_id])
 }
 
 model DeliveryMethods {
-    id       Int                      @id @default(autoincrement())
-    name     String
-    hexColor String?
-    clients  ClientsDeliveryMethods[]
-    orders   Orders[]
-    appSettings AppSettings[]
+  id          Int                      @id @default(autoincrement())
+  name        String
+  hexColor    String?
+  clients     ClientsDeliveryMethods[]
+  orders      Orders[]
+  appSettings AppSettings[]
 }
 
 model Orders {
-    id                String    @id @default(cuid())
-    deliveryMethod_id Int?
-    client_id         String
-    orderStatus_id    Int
-    totalAmount       Float?
-    discount          Float     @default(0)
-    paidAmount        Float     @default(0)
-    notes             String?
-    deliveryAddress   String?
-    trackingNumber    String?
-    createdAt         DateTime  @default(now())
-    updatedAt         DateTime  @updatedAt
-    issuedAt          DateTime?
-    paidAt            DateTime?
-    cancelledAt       DateTime?
+  id                  String    @id @default(cuid())
+  deliveryMethod_id   Int?
+  client_id           String
+  orderStatus_id      Int
+  totalAmount         Float?
+  discount            Float     @default(0)
+  paidAmount          Float     @default(0)
+  notes               String?
+  deliveryAddress     String?
+  trackingNumber      String?
+  scheduledHandoverAt DateTime?
+  handoverNote        String?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  issuedAt            DateTime?
+  paidAt              DateTime?
+  cancelledAt         DateTime?
 
-    client         Clients              @relation(fields: [client_id], references: [id])
-    deliveryMethod DeliveryMethods?     @relation(fields: [deliveryMethod_id], references: [id])
-    orderStatus    OrderStatuses        @relation(fields: [orderStatus_id], references: [id])
-    orderItems     OrderItems[]
-    statusHistory  OrderStatusHistory[]
-    returns        Returns[]
+  client         Clients              @relation(fields: [client_id], references: [id])
+  deliveryMethod DeliveryMethods?     @relation(fields: [deliveryMethod_id], references: [id])
+  orderStatus    OrderStatuses        @relation(fields: [orderStatus_id], references: [id])
+  orderItems     OrderItems[]
+  statusHistory  OrderStatusHistory[]
+  returns        Returns[]
 }
 
 model OrderStatuses {
-    id            Int                  @id @default(autoincrement())
-    name          String
-    hexColor      String
-    isLast        Boolean
-    orders        Orders[]
-    statusHistory OrderStatusHistory[]
-    appSettings   AppSettings[]
+  id            Int                  @id @default(autoincrement())
+  name          String
+  hexColor      String
+  isLast        Boolean
+  orders        Orders[]
+  statusHistory OrderStatusHistory[]
+  appSettings   AppSettings[]
 }
 
 model OrderStatusHistory {
-    id             String   @id @default(cuid())
-    order_id       String
-    orderStatus_id Int
-    userId         String?
-    comment        String?
-    createdAt      DateTime @default(now())
+  id             String   @id @default(cuid())
+  order_id       String
+  orderStatus_id Int
+  userId         String?
+  comment        String?
+  createdAt      DateTime @default(now())
 
-    order       Orders        @relation(fields: [order_id], references: [id], onDelete: Cascade)
-    orderStatus OrderStatuses @relation(fields: [orderStatus_id], references: [id])
-    user        User?         @relation(fields: [userId], references: [id])
+  order       Orders        @relation(fields: [order_id], references: [id], onDelete: Cascade)
+  orderStatus OrderStatuses @relation(fields: [orderStatus_id], references: [id])
+  user        User?         @relation(fields: [userId], references: [id])
 }
 
 model OrderItems {
-    id               Int     @id @default(autoincrement())
-    order_id         String
-    autopart_id      String?
-    warehouse_id     Int
-    quantity         Int
-    item_final_price Float
-    article          String
-    description      String
+  id               Int       @id @default(autoincrement())
+  order_id         String
+  autopart_id      String?
+  warehouse_id     Int
+  quantity         Int
+  item_final_price Float
+  article          String
+  description      String
+  pickedAt         DateTime?
+  pickedBy_userId  String?
 
-    order       Orders        @relation(fields: [order_id], references: [id], onDelete: Cascade)
-    autopart    Autoparts?    @relation(fields: [autopart_id], references: [id], onDelete: SetNull)
-    warehouse   Warehouses    @relation(fields: [warehouse_id], references: [id])
-    returnItems ReturnItems[]
+  order       Orders        @relation(fields: [order_id], references: [id], onDelete: Cascade)
+  autopart    Autoparts?    @relation(fields: [autopart_id], references: [id], onDelete: SetNull)
+  warehouse   Warehouses    @relation(fields: [warehouse_id], references: [id])
+  pickedBy    User?         @relation("PickedOrderItems", fields: [pickedBy_userId], references: [id])
+  returnItems ReturnItems[]
 }
 
 model Warehouses {
-    id      Int    @id @default(autoincrement())
-    name    String
-    address String
+  id      Int    @id @default(autoincrement())
+  name    String
+  address String
 
-    parts              AutopartsWarehouses[]
-    orderItems         OrderItems[]
-    purchaseOrderItems PurchaseOrderItems[]
-    clientsAccess      Clients[]             @relation("ClientWarehouseAccess")
-    reservations       Reservations[]
-    returnItems        ReturnItems[]
+  parts              AutopartsWarehouses[]
+  orderItems         OrderItems[]
+  purchaseOrderItems PurchaseOrderItems[]
+  clientsAccess      Clients[]             @relation("ClientWarehouseAccess")
+  reservations       Reservations[]
+  returnItems        ReturnItems[]
 }
 
 model Autoparts {
-    id                 String @id @default(cuid())
-    article            String @unique
-    description        String
-    brand_id           Int?
-    category_id        Int?
-    text_for_search_id Int?
-    fuel_type_id       Int?
-    maxNumberShown     Int    @default(5)
-    year_from          Int?
-    year_to            Int?
+  id                 String @id @default(cuid())
+  article            String @unique
+  description        String
+  brand_id           Int?
+  category_id        Int?
+  text_for_search_id Int?
+  fuel_type_id       Int?
+  maxNumberShown     Int    @default(5)
+  year_from          Int?
+  year_to            Int?
 
-    brand         Brands?                  @relation(fields: [brand_id], references: [id])
-    category      Categories?              @relation(fields: [category_id], references: [id])
-    textForSearch TextForAuthopartsSearch? @relation(fields: [text_for_search_id], references: [id])
-    fuelType      FuelType?               @relation(fields: [fuel_type_id], references: [id])
-    prices             AutopartPrices[]
-    warehouses         AutopartsWarehouses[]
-    orderItems         OrderItems[]
-    purchaseOrderItems PurchaseOrderItems[]
-    autos              AutopartsAutos[]
-    engineVolumes      AutopartsEngineVolumes[]
+  brand              Brands?                  @relation(fields: [brand_id], references: [id])
+  category           Categories?              @relation(fields: [category_id], references: [id])
+  textForSearch      TextForAuthopartsSearch? @relation(fields: [text_for_search_id], references: [id])
+  fuelType           FuelType?                @relation(fields: [fuel_type_id], references: [id])
+  prices             AutopartPrices[]
+  warehouses         AutopartsWarehouses[]
+  orderItems         OrderItems[]
+  purchaseOrderItems PurchaseOrderItems[]
+  autos              AutopartsAutos[]
+  engineVolumes      AutopartsEngineVolumes[]
 
-    analoguesA   Analogues[]    @relation("PartA")
-    analoguesB   Analogues[]    @relation("PartB")
-    AutopartLog  AutopartLog[]
-    reservations Reservations[]
+  analoguesA   Analogues[]    @relation("PartA")
+  analoguesB   Analogues[]    @relation("PartB")
+  AutopartLog  AutopartLog[]
+  reservations Reservations[]
 }
 
 model AutopartLog {
-    id         String   @id @default(cuid())
-    autopartId String
-    userId     String?
-    action     String // "moved", "updated", etc.
-    field      String // "quantity", "brand", "warehouse", etc.
-    oldValue   String?
-    newValue   String?
-    createdAt  DateTime @default(now())
+  id         String   @id @default(cuid())
+  autopartId String
+  userId     String?
+  action     String // "moved", "updated", etc.
+  field      String // "quantity", "brand", "warehouse", etc.
+  oldValue   String?
+  newValue   String?
+  createdAt  DateTime @default(now())
 
-    autopart Autoparts @relation(fields: [autopartId], references: [id], onDelete: Cascade)
+  autopart Autoparts @relation(fields: [autopartId], references: [id], onDelete: Cascade)
 }
 
 model AutopartsWarehouses {
-    autopart_id  String
-    warehouse_id Int
-    quantity     Int
+  autopart_id  String
+  warehouse_id Int
+  quantity     Int
 
-    autopart  Autoparts  @relation(fields: [autopart_id], references: [id], onDelete: Cascade)
-    warehouse Warehouses @relation(fields: [warehouse_id], references: [id])
+  autopart  Autoparts  @relation(fields: [autopart_id], references: [id], onDelete: Cascade)
+  warehouse Warehouses @relation(fields: [warehouse_id], references: [id])
 
-    @@id([autopart_id, warehouse_id])
+  @@id([autopart_id, warehouse_id])
 }
 
 model AutopartPrices {
-    autopart_id   String
-    pricesType_id Int
-    price         Float
+  autopart_id   String
+  pricesType_id Int
+  price         Float
 
-    autopart  Autoparts  @relation(fields: [autopart_id], references: [id], onDelete: Cascade)
-    priceType PriceTypes @relation(fields: [pricesType_id], references: [id])
+  autopart  Autoparts  @relation(fields: [autopart_id], references: [id], onDelete: Cascade)
+  priceType PriceTypes @relation(fields: [pricesType_id], references: [id])
 
-    @@id([autopart_id, pricesType_id])
+  @@id([autopart_id, pricesType_id])
 }
 
 model PriceTypes {
-    id      Int              @id @default(autoincrement())
-    name    String
-    prices  AutopartPrices[]
-    clients Clients[]        @relation("ClientPriceAccess")
+  id      Int              @id @default(autoincrement())
+  name    String
+  prices  AutopartPrices[]
+  clients Clients[]        @relation("ClientPriceAccess")
 }
 
 model Brands {
-    id    Int         @id @default(autoincrement())
-    name  String      @unique
-    parts Autoparts[]
+  id    Int         @id @default(autoincrement())
+  name  String      @unique
+  parts Autoparts[]
 }
 
 model Categories {
-    id    Int         @id @default(autoincrement())
-    name  String      @unique
-    parts Autoparts[]
+  id    Int         @id @default(autoincrement())
+  name  String      @unique
+  parts Autoparts[]
 }
 
 model Auto {
-    id    Int              @id @default(autoincrement())
-    name  String           @unique
-    parts AutopartsAutos[]
+  id    Int              @id @default(autoincrement())
+  name  String           @unique
+  parts AutopartsAutos[]
 }
 
 model AutopartsAutos {
-    autopart_id String
-    auto_id     Int
+  autopart_id String
+  auto_id     Int
 
-    autopart Autoparts @relation(fields: [autopart_id], references: [id], onDelete: Cascade)
-    auto     Auto      @relation(fields: [auto_id], references: [id])
+  autopart Autoparts @relation(fields: [autopart_id], references: [id], onDelete: Cascade)
+  auto     Auto      @relation(fields: [auto_id], references: [id])
 
-    @@id([autopart_id, auto_id])
+  @@id([autopart_id, auto_id])
 }
 
 model EngineVolume {
-    id    Int                      @id @default(autoincrement())
-    name  String                   @unique
-    parts AutopartsEngineVolumes[]
+  id    Int                      @id @default(autoincrement())
+  name  String                   @unique
+  parts AutopartsEngineVolumes[]
 }
 
 model AutopartsEngineVolumes {
-    autopart_id      String
-    engine_volume_id Int
+  autopart_id      String
+  engine_volume_id Int
 
-    autopart     Autoparts    @relation(fields: [autopart_id], references: [id], onDelete: Cascade)
-    engineVolume EngineVolume @relation(fields: [engine_volume_id], references: [id])
+  autopart     Autoparts    @relation(fields: [autopart_id], references: [id], onDelete: Cascade)
+  engineVolume EngineVolume @relation(fields: [engine_volume_id], references: [id])
 
-    @@id([autopart_id, engine_volume_id])
+  @@id([autopart_id, engine_volume_id])
 }
 
 model Analogues {
-    id      Int    @id @default(autoincrement())
-    partAId String
-    partBId String
+  id      Int    @id @default(autoincrement())
+  partAId String
+  partBId String
 
-    partA Autoparts @relation("PartA", fields: [partAId], references: [id], onDelete: Cascade)
-    partB Autoparts @relation("PartB", fields: [partBId], references: [id], onDelete: Cascade)
+  partA Autoparts @relation("PartA", fields: [partAId], references: [id], onDelete: Cascade)
+  partB Autoparts @relation("PartB", fields: [partBId], references: [id], onDelete: Cascade)
 
-    @@unique([partAId, partBId])
+  @@unique([partAId, partBId])
 }
 
 model TextForAuthopartsSearch {
-    id    Int         @id @default(autoincrement())
-    text  String
-    parts Autoparts[]
+  id    Int         @id @default(autoincrement())
+  text  String
+  parts Autoparts[]
 }
 
 model FuelType {
-    id    Int         @id @default(autoincrement())
-    name  String      @unique
-    parts Autoparts[]
+  id    Int         @id @default(autoincrement())
+  name  String      @unique
+  parts Autoparts[]
 }
 
 model AppSettings {
-    id                        Int  @id @default(1)
-    defaultOrderStatusId      Int?
-    defaultDeliveryMethodId   Int?
-    defaultPurchaseStatusId   Int?
-    usdRateOffset             Float @default(0)
-    reservationDurationMinutes Int @default(1440)
-    tickerText                String?
-    dbAccessEnabled           Boolean @default(true)
-    pinCode                   String  @default("0000")
-    duressPin                 String  @default("1234")
+  id                         Int     @id @default(1)
+  defaultOrderStatusId       Int?
+  defaultDeliveryMethodId    Int?
+  defaultPurchaseStatusId    Int?
+  usdRateOffset              Float   @default(0)
+  reservationDurationMinutes Int     @default(1440)
+  tickerText                 String?
+  dbAccessEnabled            Boolean @default(true)
+  pinCode                    String  @default("0000")
+  duressPin                  String  @default("1234")
 
-    defaultOrderStatus    OrderStatuses?   @relation(fields: [defaultOrderStatusId], references: [id])
-    defaultDeliveryMethod DeliveryMethods? @relation(fields: [defaultDeliveryMethodId], references: [id])
-    defaultPurchaseStatus PurchaseStatuses? @relation(fields: [defaultPurchaseStatusId], references: [id])
+  defaultOrderStatus    OrderStatuses?    @relation(fields: [defaultOrderStatusId], references: [id])
+  defaultDeliveryMethod DeliveryMethods?  @relation(fields: [defaultDeliveryMethodId], references: [id])
+  defaultPurchaseStatus PurchaseStatuses? @relation(fields: [defaultPurchaseStatusId], references: [id])
 }
 
 enum ReservationStatus {
-    active
-    cancelled
-    expired
-    converted
+  active
+  cancelled
+  expired
+  converted
 }
 
 model Reservations {
-    id           String            @id @default(cuid())
-    client_id    String
-    autopart_id  String
-    warehouse_id Int?
-    quantity     Int
-    status       ReservationStatus @default(active)
-    notes        String?
-    reservedAt   DateTime          @default(now())
-    expiresAt    DateTime
-    createdAt    DateTime          @default(now())
-    updatedAt    DateTime          @updatedAt
+  id           String            @id @default(cuid())
+  client_id    String
+  autopart_id  String
+  warehouse_id Int?
+  quantity     Int
+  status       ReservationStatus @default(active)
+  notes        String?
+  reservedAt   DateTime          @default(now())
+  expiresAt    DateTime
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
 
-    client    Clients     @relation(fields: [client_id], references: [id])
-    autopart  Autoparts   @relation(fields: [autopart_id], references: [id])
-    warehouse Warehouses? @relation(fields: [warehouse_id], references: [id])
+  client    Clients     @relation(fields: [client_id], references: [id])
+  autopart  Autoparts   @relation(fields: [autopart_id], references: [id])
+  warehouse Warehouses? @relation(fields: [warehouse_id], references: [id])
 
-    @@index([client_id])
-    @@index([autopart_id])
-    @@index([status])
-    @@index([expiresAt])
+  @@index([client_id])
+  @@index([autopart_id])
+  @@index([status])
+  @@index([expiresAt])
 }
 
 model Suppliers {
-    id            Int       @id @default(autoincrement())
-    name          String
-    contactPerson String?
-    phone         String?
-    email         String?
-    notes         String?
-    createdAt     DateTime  @default(now())
-    updatedAt     DateTime  @updatedAt
+  id            Int      @id @default(autoincrement())
+  name          String
+  contactPerson String?
+  phone         String?
+  email         String?
+  notes         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
-    purchases PurchaseOrders[]
+  purchases PurchaseOrders[]
 }
 
 model PurchaseStatuses {
-    id       Int              @id @default(autoincrement())
-    name     String
-    hexColor String
-    isLast   Boolean          @default(false)
+  id       Int     @id @default(autoincrement())
+  name     String
+  hexColor String
+  isLast   Boolean @default(false)
 
-    purchases   PurchaseOrders[]
-    appSettings AppSettings[]
+  purchases   PurchaseOrders[]
+  appSettings AppSettings[]
 }
 
 model PurchaseOrders {
-    id                String   @id @default(cuid())
-    supplier_id       Int
-    purchaseStatus_id Int
-    totalAmount       Float    @default(0)
-    notes             String?
-    orderedAt         DateTime @default(now())
-    receivedAt        DateTime?
-    createdAt         DateTime @default(now())
-    updatedAt         DateTime @updatedAt
+  id                String    @id @default(cuid())
+  supplier_id       Int
+  purchaseStatus_id Int
+  totalAmount       Float     @default(0)
+  notes             String?
+  orderedAt         DateTime  @default(now())
+  expectedAt        DateTime?
+  receivedAt        DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 
-    supplier       Suppliers          @relation(fields: [supplier_id], references: [id])
-    purchaseStatus PurchaseStatuses   @relation(fields: [purchaseStatus_id], references: [id])
-    items          PurchaseOrderItems[]
+  supplier       Suppliers            @relation(fields: [supplier_id], references: [id])
+  purchaseStatus PurchaseStatuses     @relation(fields: [purchaseStatus_id], references: [id])
+  items          PurchaseOrderItems[]
 }
 
 model PurchaseOrderItems {
-    id                Int    @id @default(autoincrement())
-    purchaseOrder_id  String
-    autopart_id       String?
-    warehouse_id      Int
-    quantity          Int
-    purchase_price    Float
-    article           String
-    description       String
+  id               Int     @id @default(autoincrement())
+  purchaseOrder_id String
+  autopart_id      String?
+  warehouse_id     Int
+  quantity         Int
+  purchase_price   Float
+  article          String
+  description      String
 
-    purchaseOrder PurchaseOrders @relation(fields: [purchaseOrder_id], references: [id], onDelete: Cascade)
-    autopart      Autoparts?     @relation(fields: [autopart_id], references: [id], onDelete: SetNull)
-    warehouse     Warehouses     @relation(fields: [warehouse_id], references: [id])
+  purchaseOrder PurchaseOrders @relation(fields: [purchaseOrder_id], references: [id], onDelete: Cascade)
+  autopart      Autoparts?     @relation(fields: [autopart_id], references: [id], onDelete: SetNull)
+  warehouse     Warehouses     @relation(fields: [warehouse_id], references: [id])
 }
 
 model ReturnStatuses {
-    id         Int       @id @default(autoincrement())
-    name       String
-    hexColor   String
-    isAccepted Boolean   @default(false)
-    returns    Returns[]
+  id         Int       @id @default(autoincrement())
+  name       String
+  hexColor   String
+  isAccepted Boolean   @default(false)
+  returns    Returns[]
 }
 
 model Returns {
-    id               String    @id @default(cuid())
-    order_id         String?
-    client_id        String?
-    returnStatus_id  Int
-    reason           String?
-    adminComment     String?
-    createdAt        DateTime  @default(now())
-    resolvedAt       DateTime?
-    createdBy_userId String?
+  id               String    @id @default(cuid())
+  order_id         String?
+  client_id        String?
+  returnStatus_id  Int
+  reason           String?
+  adminComment     String?
+  createdAt        DateTime  @default(now())
+  resolvedAt       DateTime?
+  createdBy_userId String?
 
-    order        Orders?        @relation(fields: [order_id], references: [id])
-    client       Clients?       @relation(fields: [client_id], references: [id])
-    returnStatus ReturnStatuses @relation(fields: [returnStatus_id], references: [id])
-    createdBy    User?          @relation(fields: [createdBy_userId], references: [id])
-    items        ReturnItems[]
+  order        Orders?        @relation(fields: [order_id], references: [id])
+  client       Clients?       @relation(fields: [client_id], references: [id])
+  returnStatus ReturnStatuses @relation(fields: [returnStatus_id], references: [id])
+  createdBy    User?          @relation(fields: [createdBy_userId], references: [id])
+  items        ReturnItems[]
 }
 
 model ReturnItems {
-    id            Int     @id @default(autoincrement())
-    return_id     String
-    order_item_id Int?
-    autopart_id   String?
-    warehouse_id  Int
-    quantity      Int
-    article       String
-    description   String
+  id            Int     @id @default(autoincrement())
+  return_id     String
+  order_item_id Int?
+  autopart_id   String?
+  warehouse_id  Int
+  quantity      Int
+  article       String
+  description   String
 
-    return_   Returns     @relation(fields: [return_id], references: [id], onDelete: Cascade)
-    orderItem OrderItems? @relation(fields: [order_item_id], references: [id])
-    warehouse Warehouses  @relation(fields: [warehouse_id], references: [id])
+  return_   Returns     @relation(fields: [return_id], references: [id], onDelete: Cascade)
+  orderItem OrderItems? @relation(fields: [order_item_id], references: [id])
+  warehouse Warehouses  @relation(fields: [warehouse_id], references: [id])
 }

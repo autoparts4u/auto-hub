@@ -11,12 +11,14 @@ export interface Order {
   notes: string | null;
   deliveryAddress: string | null;
   trackingNumber: string | null;
+  scheduledHandoverAt: Date | string | null;
+  handoverNote: string | null;
   createdAt: Date | string;
   updatedAt: Date | string;
   issuedAt: Date | string | null;
   paidAt: Date | string | null;
   cancelledAt: Date | string | null;
-  
+
   // Связанные данные
   client?: Client;
   deliveryMethod?: DeliveryMethod;
@@ -34,7 +36,9 @@ export interface OrderItem {
   item_final_price: number;
   article: string;
   description: string;
-  
+  pickedAt: Date | string | null;
+  pickedBy_userId: string | null;
+
   // Связанные данные
   autopart?: {
     id: string;

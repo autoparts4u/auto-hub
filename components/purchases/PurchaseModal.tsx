@@ -61,6 +61,7 @@ export default function PurchaseModal({ open, onClose, onSuccess, editPurchase, 
   const [statusId, setStatusId] = useState('');
   const [notes, setNotes] = useState('');
   const [orderedAt, setOrderedAt] = useState('');
+  const [expectedAt, setExpectedAt] = useState('');
   const [items, setItems] = useState<PurchaseItem[]>([]);
   const [saving, setSaving] = useState(false);
 
@@ -84,6 +85,7 @@ export default function PurchaseModal({ open, onClose, onSuccess, editPurchase, 
         setStatusId(editPurchase.purchaseStatus_id.toString());
         setNotes(editPurchase.notes || '');
         setOrderedAt(editPurchase.orderedAt.split('T')[0]);
+        setExpectedAt(editPurchase.expectedAt ? editPurchase.expectedAt.split('T')[0] : '');
         const mapped: PurchaseItem[] = editPurchase.items.map((item) => ({
           autopart_id: item.autopart_id || '',
           autopartLabel: item.autopart_id
@@ -101,6 +103,7 @@ export default function PurchaseModal({ open, onClose, onSuccess, editPurchase, 
         setSupplierId('');
         setNotes('');
         setOrderedAt(today);
+        setExpectedAt('');
         // Подставляем дефолтный статус из настроек
         fetch('/api/settings')
           .then(r => r.json())
@@ -263,6 +266,7 @@ export default function PurchaseModal({ open, onClose, onSuccess, editPurchase, 
         purchaseStatus_id: parseInt(statusId),
         notes: notes || undefined,
         orderedAt,
+        expectedAt: expectedAt || null,
         items: items.map((i) => ({
           autopart_id: i.autopart_id,
           warehouse_id: i.warehouse_id,
@@ -378,6 +382,16 @@ export default function PurchaseModal({ open, onClose, onSuccess, editPurchase, 
                 type="date"
                 value={orderedAt}
                 onChange={(e) => setOrderedAt(e.target.value)}
+                className="w-full h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Ожидается</Label>
+              <input
+                type="date"
+                value={expectedAt}
+                onChange={(e) => setExpectedAt(e.target.value)}
                 className="w-full h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               />
             </div>

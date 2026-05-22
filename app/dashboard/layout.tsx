@@ -1,6 +1,7 @@
 import { Sidebar } from "@/components/layout/sidebar";
 import { Breadcrumbs } from "@/components/layout/breadcrumbs";
 import { PinProvider } from "@/components/admin/PinProvider";
+import { ServiceWorkerRegister } from "@/components/dashboard/ServiceWorkerRegister";
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
 
@@ -10,6 +11,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   return (
     <PinProvider>
+      <ServiceWorkerRegister />
       <div className="relative min-h-screen md:flex">
         <Sidebar />
         <main className="flex-1 p-4 md:p-6">

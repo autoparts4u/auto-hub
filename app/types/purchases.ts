@@ -43,6 +43,7 @@ export interface PurchaseOrder {
   totalAmount: number;
   notes: string | null;
   orderedAt: string;
+  expectedAt: string | null;
   receivedAt: string | null;
   createdAt: string;
   updatedAt: string;
@@ -57,6 +58,7 @@ export interface CreatePurchaseDTO {
   purchaseStatus_id: number;
   notes?: string;
   orderedAt?: string;
+  expectedAt?: string | null;
   items: {
     autopart_id: string;
     warehouse_id: number;

@@ -26,11 +26,14 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
 import {
   Package,
   Truck,
   Calendar,
+  CalendarClock,
   Wallet,
   User,
   MapPin,
@@ -71,6 +74,12 @@ export default function OrderDetailsModal({
   const [comment, setComment] = useState('');
   const [showItemDetails, setShowItemDetails] = useState(false);
 
+  // Сборка и выдача
+  const [scheduledHandoverAt, setScheduledHandoverAt] = useState('');
+  const [handoverNote, setHandoverNote] = useState('');
+  const [savingSchedule, setSavingSchedule] = useState(false);
+  const [togglingItemId, setTogglingItemId] = useState<number | null>(null);
+
   useEffect(() => {
     if (open && orderId) {
       fetchOrderDetails();
@@ -88,6 +97,17 @@ export default function OrderDetailsModal({
         const data = await res.json();
         setOrder(data);
         setNewStatusId(data.orderStatus_id.toString());
+        // sync handover form
+        if (data.scheduledHandoverAt) {
+          const d = new Date(data.scheduledHandoverAt);
+          const pad = (n: number) => String(n).padStart(2, '0');
+          setScheduledHandoverAt(
+            `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+          );
+        } else {
+          setScheduledHandoverAt('');
+        }
+        setHandoverNote(data.handoverNote ?? '');
       } else if (!silent) {
         toast.error('Ошибка загрузки заказа');
       }
@@ -140,6 +160,65 @@ export default function OrderDetailsModal({
       }
     } catch {
       toast.error('Ошибка обновления статуса возврата');
+    }
+  };
+
+  const handleSaveSchedule = async () => {
+    try {
+      setSavingSchedule(true);
+      const res = await fetch(`/api/orders/${orderId}/schedule`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          scheduledHandoverAt: scheduledHandoverAt ? new Date(scheduledHandoverAt).toISOString() : null,
+          handoverNote: handoverNote || null,
+        }),
+      });
+      if (res.ok) {
+        toast.success('Выдача обновлена');
+        fetchOrderDetails(true);
+      } else {
+        const error = await res.json();
+        toast.error(error.error || 'Ошибка сохранения');
+      }
+    } catch (error) {
+      console.error('Error saving schedule:', error);
+      toast.error('Ошибка сохранения');
+    } finally {
+      setSavingSchedule(false);
+    }
+  };
+
+  const handleTogglePick = async (itemId: number, picked: boolean) => {
+    // оптимистично отметим в UI
+    setTogglingItemId(itemId);
+    setOrder((prev) =>
+      prev
+        ? {
+            ...prev,
+            orderItems: prev.orderItems?.map((it) =>
+              it.id === itemId ? { ...it, pickedAt: picked ? new Date().toISOString() : null } : it
+            ),
+          }
+        : prev
+    );
+    try {
+      const res = await fetch(`/api/orders/${orderId}/items/${itemId}/pick`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ picked }),
+      });
+      if (!res.ok) {
+        const error = await res.json();
+        toast.error(error.error || 'Ошибка обновления сборки');
+        fetchOrderDetails(true); // откатить из БД
+      }
+    } catch (error) {
+      console.error('Error toggling pick:', error);
+      toast.error('Ошибка обновления сборки');
+      fetchOrderDetails(true);
+    } finally {
+      setTogglingItemId(null);
     }
   };
 
@@ -373,61 +452,139 @@ export default function OrderDetailsModal({
 
           {/* Позиции заказа */}
           <div>
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="font-semibold flex items-center gap-2">
-                <Package className="h-4 w-4" />
-                Позиции заказа ({order.orderItems?.length || 0})
-              </h3>
-              <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  checked={showItemDetails}
-                  onChange={(e) => setShowItemDetails(e.target.checked)}
-                  className="h-4 w-4 rounded border-gray-300"
-                />
-                Доп. инфо
-              </label>
-            </div>
-            <div className="space-y-2">
-              {order.orderItems?.map((item) => (
-                <div
-                  key={item.id}
-                  className="border rounded-lg p-3 space-y-1"
-                >
-                  <div className="flex justify-between items-start">
-                    <div className="flex-1">
-                      <div className="font-medium">{item.article}</div>
-                      {showItemDetails && (
-                        <>
-                          <div className="text-sm text-muted-foreground">
-                            {item.description}
-                          </div>
-                          {item.autopart?.brand && (
-                            <div className="text-xs text-muted-foreground">
-                              Бренд: {item.autopart.brand.name}
-                            </div>
-                          )}
-                        </>
-                      )}
-                    </div>
-                    <div className="text-right shrink-0 ml-4">
-                      <div className="text-base font-semibold text-foreground">
-                        {item.quantity} × {formatCurrency(item.item_final_price)}
-                      </div>
-                      <div className="font-extrabold text-xl text-foreground">
-                        {formatCurrency(item.item_final_price * item.quantity)}
-                      </div>
-                    </div>
+            {(() => {
+              const items = order.orderItems ?? [];
+              const total = items.length;
+              const picked = items.filter((i) => i.pickedAt).length;
+              const allPicked = total > 0 && picked === total;
+              const canPick = !order.orderStatus?.isLast && !order.cancelledAt;
+              return (
+                <>
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="font-semibold flex items-center gap-2">
+                      <Package className="h-4 w-4" />
+                      Позиции ({total})
+                      <Badge
+                        variant={allPicked ? 'default' : 'secondary'}
+                        className={allPicked ? 'bg-emerald-600 hover:bg-emerald-600' : ''}
+                      >
+                        собрано {picked}/{total}
+                      </Badge>
+                    </h3>
+                    <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={showItemDetails}
+                        onChange={(e) => setShowItemDetails(e.target.checked)}
+                        className="h-4 w-4 rounded border-gray-300"
+                      />
+                      Доп. инфо
+                    </label>
                   </div>
-                  {showItemDetails && (
-                    <div className="text-xs text-muted-foreground">
-                      Склад: {item.warehouse?.name}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
+                  <div className="space-y-2">
+                    {items.map((item) => {
+                      const isPicked = !!item.pickedAt;
+                      return (
+                        <div
+                          key={item.id}
+                          className={`border rounded-lg p-3 space-y-1 transition-colors ${
+                            isPicked ? 'bg-emerald-50/50 border-emerald-200 dark:bg-emerald-950/20 dark:border-emerald-900' : ''
+                          }`}
+                        >
+                          <div className="flex justify-between items-start gap-3">
+                            <div className="flex items-start gap-3 flex-1 min-w-0">
+                              {canPick && (
+                                <Checkbox
+                                  checked={isPicked}
+                                  disabled={togglingItemId === item.id}
+                                  onCheckedChange={(checked) =>
+                                    handleTogglePick(item.id, checked === true)
+                                  }
+                                  className="mt-1"
+                                  aria-label={isPicked ? 'Снять отметку «собрано»' : 'Отметить «собрано»'}
+                                />
+                              )}
+                              <div className="flex-1 min-w-0">
+                                <div className={`font-medium ${isPicked ? 'line-through text-muted-foreground' : ''}`}>
+                                  {item.article}
+                                </div>
+                                {showItemDetails && (
+                                  <>
+                                    <div className="text-sm text-muted-foreground">{item.description}</div>
+                                    {item.autopart?.brand && (
+                                      <div className="text-xs text-muted-foreground">
+                                        Бренд: {item.autopart.brand.name}
+                                      </div>
+                                    )}
+                                  </>
+                                )}
+                                {isPicked && item.pickedAt && (
+                                  <div className="mt-0.5 text-xs text-emerald-700 dark:text-emerald-400">
+                                    собрано {formatDate(item.pickedAt)}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                            <div className="text-right shrink-0 ml-4">
+                              <div className="text-base font-semibold text-foreground">
+                                {item.quantity} × {formatCurrency(item.item_final_price)}
+                              </div>
+                              <div className="font-extrabold text-xl text-foreground">
+                                {formatCurrency(item.item_final_price * item.quantity)}
+                              </div>
+                            </div>
+                          </div>
+                          {showItemDetails && (
+                            <div className="text-xs text-muted-foreground">Склад: {item.warehouse?.name}</div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </>
+              );
+            })()}
           </div>
+
+          <Separator />
+
+          {/* Выдача */}
+          {!order.orderStatus?.isLast && !order.cancelledAt && (
+            <div className="space-y-3">
+              <h3 className="font-semibold flex items-center gap-2">
+                <CalendarClock className="h-4 w-4" />
+                Выдача
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label>Дата и время</Label>
+                  <Input
+                    type="datetime-local"
+                    value={scheduledHandoverAt}
+                    onChange={(e) => setScheduledHandoverAt(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Комментарий к выдаче</Label>
+                  <Textarea
+                    value={handoverNote}
+                    onChange={(e) => setHandoverNote(e.target.value)}
+                    placeholder="Где встречаемся, что взять, нюансы…"
+                    rows={2}
+                  />
+                </div>
+              </div>
+              <div className="flex justify-end">
+                <Button
+                  size="sm"
+                  onClick={handleSaveSchedule}
+                  disabled={savingSchedule}
+                >
+                  {savingSchedule ? 'Сохраняем…' : 'Сохранить'}
+                </Button>
+              </div>
+            </div>
+          )}
 
           <Separator />
 
