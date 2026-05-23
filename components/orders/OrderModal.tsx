@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Client, OrderStatus, DeliveryMethod, CreateOrderItemDTO } from '@/app/types/orders';
 import {
   Dialog,
@@ -75,9 +75,14 @@ export default function OrderModal({
   const [discount, setDiscount] = useState(0);
 
   const [deliveryMethods, setDeliveryMethods] = useState<DeliveryMethod[]>([]);
-  const [autoparts, setAutoparts] = useState<Autopart[]>([]);
+  const [autoparts, setAutoparts] = useState<Autopart[]>([]); // результаты текущего поиска (топ-25)
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
   const [items, setItems] = useState<CreateOrderItemDTO[]>([]);
+
+  // Кэш всех когда-либо виденных запчастей (по id) — чтобы список позиций
+  // мог отрисовать название даже после смены поискового запроса.
+  const [partsById, setPartsById] = useState<Record<string, Autopart>>({});
+  const [searchingParts, setSearchingParts] = useState(false);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedAutopartId, setSelectedAutopartId] = useState('');
@@ -85,32 +90,70 @@ export default function OrderModal({
   const [quantity, setQuantity] = useState(1);
   const [price, setPrice] = useState(0);
 
+  const autopartTriggerRef = useRef<HTMLButtonElement>(null);
+
+  // Дефолт статуса: настройки → первый не-финальный → первый из списка.
+  const applyDefaultStatus = (defaultOrderStatusId?: number | null) => {
+    if (defaultOrderStatusId && statuses.some(s => s.id === defaultOrderStatusId)) {
+      setStatusId(defaultOrderStatusId.toString());
+      return;
+    }
+    const fallback =
+      statuses.find(s => s.name === 'Новый') ||
+      statuses.find(s => !s.isLast) ||
+      statuses[0];
+    if (fallback) setStatusId(fallback.id.toString());
+  };
+
   useEffect(() => {
     if (open) {
-      fetchAutoparts();
       fetchWarehouses();
-      fetchDeliveryMethods();
+      fetchDeliveryMethods(); // общий список; уточнится при выборе клиента
 
       // Читаем дефолты из настроек
       fetch('/api/settings')
         .then(r => r.json())
         .then(defaults => {
-          if (defaults.defaultOrderStatusId) {
-            setStatusId(defaults.defaultOrderStatusId.toString());
-          } else {
-            const newStatus = statuses.find(s => s.name === 'Новый');
-            if (newStatus) setStatusId(newStatus.id.toString());
-          }
+          applyDefaultStatus(defaults.defaultOrderStatusId);
           if (defaults.defaultDeliveryMethodId) {
             setDeliveryMethodId(defaults.defaultDeliveryMethodId.toString());
           }
         })
-        .catch(() => {
-          const newStatus = statuses.find(s => s.name === 'Новый');
-          if (newStatus) setStatusId(newStatus.id.toString());
-        });
+        .catch(() => applyDefaultStatus());
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, statuses]);
+
+  // Дебаунс-поиск запчастей на сервере (вместо предзагрузки всего каталога)
+  useEffect(() => {
+    const q = searchTerm.trim();
+    if (!q) {
+      setAutoparts([]);
+      setSearchingParts(false);
+      return;
+    }
+    setSearchingParts(true);
+    const handle = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/autoparts/search?q=${encodeURIComponent(q)}&full=1`);
+        if (res.ok) {
+          const data: Autopart[] = await res.json();
+          setAutoparts(data);
+          // мерджим в кэш для отрисовки названий в списке позиций
+          setPartsById(prev => {
+            const next = { ...prev };
+            for (const p of data) next[p.id] = p;
+            return next;
+          });
+        }
+      } catch (error) {
+        console.error('Error searching autoparts:', error);
+      } finally {
+        setSearchingParts(false);
+      }
+    }, 200);
+    return () => clearTimeout(handle);
+  }, [searchTerm]);
 
   useEffect(() => {
     if (clientId) {
@@ -122,21 +165,6 @@ export default function OrderModal({
       }
     }
   }, [clientId, clients]);
-
-  const fetchAutoparts = async () => {
-    try {
-      const res = await fetch('/api/autoparts');
-      if (res.ok) {
-        const data = await res.json();
-        console.log('Loaded autoparts:', data.length, 'items');
-        setAutoparts(data);
-      } else {
-        console.error('Failed to fetch autoparts:', res.status, res.statusText);
-      }
-    } catch (error) {
-      console.error('Error fetching autoparts:', error);
-    }
-  };
 
   const fetchWarehouses = async () => {
     try {
@@ -196,6 +224,9 @@ export default function OrderModal({
     setQuantity(1);
     setPrice(0);
     setSearchTerm('');
+    setAutoparts([]);
+    // Возврат фокуса на выбор запчасти — для быстрого ввода следующей позиции
+    requestAnimationFrame(() => autopartTriggerRef.current?.focus());
   };
 
   const handleRemoveItem = (index: number) => {
@@ -264,18 +295,19 @@ export default function OrderModal({
     setSelectedWarehouseId('');
     setQuantity(1);
     setPrice(0);
+    setAutoparts([]);
     onClose();
   };
 
   const getAutopartDisplay = (autopartId: string) => {
-    const autopart = autoparts.find(a => a.id === autopartId);
+    const autopart = partsById[autopartId];
     if (!autopart) return 'Неизвестная запчасть';
     return `${autopart.article} - ${autopart.description}`;
   };
 
   const getSelectedAutopartName = () => {
     if (!selectedAutopartId) return null;
-    const autopart = autoparts.find(a => a.id === selectedAutopartId);
+    const autopart = partsById[selectedAutopartId];
     if (!autopart) return null;
     return autopart.article;
   };
@@ -286,32 +318,31 @@ export default function OrderModal({
   };
 
   const getAutopartQuantityInWarehouse = (autopartId: string, warehouseId: number): number => {
-    const autopart = autoparts.find(ap => ap.id === autopartId);
+    const autopart = partsById[autopartId];
     if (!autopart || !autopart.warehouses) return 0;
-    
+
     const warehouseStock = autopart.warehouses.find(w => w.warehouse_id === warehouseId);
     return warehouseStock?.quantity || 0;
   };
 
-  const filteredAutoparts = useMemo(() => {
-    const result = searchTerm.trim() 
-      ? autoparts.filter(ap =>
-          ap.article.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          ap.description.toLowerCase().includes(searchTerm.toLowerCase())
-        )
-      : autoparts.slice(0, 100); // Показываем первые 100 запчастей, если нет поиска
-    
-    console.log('Filtered autoparts:', result.length, 'items (search:', searchTerm, ')');
-    return result;
-  }, [autoparts, searchTerm]);
+  // Список для дропдауна = результаты серверного поиска (top-25)
+  const filteredAutoparts = autoparts;
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-4xl flex flex-col h-[90vh]">
+      <DialogContent
+        className="max-w-4xl flex flex-col h-[90vh]"
+        onKeyDown={(e) => {
+          if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+            e.preventDefault();
+            handleSubmit();
+          }
+        }}
+      >
         <DialogHeader className="flex-shrink-0">
           <DialogTitle>Создать новый заказ</DialogTitle>
           <DialogDescription>
-            Заполните информацию о заказе и добавьте позиции
+            Заполните информацию о заказе и добавьте позиции · Ctrl/⌘+Enter — создать
           </DialogDescription>
         </DialogHeader>
 
@@ -325,24 +356,17 @@ export default function OrderModal({
                 value={clientId} 
                 onValueChange={(value) => {
                   setClientId(value);
-                  
+
                   // Обновляем цену при изменении клиента (если запчасть уже выбрана)
                   if (selectedAutopartId) {
-                    const selectedAutopart = autoparts.find(a => a.id === selectedAutopartId);
+                    const selectedAutopart = partsById[selectedAutopartId];
                     const selectedClient = clients.find(c => c.id === value);
-                    
+
                     if (selectedAutopart && selectedClient && selectedClient.priceAccessId && selectedAutopart.prices) {
                       const matchingPrice = selectedAutopart.prices.find(
                         p => p.pricesType_id === selectedClient.priceAccessId
                       );
-                      
-                      if (matchingPrice) {
-                        setPrice(matchingPrice.price);
-                        console.log(`Цена обновлена для нового клиента: ${matchingPrice.price} (тип: ${matchingPrice.priceType.name})`);
-                      } else {
-                        setPrice(0);
-                        console.log('Цена для данного типа не найдена у нового клиента');
-                      }
+                      setPrice(matchingPrice ? matchingPrice.price : 0);
                     }
                   }
                 }}
@@ -459,35 +483,36 @@ export default function OrderModal({
             {/* Запчасть - на всю ширину */}
             <div className="space-y-2">
               <Label htmlFor="autopart-select">Запчасть *</Label>
-              <Select 
-                value={selectedAutopartId} 
+              <Select
+                value={selectedAutopartId}
                 onValueChange={(value) => {
                   setSelectedAutopartId(value);
                   setSearchTerm('');
-                  
-                  // Автоматический подбор цены
-                  const selectedAutopart = autoparts.find(a => a.id === value);
+
+                  const selectedAutopart = autoparts.find(a => a.id === value) || partsById[value];
                   const selectedClient = clients.find(c => c.id === clientId);
-                  
+
+                  // Автоматический подбор цены по типу цены клиента
                   if (selectedAutopart && selectedClient && selectedClient.priceAccessId && selectedAutopart.prices) {
                     const matchingPrice = selectedAutopart.prices.find(
                       p => p.pricesType_id === selectedClient.priceAccessId
                     );
-                    
-                    if (matchingPrice) {
-                      setPrice(matchingPrice.price);
-                      console.log(`Автоматически установлена цена: ${matchingPrice.price} (тип: ${matchingPrice.priceType.name})`);
-                    } else {
-                      // Если нет соответствующей цены, устанавливаем 0
-                      setPrice(0);
-                      console.log('Цена для данного типа не найдена');
-                    }
+                    setPrice(matchingPrice ? matchingPrice.price : 0);
                   } else {
                     setPrice(0);
                   }
+
+                  // Автовыбор склада с максимальным остатком > 0
+                  if (selectedAutopart?.warehouses?.length) {
+                    const best = [...selectedAutopart.warehouses]
+                      .filter(w => w.quantity > 0)
+                      .sort((a, b) => b.quantity - a.quantity)[0];
+                    if (best) setSelectedWarehouseId(best.warehouse_id.toString());
+                  }
                 }}
               >
-                <SelectTrigger 
+                <SelectTrigger
+                  ref={autopartTriggerRef}
                   id="autopart-select"
                   className={!selectedAutopartId ? "border-orange-300" : ""}
                 >
@@ -523,7 +548,11 @@ export default function OrderModal({
                   </div>
                   {filteredAutoparts.length === 0 ? (
                     <div className="p-4 text-sm text-muted-foreground text-center">
-                      {searchTerm ? 'Ничего не найдено' : 'Нет доступных запчастей'}
+                      {searchingParts
+                        ? 'Поиск…'
+                        : searchTerm
+                        ? 'Ничего не найдено'
+                        : 'Начните вводить артикул или описание'}
                     </div>
                   ) : (
                     <div className="max-h-[250px] overflow-y-auto">
@@ -584,6 +613,7 @@ export default function OrderModal({
                 <Input
                   id="quantity"
                   type="number"
+                  inputMode="numeric"
                   value={quantity}
                   onChange={(e) => {
                     const value = e.target.value;
@@ -606,6 +636,12 @@ export default function OrderModal({
                       setQuantity(1);
                     }
                   }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleAddItem();
+                    }
+                  }}
                   min="1"
                   className={quantity <= 0 ? "border-orange-300" : ""}
                 />
@@ -617,6 +653,7 @@ export default function OrderModal({
                 <Input
                   id="price"
                   type="number"
+                  inputMode="decimal"
                   value={price}
                   onChange={(e) => setPrice(parseFloat(e.target.value) || 0)}
                   onFocus={(e) => {
@@ -627,6 +664,12 @@ export default function OrderModal({
                   onBlur={(e) => {
                     if (e.target.value === '') {
                       setPrice(0);
+                    }
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleAddItem();
                     }
                   }}
                   min="0"

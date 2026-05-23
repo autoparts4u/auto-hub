@@ -391,14 +391,17 @@ export function TasksWidget({ data }: { data: DashboardTasks }) {
   // первичная загрузка статусов + посев seenAlertingIds + восстановление mute
   useEffect(() => {
     let cancelled = false;
+    // Предзагрузка зависимостей для «+ Новый заказ» — чтобы модал открывался мгновенно
     Promise.all([
       fetch('/api/order-statuses').then((r) => (r.ok ? r.json() : [])),
       fetch('/api/purchase-statuses').then((r) => (r.ok ? r.json() : [])),
+      fetch('/api/clients').then((r) => (r.ok ? r.json() : [])),
     ])
-      .then(([os, ps]) => {
+      .then(([os, ps, cl]) => {
         if (cancelled) return;
         setOrderStatuses(os);
         setPurchaseStatuses(ps);
+        setClients(cl);
       })
       .catch(() => {});
 
@@ -475,19 +478,20 @@ export function TasksWidget({ data }: { data: DashboardTasks }) {
   }, [fetchFresh]);
 
   const openNewOrder = async () => {
+    // Клиенты обычно уже предзагружены на маунте → открываем мгновенно.
+    if (clients) {
+      setShowNewOrder(true);
+      return;
+    }
     setLoadingNewOrderDeps(true);
     try {
-      if (!clients) {
-        const res = await fetch('/api/clients');
-        if (res.ok) {
-          const data = (await res.json()) as Client[];
-          setClients(data);
-        } else {
-          toast.error('Не удалось загрузить список клиентов');
-          return;
-        }
+      const res = await fetch('/api/clients');
+      if (res.ok) {
+        setClients((await res.json()) as Client[]);
+        setShowNewOrder(true);
+      } else {
+        toast.error('Не удалось загрузить список клиентов');
       }
-      setShowNewOrder(true);
     } catch (e) {
       console.error(e);
       toast.error('Не удалось открыть форму заказа');

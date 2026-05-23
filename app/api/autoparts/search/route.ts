@@ -1,9 +1,19 @@
 import { NextResponse } from "next/server";
+import { auth } from "@/lib/auth";
 import db from "@/lib/db/db";
 
+// GET /api/autoparts/search?q=...&full=1
+// Лёгкий серверный поиск для форм (заказ/поступление). Возвращает топ-25.
+// full=1 — включает warehouses + prices (нужно OrderModal для авто-склада и авто-цены).
 export async function GET(req: Request) {
+  const session = await auth();
+  if (!session) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const { searchParams } = new URL(req.url);
-  const query = searchParams.get("q") || "";
+  const query = (searchParams.get("q") || "").trim();
+  const full = searchParams.get("full") === "1";
 
   if (!query) {
     return NextResponse.json([], { status: 200 });
@@ -16,14 +26,19 @@ export async function GET(req: Request) {
         { description: { contains: query, mode: "insensitive" } },
       ],
     },
-    take: 20,
-    include: {
-      brand: true,
-      category: true,
-    },
+    take: 25,
+    orderBy: { article: "asc" },
+    include: full
+      ? {
+          brand: true,
+          warehouses: { include: { warehouse: true } },
+          prices: { include: { priceType: true } },
+        }
+      : {
+          brand: true,
+          category: true,
+        },
   });
-
-  console.log(parts)
 
   return NextResponse.json(parts);
 }
