@@ -25,6 +25,7 @@ import {
   Moon,
   RefreshCw,
   Plus,
+  ChevronDown,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { getContrastTextColor } from '@/lib/utils';
@@ -331,6 +332,8 @@ function Section({
   href?: string;
   children: React.ReactNode;
 }) {
+  // На мобилке свёрнуто по умолчанию; на десктопе контент всегда виден через md:!block.
+  const [open, setOpen] = useState(false);
   const toneRing =
     tone === 'danger'
       ? 'ring-1 ring-destructive/40'
@@ -340,20 +343,32 @@ function Section({
   return (
     <Card className={toneRing}>
       <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-3">
-        <CardTitle className="flex items-center gap-2 text-base">
-          <Icon className="size-4" />
-          {title}
-          <Badge variant="secondary" className="ml-1">
-            {count}
-          </Badge>
-        </CardTitle>
+        <button
+          type="button"
+          onClick={() => setOpen((o) => !o)}
+          aria-expanded={open}
+          className="flex flex-1 items-center gap-2 text-left md:pointer-events-none md:cursor-default"
+        >
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Icon className="size-4" />
+            {title}
+            <Badge variant="secondary" className="ml-1">
+              {count}
+            </Badge>
+          </CardTitle>
+          <ChevronDown
+            className={`ml-auto size-4 text-muted-foreground transition-transform md:hidden ${
+              open ? 'rotate-180' : ''
+            }`}
+          />
+        </button>
         {href && (
           <Link href={href} className="text-xs text-muted-foreground transition-colors hover:text-foreground">
             открыть →
           </Link>
         )}
       </CardHeader>
-      <CardContent className="space-y-2">{children}</CardContent>
+      <CardContent className={`space-y-2 md:!block ${open ? '' : 'hidden'}`}>{children}</CardContent>
     </Card>
   );
 }

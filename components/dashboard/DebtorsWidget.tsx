@@ -10,7 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { CircleDollarSign, Phone } from 'lucide-react';
+import { CircleDollarSign, ChevronDown, Phone } from 'lucide-react';
 import { getContrastTextColor } from '@/lib/utils';
 import type { DashboardTasks } from '@/lib/services/dashboardTasks';
 
@@ -147,6 +147,8 @@ export function DebtorsWidget({
   onOpenOrder: (orderId: string) => void;
 }) {
   const [selected, setSelected] = useState<Debtor | null>(null);
+  // На мобилке свёрнуто по умолчанию; на десктопе всегда видно через md:!block.
+  const [open, setOpen] = useState(false);
 
   const shown = debtors.length;
   const isToneDanger = totalAmount > 0;
@@ -155,20 +157,32 @@ export function DebtorsWidget({
     <>
       <Card className={isToneDanger ? 'ring-1 ring-destructive/40' : ''}>
         <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-3">
-          <CardTitle className="flex items-center gap-2 text-base">
-            <CircleDollarSign className="size-4" />
-            Должники
-            <Badge variant="secondary" className="ml-1">
-              {totalCount}
-            </Badge>
-            {totalAmount > 0 && (
-              <span className="ml-2 text-sm font-bold text-destructive">
-                {formatMoney(totalAmount)} ₽
-              </span>
-            )}
-          </CardTitle>
+          <button
+            type="button"
+            onClick={() => setOpen((o) => !o)}
+            aria-expanded={open}
+            className="flex flex-1 items-center gap-2 text-left md:pointer-events-none md:cursor-default"
+          >
+            <CardTitle className="flex items-center gap-2 text-base">
+              <CircleDollarSign className="size-4" />
+              Должники
+              <Badge variant="secondary" className="ml-1">
+                {totalCount}
+              </Badge>
+              {totalAmount > 0 && (
+                <span className="ml-2 text-sm font-bold text-destructive">
+                  {formatMoney(totalAmount)} ₽
+                </span>
+              )}
+            </CardTitle>
+            <ChevronDown
+              className={`ml-auto size-4 text-muted-foreground transition-transform md:hidden ${
+                open ? 'rotate-180' : ''
+              }`}
+            />
+          </button>
         </CardHeader>
-        <CardContent>
+        <CardContent className={`md:!block ${open ? '' : 'hidden'}`}>
           {shown === 0 ? (
             <div className="rounded-md border border-dashed px-3 py-4 text-center text-sm text-muted-foreground">
               Должников нет
