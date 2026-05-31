@@ -1,7 +1,14 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Return, ReturnStatus } from '@/app/types/orders';
+import {
+  RETURN_PRESET_LABELS,
+  filterReturnsByPreset,
+  isReturnPreset,
+  type ReturnPreset,
+} from '@/lib/dashboard/presets';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -20,7 +27,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Plus, Search, ChevronDown, ChevronUp } from 'lucide-react';
+import { Plus, Search, ChevronDown, ChevronUp, Filter, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { getContrastTextColor } from '@/lib/utils';
 import FreeReturnModal from './FreeReturnModal';
@@ -40,6 +47,13 @@ const formatDate = (iso: string) =>
   });
 
 export default function ReturnsTable() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const returnPresetRaw = searchParams.get('returnPreset');
+  const returnPreset: ReturnPreset | null = isReturnPreset(returnPresetRaw)
+    ? returnPresetRaw
+    : null;
+
   const [returns, setReturns] = useState<ReturnWithOrder[]>([]);
   const [statuses, setStatuses] = useState<ReturnStatus[]>([]);
   const [loading, setLoading] = useState(true);
@@ -96,8 +110,39 @@ export default function ReturnsTable() {
 
   const pending = returns.filter((r) => !r.resolvedAt).length;
 
+  const visibleReturns = useMemo(
+    () => (returnPreset ? filterReturnsByPreset(returns, returnPreset) : returns),
+    [returns, returnPreset]
+  );
+
+  const clearReturnPreset = () => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete('returnPreset');
+    const qs = params.toString();
+    router.replace(qs ? `?${qs}` : '?', { scroll: false });
+  };
+
   return (
     <div className="space-y-4">
+      {returnPreset && (
+        <div className="flex items-center gap-2 rounded-md border border-primary/30 bg-primary/5 px-3 py-2 text-sm">
+          <Filter className="h-4 w-4 text-primary" />
+          <span className="text-muted-foreground">Преднабор с дашборда:</span>
+          <span className="font-medium">{RETURN_PRESET_LABELS[returnPreset]}</span>
+          <span className="ml-1 text-xs text-muted-foreground">· найдено {visibleReturns.length}</span>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={clearReturnPreset}
+            className="ml-auto h-7 px-2"
+          >
+            <X className="h-3.5 w-3.5 mr-1" />
+            Сбросить
+          </Button>
+        </div>
+      )}
+
       {/* Toolbar */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div className="flex items-center gap-3">
@@ -138,7 +183,7 @@ export default function ReturnsTable() {
       {/* Table */}
       {loading ? (
         <div className="text-center py-12 text-muted-foreground">Загрузка...</div>
-      ) : returns.length === 0 ? (
+      ) : visibleReturns.length === 0 ? (
         <div className="text-center py-12 text-muted-foreground">Возвратов не найдено</div>
       ) : (
         <div className="border rounded-lg overflow-hidden">
@@ -156,7 +201,7 @@ export default function ReturnsTable() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {returns.map((ret) => (
+              {visibleReturns.map((ret) => (
                 <>
                   <TableRow
                     key={ret.id}

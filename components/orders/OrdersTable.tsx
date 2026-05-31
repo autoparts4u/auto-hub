@@ -1,7 +1,14 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Order, OrderStatus, Client } from '@/app/types/orders';
+import {
+  ORDER_PRESET_LABELS,
+  filterOrdersByPreset,
+  isOrderPreset,
+  type OrderPreset,
+} from '@/lib/dashboard/presets';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
@@ -46,6 +53,17 @@ import OrderDetailsModal from './OrderDetailsModal';
 import OrderPaymentModal from './OrderPaymentModal';
 
 export default function OrdersTable() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // URL-пресет дашборда (handoverToday, handoverOverdue, inAssembly, stale) —
+  // источник правды для этого фильтра. Чтобы UI на этой странице видно
+  // отображал «откуда пришёл» пользователь и давал × для сброса.
+  const dashboardPresetRaw = searchParams.get('dashboardPreset');
+  const dashboardPreset: OrderPreset | null = isOrderPreset(dashboardPresetRaw)
+    ? dashboardPresetRaw
+    : null;
+
   const [orders, setOrders] = useState<Order[]>([]);
   const [statuses, setStatuses] = useState<OrderStatus[]>([]);
   const [allClients, setAllClients] = useState<Client[]>([]);
@@ -53,7 +71,10 @@ export default function OrdersTable() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [clientFilter, setClientFilter] = useState<string>('all');
-  const [unpaidIssuedFilter, setUnpaidIssuedFilter] = useState(false);
+  // Инициализация ?unpaidIssued=1 из URL (на сейчас — только initial; toggle живёт в стейте)
+  const [unpaidIssuedFilter, setUnpaidIssuedFilter] = useState<boolean>(
+    () => searchParams.get('unpaidIssued') === '1' || searchParams.get('unpaidIssued') === 'true'
+  );
 
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
@@ -261,7 +282,7 @@ export default function OrdersTable() {
     return count;
   };
 
-  const filteredOrders = orders.filter((order) => {
+  const filteredOrdersBeforePreset = orders.filter((order) => {
     // Фильтр по вкладке: активные / отменённые
     if (ordersTab === 'cancelled' ? !order.cancelledAt : !!order.cancelledAt) return false;
 
@@ -281,8 +302,43 @@ export default function OrdersTable() {
     );
   });
 
+  // URL-пресет применяем последним поверх остальных фильтров.
+  const filteredOrders = useMemo(
+    () =>
+      dashboardPreset
+        ? filterOrdersByPreset(filteredOrdersBeforePreset, dashboardPreset)
+        : filteredOrdersBeforePreset,
+    [filteredOrdersBeforePreset, dashboardPreset]
+  );
+
+  const clearDashboardPreset = () => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete('dashboardPreset');
+    const qs = params.toString();
+    router.replace(qs ? `?${qs}` : '?', { scroll: false });
+  };
+
   return (
     <div className="space-y-4">
+      {dashboardPreset && (
+        <div className="flex items-center gap-2 rounded-md border border-primary/30 bg-primary/5 px-3 py-2 text-sm">
+          <Filter className="h-4 w-4 text-primary" />
+          <span className="text-muted-foreground">Преднабор с дашборда:</span>
+          <span className="font-medium">{ORDER_PRESET_LABELS[dashboardPreset]}</span>
+          <span className="ml-1 text-xs text-muted-foreground">· найдено {filteredOrders.length}</span>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={clearDashboardPreset}
+            className="ml-auto h-7 px-2"
+          >
+            <X className="h-3.5 w-3.5 mr-1" />
+            Сбросить
+          </Button>
+        </div>
+      )}
+
       {/* Заголовок и кнопка создания */}
       <div className="flex justify-between items-center gap-4">
         <div className="flex-1 min-w-0">

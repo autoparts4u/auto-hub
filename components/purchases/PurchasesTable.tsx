@@ -1,7 +1,14 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { PurchaseOrder, PurchaseStatus, Supplier } from '@/app/types/purchases';
+import {
+  PURCHASE_PRESET_LABELS,
+  filterPurchasesByPreset,
+  isPurchasePreset,
+  type PurchasePreset,
+} from '@/lib/dashboard/presets';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -20,13 +27,20 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Plus, Search, Trash2, Pencil, Package } from 'lucide-react';
+import { Plus, Search, Trash2, Pencil, Package, Filter, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { getContrastTextColor } from '@/lib/utils';
 import PurchaseModal from './PurchaseModal';
 import PurchaseDetailsModal from './PurchaseDetailsModal';
 
 export default function PurchasesTable() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const purchasePresetRaw = searchParams.get('purchasePreset');
+  const purchasePreset: PurchasePreset | null = isPurchasePreset(purchasePresetRaw)
+    ? purchasePresetRaw
+    : null;
+
   const [purchases, setPurchases] = useState<PurchaseOrder[]>([]);
   const [statuses, setStatuses] = useState<PurchaseStatus[]>([]);
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
@@ -129,7 +143,7 @@ export default function PurchasesTable() {
   const formatCurrency = (v: number) =>
     new Intl.NumberFormat('ru-RU', { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(v);
 
-  const filteredPurchases = purchases.filter((p) => {
+  const filteredPurchasesBeforePreset = purchases.filter((p) => {
     if (!searchTerm) return true;
     const s = searchTerm.toLowerCase();
     return (
@@ -139,12 +153,46 @@ export default function PurchasesTable() {
     );
   });
 
+  const filteredPurchases = useMemo(
+    () =>
+      purchasePreset
+        ? filterPurchasesByPreset(filteredPurchasesBeforePreset, purchasePreset)
+        : filteredPurchasesBeforePreset,
+    [filteredPurchasesBeforePreset, purchasePreset]
+  );
+
+  const clearPurchasePreset = () => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete('purchasePreset');
+    const qs = params.toString();
+    router.replace(qs ? `?${qs}` : '?', { scroll: false });
+  };
+
   const pendingCount = purchases.filter((p) => !p.purchaseStatus.isLast).length;
   const receivedCount = purchases.filter((p) => p.purchaseStatus.isLast).length;
   const totalSum = purchases.reduce((s, p) => s + p.totalAmount, 0);
 
   return (
     <div className="space-y-4">
+      {purchasePreset && (
+        <div className="flex items-center gap-2 rounded-md border border-primary/30 bg-primary/5 px-3 py-2 text-sm">
+          <Filter className="h-4 w-4 text-primary" />
+          <span className="text-muted-foreground">Преднабор с дашборда:</span>
+          <span className="font-medium">{PURCHASE_PRESET_LABELS[purchasePreset]}</span>
+          <span className="ml-1 text-xs text-muted-foreground">· найдено {filteredPurchases.length}</span>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={clearPurchasePreset}
+            className="ml-auto h-7 px-2"
+          >
+            <X className="h-3.5 w-3.5 mr-1" />
+            Сбросить
+          </Button>
+        </div>
+      )}
+
       <div className="flex justify-between items-center gap-4">
         <div>
           <h2 className="text-2xl md:text-3xl font-bold tracking-tight">Поступления</h2>

@@ -1,12 +1,19 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
+import {
+  RESERVATION_PRESET_LABELS,
+  filterReservationsByPreset,
+  isReservationPreset,
+  type ReservationPreset,
+} from '@/lib/dashboard/presets';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
-import { Ban, Package, RefreshCw, Search, ShoppingCart, Trash2, SlidersHorizontal, X } from 'lucide-react';
+import { Ban, Package, RefreshCw, Search, ShoppingCart, Trash2, SlidersHorizontal, X, Filter } from 'lucide-react';
 import { ClientBulkOrderModal } from './ClientBulkOrderModal';
 import { RESERVATIONS_READ_EVENT } from '@/lib/hooks/useReservationBadge';
 import {
@@ -102,11 +109,21 @@ const STATUS_FILTER_OPTIONS = [
 ];
 
 export function ReservationsTable() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const reservationPresetRaw = searchParams.get('reservationPreset');
+  const reservationPreset: ReservationPreset | null = isReservationPreset(reservationPresetRaw)
+    ? reservationPresetRaw
+    : null;
+
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
   const [uniqueClients, setUniqueClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
-  const [statusFilter, setStatusFilter] = useState('active');
+  // При входе с пресетом expiringSoon принудительно показываем активные
+  const [statusFilter, setStatusFilter] = useState(
+    reservationPreset === 'expiringSoon' ? 'active' : 'active'
+  );
   const [search, setSearch] = useState('');
   const [clientFilter, setClientFilter] = useState('all');
   const [datePreset, setDatePreset] = useState<DatePreset>('all');
@@ -269,7 +286,7 @@ export function ReservationsTable() {
     });
   const bulkOrderClient = bulkOrderClientId ? activeByClient.get(bulkOrderClientId) : undefined;
 
-  const filtered = reservations.filter(r => {
+  const filteredBeforePreset = reservations.filter(r => {
     // Текстовый поиск
     if (search) {
       const q = search.toLowerCase();
@@ -304,6 +321,21 @@ export function ReservationsTable() {
     return true;
   });
 
+  const filtered = useMemo(
+    () =>
+      reservationPreset
+        ? filterReservationsByPreset(filteredBeforePreset, reservationPreset)
+        : filteredBeforePreset,
+    [filteredBeforePreset, reservationPreset]
+  );
+
+  const clearReservationPreset = () => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete('reservationPreset');
+    const qs = params.toString();
+    router.replace(qs ? `?${qs}` : '?', { scroll: false });
+  };
+
   const formatDate = (iso: string) =>
     new Date(iso).toLocaleString('ru-RU', {
       day: '2-digit', month: '2-digit', year: '2-digit',
@@ -317,6 +349,25 @@ export function ReservationsTable() {
 
   return (
     <div className="space-y-4">
+      {reservationPreset && (
+        <div className="flex items-center gap-2 rounded-md border border-primary/30 bg-primary/5 px-3 py-2 text-sm">
+          <Filter className="h-4 w-4 text-primary" />
+          <span className="text-muted-foreground">Преднабор с дашборда:</span>
+          <span className="font-medium">{RESERVATION_PRESET_LABELS[reservationPreset]}</span>
+          <span className="ml-1 text-xs text-muted-foreground">· найдено {filtered.length}</span>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={clearReservationPreset}
+            className="ml-auto h-7 px-2"
+          >
+            <X className="h-3.5 w-3.5 mr-1" />
+            Сбросить
+          </Button>
+        </div>
+      )}
+
       {/* Фильтры */}
       <div className="space-y-2">
         {/* Строка 1: статус + поиск + доп. фильтры + обновить */}

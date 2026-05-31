@@ -700,7 +700,7 @@ export function TasksWidget({ data }: { data: DashboardTasks }) {
           icon={CalendarClock}
           count={handoverToday.length}
           tone="default"
-          href="/dashboard/orders"
+          href="/dashboard/orders?dashboardPreset=handoverToday"
         >
           {handoverToday.length === 0 ? (
             <Empty text="На сегодня выдач не запланировано" />
@@ -723,7 +723,7 @@ export function TasksWidget({ data }: { data: DashboardTasks }) {
           icon={PackageX}
           count={handoverOverdue.length}
           tone="danger"
-          href="/dashboard/orders"
+          href="/dashboard/orders?dashboardPreset=handoverOverdue"
         >
           {handoverOverdue.length === 0 ? (
             <Empty text="Просроченных нет" />
@@ -746,7 +746,7 @@ export function TasksWidget({ data }: { data: DashboardTasks }) {
           icon={PackageCheck}
           count={inAssembly.length}
           tone="default"
-          href="/dashboard/orders"
+          href="/dashboard/orders?dashboardPreset=inAssembly"
         >
           {inAssembly.length === 0 ? (
             <Empty text="Ничего не собирается" />
@@ -769,7 +769,7 @@ export function TasksWidget({ data }: { data: DashboardTasks }) {
           icon={Hourglass}
           count={staleOrders.length}
           tone="warn"
-          href="/dashboard/orders"
+          href="/dashboard/orders?dashboardPreset=stale"
         >
           {staleOrders.length === 0 ? (
             <Empty text="Зависших заказов нет" />
@@ -792,7 +792,7 @@ export function TasksWidget({ data }: { data: DashboardTasks }) {
           icon={Truck}
           count={purchasesOverdue.length}
           tone="danger"
-          href="/dashboard/orders"
+          href="/dashboard/orders?tab=purchases&purchasePreset=overdue"
         >
           {purchasesOverdue.length === 0 ? (
             <Empty text="Все поставки в срок" />
@@ -815,7 +815,7 @@ export function TasksWidget({ data }: { data: DashboardTasks }) {
           icon={Clock}
           count={reservationsExpiringSoon.length}
           tone="warn"
-          href="/dashboard/reservations"
+          href="/dashboard/reservations?reservationPreset=expiringSoon"
         >
           {reservationsExpiringSoon.length === 0 ? (
             <Empty text="Нет истекающих резерваций" />
@@ -842,7 +842,7 @@ export function TasksWidget({ data }: { data: DashboardTasks }) {
           icon={Undo2}
           count={returnsStale.length}
           tone="warn"
-          href="/dashboard/orders"
+          href="/dashboard/orders?tab=returns&returnPreset=stale"
         >
           {returnsStale.length === 0 ? (
             <Empty text="Возвратов без обработки нет" />

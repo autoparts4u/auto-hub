@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -181,6 +182,12 @@ export function DebtorsWidget({
               }`}
             />
           </button>
+          <Link
+            href="/dashboard/orders?unpaidIssued=1"
+            className="text-xs text-muted-foreground transition-colors hover:text-foreground"
+          >
+            открыть →
+          </Link>
         </CardHeader>
         <CardContent className={`md:!block ${open ? '' : 'hidden'}`}>
           {shown === 0 ? (
