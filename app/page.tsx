@@ -10,7 +10,7 @@ export default async function Home() {
   }
 
   if (session.user.role === "admin") {
-    redirect("/dashboard");
+    redirect("/dashboard/autoparts");
   } else {
     redirect("/shop");
   }
