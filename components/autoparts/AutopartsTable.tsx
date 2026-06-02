@@ -850,7 +850,7 @@ export function AutopartsTable({
             className="w-full sm:max-w-xs bg-background"
           />
           <div className="space-y-1 w-full sm:w-auto">
-            <Label>Параметры авто</Label>
+            <Label>Авто</Label>
             <Popover>
               <PopoverTrigger asChild>
                 <Button
@@ -877,189 +877,175 @@ export function AutopartsTable({
                 <div className="space-y-4">
                   {/* Марки авто */}
                   <div className="space-y-2">
-                    <Label className="text-sm font-semibold">Марки авто</Label>
-                    <Command className="border rounded-md">
-                      <CommandInput placeholder="Поиск марки..." />
-                      <CommandList className="max-h-[150px]">
-                        <CommandEmpty>Марка не найдена</CommandEmpty>
-                        <CommandGroup>
-                          {autos.map((auto) => {
-                            const autoName = auto.name;
-                            if (!autoName) return null;
-                            const isSelected = selectedAutos.includes(autoName);
-                            return (
-                              <CommandItem
-                                key={autoName}
-                                onSelect={() => {
-                                  const newAutos = isSelected
-                                    ? selectedAutos.filter(
-                                        (name) => name !== autoName,
-                                      )
-                                    : [...selectedAutos, autoName];
-                                  handleAutoChange(newAutos);
-                                }}
-                              >
-                                <div className="flex items-center gap-2">
-                                  <Check
-                                    className={`h-4 w-4 ${
-                                      isSelected ? 'opacity-100' : 'opacity-0'
-                                    }`}
-                                  />
-                                  {autoName}
-                                </div>
-                              </CommandItem>
-                            );
-                          })}
-                        </CommandGroup>
-                      </CommandList>
-                    </Command>
-                    {selectedAutos.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mt-1">
-                        {selectedAutos.map((auto) => (
-                          <span
-                            key={auto}
-                            className="inline-flex items-center gap-1 bg-primary/10 text-primary text-xs px-2 py-0.5 rounded-md cursor-pointer hover:bg-primary/20"
-                            onClick={() =>
-                              handleAutoChange(
-                                selectedAutos.filter((a) => a !== auto),
-                              )
-                            }
-                          >
-                            {auto}
-                            <span className="text-xs">×</span>
-                          </span>
-                        ))}
-                      </div>
-                    )}
+                    <Label className="text-xs text-muted-foreground">Марки авто</Label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className={`w-full justify-between font-normal ${getFilterHighlightClass(selectedAutos.length > 0)}`}
+                        >
+                          {selectedAutos.length === 0
+                            ? 'Все'
+                            : `${selectedAutos.length} выбрано`}
+                          <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-[260px] p-0" align="start">
+                        <Command>
+                          <CommandInput placeholder="Поиск марки..." />
+                          <CommandList className="max-h-[220px]">
+                            <CommandEmpty>Марка не найдена</CommandEmpty>
+                            <CommandGroup>
+                              {autos.map((auto) => {
+                                const autoName = auto.name;
+                                if (!autoName) return null;
+                                const isSelected = selectedAutos.includes(autoName);
+                                return (
+                                  <CommandItem
+                                    key={autoName}
+                                    value={autoName}
+                                    onSelect={() => {
+                                      const newAutos = isSelected
+                                        ? selectedAutos.filter(
+                                            (name) => name !== autoName,
+                                          )
+                                        : [...selectedAutos, autoName];
+                                      handleAutoChange(newAutos);
+                                    }}
+                                  >
+                                    <div className="flex items-center gap-2">
+                                      <Check
+                                        className={`h-4 w-4 ${
+                                          isSelected ? 'opacity-100' : 'opacity-0'
+                                        }`}
+                                      />
+                                      {autoName}
+                                    </div>
+                                  </CommandItem>
+                                );
+                              })}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
                   </div>
 
                   {/* Объемы двигателя */}
                   <div className="space-y-2">
-                    <Label className="text-sm font-semibold">
-                      Объемы двигателя
-                    </Label>
-                    <Command className="border rounded-md">
-                      <CommandInput placeholder="Поиск объема..." />
-                      <CommandList className="max-h-[150px]">
-                        <CommandEmpty>Объем не найден</CommandEmpty>
-                        <CommandGroup>
-                          {engineVolumes.map((ev) => {
-                            const volumeName = ev.name;
-                            if (!volumeName) return null;
-                            const isSelected =
-                              selectedEngineVolumes.includes(volumeName);
-                            return (
-                              <CommandItem
-                                key={ev.id}
-                                onSelect={() => {
-                                  const newVolumes = isSelected
-                                    ? selectedEngineVolumes.filter(
-                                        (name) => name !== volumeName,
-                                      )
-                                    : [...selectedEngineVolumes, volumeName];
-                                  setSelectedEngineVolumes(newVolumes);
-                                  setCurrentPage(1);
-                                }}
-                              >
-                                <div className="flex items-center gap-2">
-                                  <Check
-                                    className={`h-4 w-4 ${
-                                      isSelected ? 'opacity-100' : 'opacity-0'
-                                    }`}
-                                  />
-                                  {volumeName}
-                                </div>
-                              </CommandItem>
-                            );
-                          })}
-                        </CommandGroup>
-                      </CommandList>
-                    </Command>
-                    {selectedEngineVolumes.length > 0 && (
-                      <div className="flex flex-wrap gap-1 mt-1">
-                        {selectedEngineVolumes.map((volume) => (
-                          <span
-                            key={volume}
-                            className="inline-flex items-center gap-1 bg-primary/10 text-primary text-xs px-2 py-0.5 rounded-md cursor-pointer hover:bg-primary/20"
-                            onClick={() =>
-                              setSelectedEngineVolumes(
-                                selectedEngineVolumes.filter(
-                                  (v) => v !== volume,
-                                ),
-                              )
-                            }
-                          >
-                            {volume}
-                            <span className="text-xs">×</span>
-                          </span>
-                        ))}
-                      </div>
-                    )}
+                    <Label className="text-xs text-muted-foreground">Объемы двигателя</Label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          className={`w-full justify-between font-normal ${getFilterHighlightClass(selectedEngineVolumes.length > 0)}`}
+                        >
+                          {selectedEngineVolumes.length === 0
+                            ? 'Все'
+                            : `${selectedEngineVolumes.length} выбрано`}
+                          <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-[260px] p-0" align="start">
+                        <Command>
+                          <CommandInput placeholder="Поиск объема..." />
+                          <CommandList className="max-h-[220px]">
+                            <CommandEmpty>Объем не найден</CommandEmpty>
+                            <CommandGroup>
+                              {engineVolumes.map((ev) => {
+                                const volumeName = ev.name;
+                                if (!volumeName) return null;
+                                const isSelected =
+                                  selectedEngineVolumes.includes(volumeName);
+                                return (
+                                  <CommandItem
+                                    key={ev.id}
+                                    value={volumeName}
+                                    onSelect={() => {
+                                      const newVolumes = isSelected
+                                        ? selectedEngineVolumes.filter(
+                                            (name) => name !== volumeName,
+                                          )
+                                        : [...selectedEngineVolumes, volumeName];
+                                      setSelectedEngineVolumes(newVolumes);
+                                      setCurrentPage(1);
+                                    }}
+                                  >
+                                    <div className="flex items-center gap-2">
+                                      <Check
+                                        className={`h-4 w-4 ${
+                                          isSelected ? 'opacity-100' : 'opacity-0'
+                                        }`}
+                                      />
+                                      {volumeName}
+                                    </div>
+                                  </CommandItem>
+                                );
+                              })}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
                   </div>
 
                   {/* Виды топлива */}
                   {fuelTypes.length > 0 && (
                     <div className="space-y-2">
-                      <Label className="text-sm font-semibold">
-                        Виды топлива
-                      </Label>
-                      <Command className="border rounded-md">
-                        <CommandInput placeholder="Поиск вида топлива..." />
-                        <CommandList className="max-h-[150px]">
-                          <CommandEmpty>Вид топлива не найден</CommandEmpty>
-                          <CommandGroup>
-                            {fuelTypes.map((ft) => {
-                              const fuelTypeName = ft.name;
-                              if (!fuelTypeName) return null;
-                              const isSelected =
-                                selectedFuelTypes.includes(fuelTypeName);
-                              return (
-                                <CommandItem
-                                  key={ft.id}
-                                  onSelect={() => {
-                                    const newFuelTypes = isSelected
-                                      ? selectedFuelTypes.filter(
-                                          (name) => name !== fuelTypeName,
-                                        )
-                                      : [...selectedFuelTypes, fuelTypeName];
-                                    setSelectedFuelTypes(newFuelTypes);
-                                    setCurrentPage(1);
-                                  }}
-                                >
-                                  <div className="flex items-center gap-2">
-                                    <Check
-                                      className={`h-4 w-4 ${
-                                        isSelected ? 'opacity-100' : 'opacity-0'
-                                      }`}
-                                    />
-                                    {fuelTypeName}
-                                  </div>
-                                </CommandItem>
-                              );
-                            })}
-                          </CommandGroup>
-                        </CommandList>
-                      </Command>
-                      {selectedFuelTypes.length > 0 && (
-                        <div className="flex flex-wrap gap-1 mt-1">
-                          {selectedFuelTypes.map((fuelType) => (
-                            <span
-                              key={fuelType}
-                              className="inline-flex items-center gap-1 bg-primary/10 text-primary text-xs px-2 py-0.5 rounded-md cursor-pointer hover:bg-primary/20"
-                              onClick={() =>
-                                setSelectedFuelTypes(
-                                  selectedFuelTypes.filter(
-                                    (ft) => ft !== fuelType,
-                                  ),
-                                )
-                              }
-                            >
-                              {fuelType}
-                              <span className="text-xs">×</span>
-                            </span>
-                          ))}
-                        </div>
-                      )}
+                      <Label className="text-xs text-muted-foreground">Виды топлива</Label>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="outline"
+                            className={`w-full justify-between font-normal ${getFilterHighlightClass(selectedFuelTypes.length > 0)}`}
+                          >
+                            {selectedFuelTypes.length === 0
+                              ? 'Все'
+                              : `${selectedFuelTypes.length} выбрано`}
+                            <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[260px] p-0" align="start">
+                          <Command>
+                            <CommandInput placeholder="Поиск вида топлива..." />
+                            <CommandList className="max-h-[220px]">
+                              <CommandEmpty>Вид топлива не найден</CommandEmpty>
+                              <CommandGroup>
+                                {fuelTypes.map((ft) => {
+                                  const fuelTypeName = ft.name;
+                                  if (!fuelTypeName) return null;
+                                  const isSelected =
+                                    selectedFuelTypes.includes(fuelTypeName);
+                                  return (
+                                    <CommandItem
+                                      key={ft.id}
+                                      value={fuelTypeName}
+                                      onSelect={() => {
+                                        const newFuelTypes = isSelected
+                                          ? selectedFuelTypes.filter(
+                                              (name) => name !== fuelTypeName,
+                                            )
+                                          : [...selectedFuelTypes, fuelTypeName];
+                                        setSelectedFuelTypes(newFuelTypes);
+                                        setCurrentPage(1);
+                                      }}
+                                    >
+                                      <div className="flex items-center gap-2">
+                                        <Check
+                                          className={`h-4 w-4 ${
+                                            isSelected ? 'opacity-100' : 'opacity-0'
+                                          }`}
+                                        />
+                                        {fuelTypeName}
+                                      </div>
+                                    </CommandItem>
+                                  );
+                                })}
+                              </CommandGroup>
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
                     </div>
                   )}
 
@@ -2539,9 +2525,9 @@ export function AutopartsTable({
                 />
               </div>
 
-              {/* Параметры авто */}
+              {/* Авто */}
               <div className="space-y-2">
-                <Label className="text-sm font-semibold">Параметры авто</Label>
+                <Label className="text-sm font-semibold">Авто</Label>
 
                 {/* Марки авто */}
                 <div className="space-y-2">

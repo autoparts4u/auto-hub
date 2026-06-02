@@ -16,6 +16,7 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
+import { Check, ChevronsUpDown, X } from "lucide-react";
 import { AutopartWithStock, AutopartFormData } from "@/app/types/autoparts";
 import {
   Auto,
@@ -94,7 +95,6 @@ export const AutopartModal = forwardRef<AutopartModalRef, AutopartModalProps>(
   const [brandOpen, setBrandOpen] = useState(false);
   const [categoryOpen, setCategoryOpen] = useState(false);
   const [autoOpen, setAutoOpen] = useState(false);
-  const autoSelectingRef = useRef(false);
   const [engineVolumeOpen, setEngineVolumeOpen] = useState(false);
   const [textForSearchOpen, setTextForSearchOpen] = useState(false);
   const [fuelTypeOpen, setFuelTypeOpen] = useState(false);
@@ -442,136 +442,139 @@ export const AutopartModal = forwardRef<AutopartModalRef, AutopartModalProps>(
       </div>
       <div className="space-y-1">
         <label className="text-sm font-medium">Авто</label>
-        
         {loading ? (
-          <Skeleton className="h-20 w-full rounded-md" />
-        ) : selectedAutos.length > 0 ? (
-          <ul className="space-y-1 mb-3">
-            {selectedAutos.map((auto) => (
-              <li
-                key={auto.id}
-                className="flex justify-between items-center border p-2 rounded"
-              >
-                <span>{auto.name}</span>
-                <Button
-                  size="sm"
-                  variant="destructive"
-                  onClick={() =>
-                    setSelectedAutos((prev) => prev.filter((a) => a.id !== auto.id))
-                  }
-                >
-                  Удалить
-                </Button>
-              </li>
-            ))}
-          </ul>
+          <Skeleton className="h-9 w-full rounded-md" />
         ) : (
-          <p className="text-sm text-muted-foreground mb-3">
-            Авто не выбрано
-          </p>
+          <>
+            <Popover open={autoOpen} onOpenChange={setAutoOpen}>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="w-full justify-between font-normal">
+                  <span className={selectedAutos.length ? "" : "text-muted-foreground"}>
+                    {selectedAutos.length
+                      ? `Выбрано: ${selectedAutos.length}`
+                      : "Выберите авто"}
+                  </span>
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-(--radix-popover-trigger-width) p-0" align="start">
+                <Command>
+                  <CommandInput placeholder="Поиск авто..." />
+                  <CommandList>
+                    <CommandEmpty>Авто не найдено</CommandEmpty>
+                    <CommandGroup>
+                      {autos.map((a) => {
+                        const isSelected = selectedAutos.some((sa) => sa.id === a.id);
+                        return (
+                          <CommandItem
+                            key={a.id}
+                            onSelect={() => {
+                              setSelectedAutos((prev) =>
+                                isSelected
+                                  ? prev.filter((x) => x.id !== a.id)
+                                  : [...prev, a]
+                              );
+                              setTouched((prev) => ({ ...prev, selectedAutos: true }));
+                            }}
+                          >
+                            <Check
+                              className={`mr-2 h-4 w-4 ${isSelected ? "opacity-100" : "opacity-0"}`}
+                            />
+                            {a.name}
+                          </CommandItem>
+                        );
+                      })}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
+            {selectedAutos.length > 0 && (
+              <div className="flex flex-wrap gap-1 mt-1">
+                {selectedAutos.map((auto) => (
+                  <span
+                    key={auto.id}
+                    className="inline-flex items-center gap-1 bg-primary/10 text-primary text-xs px-2 py-1 rounded-md cursor-pointer hover:bg-primary/20"
+                    onClick={() =>
+                      setSelectedAutos((prev) => prev.filter((a) => a.id !== auto.id))
+                    }
+                  >
+                    {auto.name}
+                    <X className="w-3 h-3" />
+                  </span>
+                ))}
+              </div>
+            )}
+          </>
         )}
-        
-        <Popover
-          open={autoOpen}
-          onOpenChange={(open) => {
-            if (!open && autoSelectingRef.current) return;
-            setAutoOpen(open);
-          }}
-        >
-          <PopoverTrigger asChild>
-            <Button variant="outline" className="w-full justify-between">
-              Добавить авто
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-[300px] p-0">
-            <Command>
-              <CommandInput placeholder="Поиск авто..." />
-              <CommandList>
-                <CommandEmpty>Авто не найдено</CommandEmpty>
-                <CommandGroup>
-                  {autos
-                    .filter((a) => !selectedAutos.find((sa) => sa.id === a.id))
-                    .map((a) => (
-                      <CommandItem
-                        key={a.id}
-                        onPointerDown={() => { autoSelectingRef.current = true; }}
-                        onSelect={() => {
-                          setSelectedAutos((prev) => [...prev, a]);
-                          setTouched((prev) => ({ ...prev, selectedAutos: true }));
-                          setTimeout(() => { autoSelectingRef.current = false; }, 0);
-                        }}
-                      >
-                        {a.name}
-                      </CommandItem>
-                    ))}
-                </CommandGroup>
-              </CommandList>
-            </Command>
-          </PopoverContent>
-        </Popover>
       </div>
       <div className="space-y-1">
         <label className="text-sm font-medium">Объем двигателя</label>
-        
         {loading ? (
-          <Skeleton className="h-20 w-full rounded-md" />
-        ) : selectedEngineVolumes.length > 0 ? (
-          <ul className="space-y-1 mb-3">
-            {selectedEngineVolumes.map((ev) => (
-              <li
-                key={ev.id}
-                className="flex justify-between items-center border p-2 rounded"
-              >
-                <span>{ev.name}</span>
-                <Button
-                  size="sm"
-                  variant="destructive"
-                  onClick={() =>
-                    setSelectedEngineVolumes((prev) => prev.filter((e) => e.id !== ev.id))
-                  }
-                >
-                  Удалить
-                </Button>
-              </li>
-            ))}
-          </ul>
+          <Skeleton className="h-9 w-full rounded-md" />
         ) : (
-          <p className="text-sm text-muted-foreground mb-3">
-            Объем двигателя не выбран
-          </p>
+          <>
+            <Popover open={engineVolumeOpen} onOpenChange={setEngineVolumeOpen}>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="w-full justify-between font-normal">
+                  <span className={selectedEngineVolumes.length ? "" : "text-muted-foreground"}>
+                    {selectedEngineVolumes.length
+                      ? `Выбрано: ${selectedEngineVolumes.length}`
+                      : "Выберите объем"}
+                  </span>
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-(--radix-popover-trigger-width) p-0" align="start">
+                <Command>
+                  <CommandInput placeholder="Поиск объема двигателя..." />
+                  <CommandList>
+                    <CommandEmpty>Объем двигателя не найден</CommandEmpty>
+                    <CommandGroup>
+                      {engineVolumes.map((ev) => {
+                        const isSelected = selectedEngineVolumes.some((sev) => sev.id === ev.id);
+                        return (
+                          <CommandItem
+                            key={ev.id}
+                            onSelect={() => {
+                              setSelectedEngineVolumes((prev) =>
+                                isSelected
+                                  ? prev.filter((x) => x.id !== ev.id)
+                                  : [...prev, ev]
+                              );
+                              setTouched((prev) => ({ ...prev, selectedEngineVolumes: true }));
+                            }}
+                          >
+                            <Check
+                              className={`mr-2 h-4 w-4 ${isSelected ? "opacity-100" : "opacity-0"}`}
+                            />
+                            {ev.name}
+                          </CommandItem>
+                        );
+                      })}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
+            {selectedEngineVolumes.length > 0 && (
+              <div className="flex flex-wrap gap-1 mt-1">
+                {selectedEngineVolumes.map((ev) => (
+                  <span
+                    key={ev.id}
+                    className="inline-flex items-center gap-1 bg-primary/10 text-primary text-xs px-2 py-1 rounded-md cursor-pointer hover:bg-primary/20"
+                    onClick={() =>
+                      setSelectedEngineVolumes((prev) => prev.filter((e) => e.id !== ev.id))
+                    }
+                  >
+                    {ev.name}
+                    <X className="w-3 h-3" />
+                  </span>
+                ))}
+              </div>
+            )}
+          </>
         )}
-        
-        <Popover open={engineVolumeOpen} onOpenChange={setEngineVolumeOpen}>
-          <PopoverTrigger asChild>
-            <Button variant="outline" className="w-full justify-between">
-              Добавить объем двигателя
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-[300px] p-0">
-            <Command>
-              <CommandInput placeholder="Поиск объема двигателя..." />
-              <CommandList>
-                <CommandEmpty>Объем двигателя не найден</CommandEmpty>
-                <CommandGroup>
-                  {engineVolumes
-                    .filter((ev) => !selectedEngineVolumes.find((sev) => sev.id === ev.id))
-                    .map((ev) => (
-                      <CommandItem
-                        key={ev.id}
-                        onSelect={() => {
-                          setSelectedEngineVolumes((prev) => [...prev, ev]);
-                          setTouched((prev) => ({ ...prev, selectedEngineVolumes: true }));
-                          setEngineVolumeOpen(false);
-                        }}
-                      >
-                        {ev.name}
-                      </CommandItem>
-                    ))}
-                </CommandGroup>
-              </CommandList>
-            </Command>
-          </PopoverContent>
-        </Popover>
       </div>
       <div className="space-y-1">
         <label className="text-sm font-medium">Текст для поиска</label>
