@@ -350,17 +350,17 @@ export function ReservationsTable() {
   return (
     <div className="space-y-4">
       {reservationPreset && (
-        <div className="flex items-center gap-2 rounded-md border border-primary/30 bg-primary/5 px-3 py-2 text-sm">
-          <Filter className="h-4 w-4 text-primary" />
-          <span className="text-muted-foreground">Преднабор с дашборда:</span>
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-md border border-primary/30 bg-primary/5 px-3 py-2 text-sm">
+          <Filter className="h-4 w-4 shrink-0 text-primary" />
+          <span className="text-muted-foreground">Преднабор:</span>
           <span className="font-medium">{RESERVATION_PRESET_LABELS[reservationPreset]}</span>
-          <span className="ml-1 text-xs text-muted-foreground">· найдено {filtered.length}</span>
+          <span className="text-xs text-muted-foreground">· найдено {filtered.length}</span>
           <Button
             type="button"
             variant="ghost"
             size="sm"
             onClick={clearReservationPreset}
-            className="ml-auto h-7 px-2"
+            className="ml-auto h-7 px-2 shrink-0"
           >
             <X className="h-3.5 w-3.5 mr-1" />
             Сбросить

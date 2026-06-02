@@ -42,7 +42,7 @@ function getSessionDuration(startedAt: Date | string, endedAt: Date | string | n
 
 export function ActivityOverviewTable({ users }: { users: UserRow[] }) {
   return (
-    <div className="border rounded-lg overflow-hidden">
+    <div className="border rounded-lg overflow-x-auto">
       <table className="w-full text-sm">
         <thead className="bg-muted/50">
           <tr>

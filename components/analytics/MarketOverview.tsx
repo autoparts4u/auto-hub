@@ -210,7 +210,7 @@ export default function MarketOverview() {
 
           {/* Top parts with metric toggle */}
           <Card className="py-4">
-            <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0">
+            <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2 space-y-0">
               <CardTitle className="text-base">Топ деталей</CardTitle>
               <div className="flex items-center rounded-md border overflow-hidden">
                 {SORT_OPTIONS.map((o) => (
