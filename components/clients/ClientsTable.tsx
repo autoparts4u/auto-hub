@@ -147,14 +147,20 @@ export default function ClientsTable({ priceTypes }: ClientsTableProps) {
     try {
       if (!silent) setLoading(true);
       
-      // Загружаем клиентов (теперь они содержат всю необходимую информацию, включая user)
-      const clientsResponse = await fetch('/api/clients');
+      // Грузим всё параллельно (раньше было 4 последовательных fetch — водопад).
+      const [clientsResponse, usersResponse, warehousesResponse, settingsResponse] =
+        await Promise.all([
+          fetch('/api/clients'),
+          fetch('/api/users'),
+          fetch('/api/warehouses'),
+          fetch('/api/settings'),
+        ]);
+
       if (!clientsResponse.ok) throw new Error('Failed to fetch clients');
       const clientsData = await clientsResponse.json();
       setClients(clientsData);
 
-      // Загружаем пользователей (для вкладки "Пользователи")
-      const usersResponse = await fetch('/api/users');
+      // Пользователи (для вкладки "Пользователи")
       if (!usersResponse.ok) throw new Error('Failed to fetch users');
       const usersData = await usersResponse.json();
       
@@ -186,14 +192,12 @@ export default function ClientsTable({ priceTypes }: ClientsTableProps) {
       }));
       setUsers(transformedUsers);
 
-      // Загружаем склады
-      const warehousesResponse = await fetch('/api/warehouses');
+      // Склады
       if (!warehousesResponse.ok) throw new Error('Failed to fetch warehouses');
       const warehousesData = await warehousesResponse.json();
       setWarehouses(warehousesData);
 
-      // Загружаем глобальные настройки для дефолтного времени резервации
-      const settingsResponse = await fetch('/api/settings');
+      // Глобальные настройки (дефолтное время резервации)
       if (settingsResponse.ok) {
         const settingsData = await settingsResponse.json();
         if (settingsData.reservationDurationMinutes) {

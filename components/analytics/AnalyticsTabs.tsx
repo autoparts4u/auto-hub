@@ -1,12 +1,21 @@
 'use client';
 
 import { useState } from 'react';
+import dynamic from 'next/dynamic';
 import { ActivityOverviewTable } from './ActivityOverviewTable';
-import ActivityReport from './ActivityReport';
-import MarketOverview from './MarketOverview';
-import ClientAnalytics from './ClientAnalytics';
-import ProductAnalytics from './ProductAnalytics';
-import OrdersReport from '@/components/orders/OrdersReport';
+
+// Тяжёлые от recharts вкладки грузим лениво — recharts не попадает в первый
+// бандл страницы аналитики и подтягивается только при открытии вкладки.
+const TabLoader = () => (
+  <div className="flex items-center justify-center py-16 text-sm text-muted-foreground">
+    Загрузка…
+  </div>
+);
+const MarketOverview = dynamic(() => import('./MarketOverview'), { loading: TabLoader });
+const OrdersReport = dynamic(() => import('@/components/orders/OrdersReport'), { loading: TabLoader });
+const ClientAnalytics = dynamic(() => import('./ClientAnalytics'), { loading: TabLoader });
+const ProductAnalytics = dynamic(() => import('./ProductAnalytics'), { loading: TabLoader });
+const ActivityReport = dynamic(() => import('./ActivityReport'), { loading: TabLoader });
 
 interface UserRow {
   id: string;

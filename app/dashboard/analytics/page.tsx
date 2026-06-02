@@ -7,36 +7,42 @@ export default async function AnalyticsPage() {
   const session = await auth();
   if (!session || session.user.role !== "admin") redirect("/shop");
 
-  const users = await db.user.findMany({
-    select: {
-      id: true,
-      email: true,
-      role: true,
-      createdAt: true,
-      _count: { select: { activitySessions: true } },
-      activitySessions: {
-        select: {
-          id: true,
-          startedAt: true,
-          endedAt: true,
-          _count: { select: { events: true } },
+  // Раньше: N+1 (отдельный COUNT событий на каждого юзера).
+  // Теперь: один проход по сессиям с _count событий + суммируем в JS.
+  const [users, sessionEventCounts] = await Promise.all([
+    db.user.findMany({
+      select: {
+        id: true,
+        email: true,
+        role: true,
+        createdAt: true,
+        _count: { select: { activitySessions: true } },
+        activitySessions: {
+          select: {
+            id: true,
+            startedAt: true,
+            endedAt: true,
+            _count: { select: { events: true } },
+          },
+          orderBy: { startedAt: "desc" },
+          take: 1,
         },
-        orderBy: { startedAt: "desc" },
-        take: 1,
       },
-    },
-    orderBy: { createdAt: "desc" },
-  });
+      orderBy: { createdAt: "desc" },
+    }),
+    db.userActivitySession.findMany({
+      select: { userId: true, _count: { select: { events: true } } },
+    }),
+  ]);
 
-  // Считаем суммарное количество событий для каждого пользователя
-  const usersWithTotalEvents = await Promise.all(
-    users.map(async (user) => {
-      const totalEvents = await db.userActivityEvent.count({
-        where: { session: { userId: user.id } },
-      });
-      return { ...user, totalEvents };
-    })
-  );
+  const totalEventsByUser = new Map<string, number>();
+  for (const s of sessionEventCounts) {
+    totalEventsByUser.set(s.userId, (totalEventsByUser.get(s.userId) ?? 0) + s._count.events);
+  }
+  const usersWithTotalEvents = users.map((user) => ({
+    ...user,
+    totalEvents: totalEventsByUser.get(user.id) ?? 0,
+  }));
 
   return (
     <div className="space-y-4">

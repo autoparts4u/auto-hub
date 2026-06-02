@@ -1,6 +1,5 @@
 "use client";
 import React, { useState } from "react";
-import * as XLSX from "xlsx";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
@@ -20,6 +19,8 @@ export default function ImportAutopartsButton() {
 
     const reader = new FileReader();
     reader.onload = async (evt) => {
+      // Динамический импорт xlsx (~400 КБ) — грузится только при импорте файла.
+      const XLSX = await import("xlsx");
       const data = evt.target?.result;
       const workbook = XLSX.read(data, { type: "binary" });
       const sheetName = workbook.SheetNames[0];
