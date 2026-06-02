@@ -15,10 +15,19 @@ import {
   BarChart2,
   BookMarked,
   ChevronLeft,
+  Power,
 } from "lucide-react";
 import { signOut } from "next-auth/react";
 import { useEffect, useState } from "react";
 import clsx from "clsx";
+import { toast } from "sonner";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useReservationBadge } from "@/lib/hooks/useReservationBadge";
 
 const navItems = [
@@ -38,6 +47,20 @@ export function Sidebar() {
   const { count: reservationCount, markAsRead } = useReservationBadge();
 
   const [collapsed, setCollapsed] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [confirming, setConfirming] = useState(false);
+
+  const handleConfirm = async () => {
+    setConfirming(true);
+    try {
+      const res = await fetch("/api/security/confirm", { method: "POST" });
+      if (!res.ok) throw new Error();
+      window.location.reload();
+    } catch {
+      toast.error("Не удалось выполнить действие");
+      setConfirming(false);
+    }
+  };
 
   useEffect(() => {
     const stored = localStorage.getItem("sidebar-collapsed");
@@ -161,18 +184,55 @@ export function Sidebar() {
 
         {/* Footer */}
         <div className="shrink-0 border-t p-2">
-          <button
-            onClick={() => { localStorage.removeItem("pinLastVerified"); signOut({ callbackUrl: "/sign-in" }); }}
-            className={clsx(
-              "flex items-center gap-3 w-full px-3 py-2 rounded-lg text-sm font-medium text-destructive hover:bg-destructive/10 transition-colors",
-              collapsed && "justify-center px-2"
-            )}
-          >
-            <LogOut className="h-[18px] w-[18px] shrink-0" />
-            {!collapsed && <span className="truncate">Выйти</span>}
-          </button>
+          <div className={clsx("flex gap-1", collapsed ? "flex-col" : "items-center")}>
+            <button
+              onClick={() => { localStorage.removeItem("pinLastVerified"); signOut({ callbackUrl: "/sign-in" }); }}
+              className={clsx(
+                "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-destructive hover:bg-destructive/10 transition-colors",
+                collapsed ? "justify-center px-2" : "flex-1"
+              )}
+            >
+              <LogOut className="h-[18px] w-[18px] shrink-0" />
+              {!collapsed && <span className="truncate">Выйти</span>}
+            </button>
+            <button
+              onClick={() => setShowConfirm(true)}
+              aria-label="Выключить"
+              className={clsx(
+                "flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-colors",
+                collapsed ? "px-2 py-2" : "h-9 w-9 shrink-0"
+              )}
+            >
+              <Power className="h-[18px] w-[18px] shrink-0" />
+            </button>
+          </div>
         </div>
       </aside>
+
+      <Dialog
+        open={showConfirm}
+        onOpenChange={(o) => {
+          if (!confirming) setShowConfirm(o);
+        }}
+      >
+        <DialogContent aria-describedby={undefined}>
+          <DialogHeader>
+            <DialogTitle>Продолжить?</DialogTitle>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setShowConfirm(false)}
+              disabled={confirming}
+            >
+              Отмена
+            </Button>
+            <Button onClick={handleConfirm} disabled={confirming}>
+              {confirming ? "…" : "Да"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
