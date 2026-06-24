@@ -5,6 +5,11 @@ import prisma from '@/lib/db/db';
 // GET /api/reports/market?days=7|14|30|90|180|365
 // Стратегический обзор рынка: прибыль/маржа по деталям, бренды/категории,
 // ABC-анализ, неликвид, дефицит при спросе, возвраты. Admin-only.
+//
+// Себестоимость продаж считается по FIFO: каждая проданная штука списывается
+// с самой старой ещё не распроданной партии закупки. Чтобы знать, какие партии
+// уже «съедены» к началу периода, проигрываем всю историю продаж артикула,
+// а в прибыль попадают только продажи внутри выбранного периода.
 export async function GET(request: NextRequest) {
   try {
     const session = await auth();
@@ -22,16 +27,15 @@ export async function GET(request: NextRequest) {
     const [periodItems, purchaseItems, autoparts, returnItems] = await Promise.all([
       prisma.orderItems.findMany({
         where: { order: { createdAt: { gte: from, lte: to } } },
-        select: {
-          article: true,
-          description: true,
-          quantity: true,
-          item_final_price: true,
-          order: { select: { id: true, createdAt: true } },
-        },
+        select: { article: true, description: true },
       }),
       prisma.purchaseOrderItems.findMany({
-        select: { article: true, quantity: true, purchase_price: true },
+        select: {
+          article: true,
+          quantity: true,
+          purchase_price: true,
+          purchaseOrder: { select: { orderedAt: true, receivedAt: true } },
+        },
       }),
       prisma.autoparts.findMany({
         select: {
@@ -48,18 +52,108 @@ export async function GET(request: NextRequest) {
       }),
     ]);
 
-    // --- Средняя закупочная цена по артикулу (взвешенная по количеству) ---
-    const costAgg = new Map<string, { sum: number; qty: number }>();
+    // Артикулы, продававшиеся в периоде — только по ним нужна полная история для FIFO.
+    const periodArticles = [...new Set(periodItems.map((i) => i.article))];
+    const periodDesc = new Map<string, string>();
+    for (const i of periodItems) if (!periodDesc.has(i.article)) periodDesc.set(i.article, i.description);
+
+    // Вся история продаж этих артикулов (для проигрывания FIFO).
+    const historyItems =
+      periodArticles.length > 0
+        ? await prisma.orderItems.findMany({
+            where: { article: { in: periodArticles } },
+            select: {
+              article: true,
+              quantity: true,
+              item_final_price: true,
+              order: { select: { id: true, createdAt: true } },
+            },
+          })
+        : [];
+
+    // --- Партии закупки по артикулу (по возрастанию даты прихода) ---
+    const lotsByArticle = new Map<string, { qty: number; price: number; t: number }[]>();
     for (const p of purchaseItems) {
-      const e = costAgg.get(p.article) ?? { sum: 0, qty: 0 };
-      e.sum += p.purchase_price * p.quantity;
-      e.qty += p.quantity;
-      costAgg.set(p.article, e);
+      const d = p.purchaseOrder.receivedAt ?? p.purchaseOrder.orderedAt;
+      const lot = { qty: p.quantity, price: p.purchase_price, t: new Date(d).getTime() };
+      const arr = lotsByArticle.get(p.article);
+      if (arr) arr.push(lot);
+      else lotsByArticle.set(p.article, [lot]);
     }
-    const avgCost = (article: string): number | null => {
-      const e = costAgg.get(article);
-      return e && e.qty > 0 ? e.sum / e.qty : null;
+    for (const arr of lotsByArticle.values()) arr.sort((a, b) => a.t - b.t);
+
+    // Текущий склад оцениваем по последней закупочной цене (остаток — это новые партии).
+    const latestCost = (article: string): number | null => {
+      const arr = lotsByArticle.get(article);
+      return arr && arr.length ? arr[arr.length - 1].price : null;
     };
+
+    // --- Все продажи по артикулу (по возрастанию даты) ---
+    const allSalesByArticle = new Map<
+      string,
+      { qty: number; price: number; t: number; orderId: string; inPeriod: boolean }[]
+    >();
+    for (const it of historyItems) {
+      const created = it.order.createdAt;
+      const rec = {
+        qty: it.quantity,
+        price: it.item_final_price,
+        t: new Date(created).getTime(),
+        orderId: it.order.id,
+        inPeriod: created >= from && created <= to,
+      };
+      const arr = allSalesByArticle.get(it.article);
+      if (arr) arr.push(rec);
+      else allSalesByArticle.set(it.article, [rec]);
+    }
+    for (const arr of allSalesByArticle.values()) arr.sort((a, b) => a.t - b.t);
+
+    // --- FIFO-проигрывание: для продаж периода получаем себестоимость ---
+    interface PeriodLine {
+      article: string;
+      t: number;
+      qty: number;
+      coveredQty: number; // штуки, для которых нашлась закупочная партия
+      revenue: number;
+      revenueCovered: number;
+      cost: number;
+      orderId: string;
+    }
+    const periodLines: PeriodLine[] = [];
+
+    for (const [article, salesArr] of allSalesByArticle) {
+      const lots = lotsByArticle.get(article) ?? [];
+      let li = 0;
+      let rem = lots[0]?.qty ?? 0;
+      for (const s of salesArr) {
+        let need = s.qty;
+        let cost = 0;
+        let covered = 0;
+        while (need > 0 && li < lots.length) {
+          const take = Math.min(need, rem);
+          cost += take * lots[li].price;
+          covered += take;
+          need -= take;
+          rem -= take;
+          if (rem === 0) {
+            li++;
+            rem = lots[li]?.qty ?? 0;
+          }
+        }
+        if (s.inPeriod) {
+          periodLines.push({
+            article,
+            t: s.t,
+            qty: s.qty,
+            coveredQty: covered,
+            revenue: s.qty * s.price,
+            revenueCovered: covered * s.price,
+            cost,
+            orderId: s.orderId,
+          });
+        }
+      }
+    }
 
     // --- Справочник по артикулу: бренд/категория/остаток ---
     interface PartMeta {
@@ -78,7 +172,7 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // --- Продажи по артикулу (период) ---
+    // --- Агрегация продаж периода по артикулу ---
     interface SalesRow {
       article: string;
       description: string;
@@ -86,36 +180,45 @@ export async function GET(request: NextRequest) {
       category: string;
       qty: number;
       revenue: number;
+      revenueCovered: number;
+      cost: number;
+      coveredQty: number;
       orderIds: Set<string>;
     }
     const sales = new Map<string, SalesRow>();
     const orderIdSet = new Set<string>();
-    for (const it of periodItems) {
-      orderIdSet.add(it.order.id);
-      const m = meta.get(it.article);
+    for (const ln of periodLines) {
+      orderIdSet.add(ln.orderId);
+      const m = meta.get(ln.article);
       const row =
-        sales.get(it.article) ??
+        sales.get(ln.article) ??
         ({
-          article: it.article,
-          description: m?.description ?? it.description,
+          article: ln.article,
+          description: m?.description ?? periodDesc.get(ln.article) ?? '',
           brand: m?.brand ?? '—',
           category: m?.category ?? '—',
           qty: 0,
           revenue: 0,
+          revenueCovered: 0,
+          cost: 0,
+          coveredQty: 0,
           orderIds: new Set<string>(),
         } as SalesRow);
-      row.qty += it.quantity;
-      row.revenue += it.quantity * it.item_final_price;
-      row.orderIds.add(it.order.id);
-      sales.set(it.article, row);
+      row.qty += ln.qty;
+      row.revenue += ln.revenue;
+      row.revenueCovered += ln.revenueCovered;
+      row.cost += ln.cost;
+      row.coveredQty += ln.coveredQty;
+      row.orderIds.add(ln.orderId);
+      sales.set(ln.article, row);
     }
 
-    // --- Топ деталей с прибылью/маржой ---
+    // --- Топ деталей с прибылью/маржой (FIFO) ---
     const topParts = [...sales.values()].map((r) => {
-      const cost = avgCost(r.article);
-      const totalCost = cost != null ? cost * r.qty : null;
-      const profit = totalCost != null ? r.revenue - totalCost : null;
-      const marginPct = profit != null && r.revenue > 0 ? (profit / r.revenue) * 100 : null;
+      const hasCost = r.coveredQty > 0;
+      const profit = hasCost ? r.revenueCovered - r.cost : null;
+      const marginPct =
+        hasCost && r.revenueCovered > 0 ? ((profit as number) / r.revenueCovered) * 100 : null;
       return {
         article: r.article,
         description: r.description,
@@ -129,21 +232,28 @@ export async function GET(request: NextRequest) {
     });
 
     // --- Сводка ---
-    const revenue = topParts.reduce((s, p) => s + p.revenue, 0);
-    const unitsSold = topParts.reduce((s, p) => s + p.qty, 0);
-    const withCost = topParts.filter((p) => p.profit != null);
-    const estProfit = withCost.reduce((s, p) => s + (p.profit ?? 0), 0);
-    const revenueWithCost = withCost.reduce((s, p) => s + p.revenue, 0);
+    let revenue = 0;
+    let unitsSold = 0;
+    let estProfit = 0;
+    let revenueWithCost = 0;
+    for (const r of sales.values()) {
+      revenue += r.revenue;
+      unitsSold += r.qty;
+      if (r.coveredQty > 0) {
+        estProfit += r.revenueCovered - r.cost;
+        revenueWithCost += r.revenueCovered;
+      }
+    }
     const marginPct = revenueWithCost > 0 ? (estProfit / revenueWithCost) * 100 : 0;
     const ordersCount = orderIdSet.size;
     const avgOrderValue = ordersCount > 0 ? revenue / ordersCount : 0;
 
-    // Стоимость склада по закупке + неликвид
+    // Стоимость склада по последней закупке + неликвид
     let inventoryValueCost = 0;
     const deadStock: { article: string; description: string; stock: number; valueCost: number }[] = [];
     for (const [article, m] of meta) {
       if (m.stock <= 0) continue;
-      const cost = avgCost(article) ?? 0;
+      const cost = latestCost(article) ?? 0;
       const value = m.stock * cost;
       inventoryValueCost += value;
       if (!sales.has(article)) {
@@ -216,21 +326,19 @@ export async function GET(request: NextRequest) {
       .sort((a, b) => b.qty - a.qty)
       .slice(0, 10);
 
-    // --- Тренд: выручка + прибыль по дням ---
+    // --- Тренд: выручка + прибыль (FIFO) по дням ---
     const trendMap = new Map<string, { revenue: number; profit: number }>();
     for (let i = 0; i < days; i++) {
       const d = new Date(from.getTime() + i * 24 * 60 * 60 * 1000);
       const key = `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}`;
       if (!trendMap.has(key)) trendMap.set(key, { revenue: 0, profit: 0 });
     }
-    for (const it of periodItems) {
-      const d = it.order.createdAt;
+    for (const ln of periodLines) {
+      const d = new Date(ln.t);
       const key = `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}`;
       const e = trendMap.get(key) ?? { revenue: 0, profit: 0 };
-      const lineRevenue = it.quantity * it.item_final_price;
-      const cost = avgCost(it.article);
-      e.revenue += lineRevenue;
-      if (cost != null) e.profit += lineRevenue - cost * it.quantity;
+      e.revenue += ln.revenue;
+      e.profit += ln.revenueCovered - ln.cost;
       trendMap.set(key, e);
     }
     const trend = [...trendMap.entries()]
