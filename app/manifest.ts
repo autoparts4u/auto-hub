@@ -5,7 +5,8 @@ export default function manifest(): MetadataRoute.Manifest {
     name: 'AutoHub — задачи',
     short_name: 'AutoHub',
     description: 'Админ-панель автозапчастей',
-    start_url: '/dashboard',
+    // "/" разводит по ролям: админ → /dashboard/autoparts, клиент → /shop
+    start_url: '/',
     scope: '/',
     display: 'standalone',
     background_color: '#0f172a',

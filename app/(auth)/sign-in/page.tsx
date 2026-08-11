@@ -37,7 +37,12 @@ const Page = async () => {
               "use server";
               await executeAction({
                 actionFn: async () => {
-                  await signIn("credentials", formData);
+                  // "/" сам разводит по ролям: админ → /dashboard/autoparts, клиент → /shop
+                  await signIn("credentials", {
+                    email: formData.get("email"),
+                    password: formData.get("password"),
+                    redirectTo: "/",
+                  });
                 },
               });
             }}

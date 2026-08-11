@@ -7,7 +7,8 @@ const GoogleSignIn = () => {
     <form
       action={async () => {
         "use server";
-        await signIn("google");
+        // "/" сам разводит по ролям: админ → /dashboard/autoparts, клиент → /shop
+        await signIn("google", { redirectTo: "/" });
       }}
     >
       <Button className="w-full" variant="outline">
