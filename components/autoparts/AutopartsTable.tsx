@@ -67,6 +67,7 @@ import {
   BookMarked,
   BookmarkCheck,
   ClipboardList,
+  Search,
 } from 'lucide-react';
 import { PriceEditModal } from './PriceEditModal';
 import {
@@ -158,7 +159,7 @@ function MobileFilterSection({
         type="button"
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
-        className="w-full flex items-center justify-between gap-2 px-3 py-2.5 text-left bg-muted/40 hover:bg-muted/60 transition-colors"
+        className="w-full flex items-center justify-between gap-2 px-3 py-2.5 text-left bg-muted/100 hover:bg-muted transition-colors"
       >
         <span className="flex items-center gap-2 text-sm font-medium">
           {title}
@@ -320,6 +321,7 @@ function AutopartsTableContent({
   const [usdRate, setUsdRate] = useState<number | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const searchModalInputRef = useRef<HTMLInputElement>(null);
+  const searchMobileInputRef = useRef<HTMLInputElement>(null);
   const autopartModalRef = useRef<{ handleSubmit: () => Promise<void> }>(null);
   const filtersModalContentRef = useRef<HTMLDivElement>(null);
   const filtersModalTitleRef = useRef<HTMLDivElement>(null);
@@ -665,6 +667,7 @@ function AutopartsTableContent({
   const resetFilters = () => {
     if (searchInputRef.current) searchInputRef.current.value = '';
     if (searchModalInputRef.current) searchModalInputRef.current.value = '';
+    if (searchMobileInputRef.current) searchMobileInputRef.current.value = '';
     setSearchFilter('');
     setSelectedBrands([]);
     setSelectedWarehouses([]);
@@ -699,6 +702,10 @@ function AutopartsTableContent({
 
   // Обработчики для сброса страницы при изменении фильтров
   const handleSearchChange = (value: string) => {
+    // Поля неуправляемые, поэтому держим их в синхроне вручную
+    for (const ref of [searchInputRef, searchModalInputRef, searchMobileInputRef]) {
+      if (ref.current && ref.current.value !== value) ref.current.value = value;
+    }
     if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
     searchDebounceRef.current = setTimeout(() => {
       setSearchFilter(value);
@@ -1339,6 +1346,20 @@ function AutopartsTableContent({
               </div>
             </Label>
           </div>
+        </div>
+      </div>
+
+      {/* Поиск на мобильных — прилипает к верху вместо убранной панели фильтров */}
+      <div className="md:hidden sticky top-0 z-20 -mx-4 px-4 py-2 bg-background border-b">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-primary pointer-events-none" />
+          <Input
+            ref={searchMobileInputRef}
+            placeholder="Поиск по описанию или артикулу"
+            defaultValue=""
+            onChange={(e) => handleSearchChange(e.target.value)}
+            className="w-full pl-9 bg-muted/40 shadow-sm"
+          />
         </div>
       </div>
 
@@ -2541,7 +2562,8 @@ function AutopartsTableContent({
                   ref={searchModalInputRef}
                   id="modal-search"
                   placeholder="Поиск по описанию или артикулу"
-                  defaultValue=""
+                  // модалка перемонтируется при открытии — подставляем текущий запрос
+                  defaultValue={searchFilter}
                   onChange={(e) => handleSearchChange(e.target.value)}
                   className="w-full"
                   autoFocus={false}
