@@ -1,6 +1,12 @@
 'use client';
 
-import { useState, useRef, useEffect, useMemo } from 'react';
+import {
+  useState,
+  useRef,
+  useEffect,
+  useMemo,
+  useSyncExternalStore,
+} from 'react';
 import { toast } from 'sonner';
 import { useActivity } from '@/components/activity/ActivityProvider';
 import { AutopartWithStock, AutopartFormData } from '@/app/types/autoparts';
@@ -133,7 +139,72 @@ function AdminCardExpander({
   );
 }
 
-export function AutopartsTable({
+// Сворачиваемая секция фильтра (мобильная модалка фильтров).
+// Состояние раскрытия хранится локально — иначе тап по заголовку перерисовывал
+// бы всю таблицу целиком и список появлялся бы с задержкой.
+function MobileFilterSection({
+  title,
+  count,
+  children,
+}: {
+  title: string;
+  count: number;
+  children: React.ReactNode;
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="border rounded-md overflow-hidden">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        className="w-full flex items-center justify-between gap-2 px-3 py-2.5 text-left bg-muted/40 hover:bg-muted/60 transition-colors"
+      >
+        <span className="flex items-center gap-2 text-sm font-medium">
+          {title}
+          {count > 0 && (
+            <span className="inline-flex items-center justify-center h-5 min-w-[20px] px-1.5 text-xs font-bold rounded-full bg-primary text-primary-foreground">
+              {count}
+            </span>
+          )}
+        </span>
+        <ChevronDown
+          className={`w-4 h-4 shrink-0 text-muted-foreground transition-transform ${open ? 'rotate-180' : ''}`}
+        />
+      </button>
+      {open && <div className="border-t space-y-2 p-2">{children}</div>}
+    </div>
+  );
+}
+
+// Десктопная таблица и мобильный список — взаимоисключающие ветки дерева.
+// Раньше обе рендерились всегда (одна пряталась через CSS), и каждый рендер
+// стоил вдвое дороже. Через matchMedia рендерим только нужную.
+// На сервере и во время гидрации значение null — тогда рендерятся обе ветки
+// со старым CSS-скрытием, иначе разметка сервера и клиента разойдется.
+const DESKTOP_QUERY = '(min-width: 768px)';
+const subscribeIsDesktop = (onChange: () => void) => {
+  const mq = window.matchMedia(DESKTOP_QUERY);
+  mq.addEventListener('change', onChange);
+  return () => mq.removeEventListener('change', onChange);
+};
+const useIsDesktop = () =>
+  useSyncExternalStore<boolean | null>(
+    subscribeIsDesktop,
+    () => window.matchMedia(DESKTOP_QUERY).matches,
+    () => null,
+  );
+
+// Один TooltipProvider на всю таблицу вместо провайдера в каждой строке
+export function AutopartsTable(props: Props) {
+  return (
+    <TooltipProvider>
+      <AutopartsTableContent {...props} />
+    </TooltipProvider>
+  );
+}
+
+function AutopartsTableContent({
   parts,
   brands,
   warehouses,
@@ -148,6 +219,7 @@ export function AutopartsTable({
   clientId,
 }: Props) {
   const { logEvent } = useActivity();
+  const isDesktop = useIsDesktop();
   const [localParts, setLocalParts] = useState<AutopartWithStock[]>(parts);
   const [reservationSummary, setReservationSummary] = useState<
     Record<string, { reservedCount: number; nearestExpiry: string | null }>
@@ -244,13 +316,11 @@ export function AutopartsTable({
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(50);
   const [submitting, setSubmitting] = useState(false);
-  const [showFilters, setShowFilters] = useState(true);
   const [showFiltersModal, setShowFiltersModal] = useState(false);
   const [usdRate, setUsdRate] = useState<number | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const searchModalInputRef = useRef<HTMLInputElement>(null);
   const autopartModalRef = useRef<{ handleSubmit: () => Promise<void> }>(null);
-  const lastScrollY = useRef(0);
   const filtersModalContentRef = useRef<HTMLDivElement>(null);
   const filtersModalTitleRef = useRef<HTMLDivElement>(null);
 
@@ -267,30 +337,6 @@ export function AutopartsTable({
       })
       .catch(() => {});
   }, []);
-
-  // Автоматическое скрытие фильтров при скролле вниз на мобильных
-  useEffect(() => {
-    const handleScroll = () => {
-      // Только на мобильных устройствах
-      if (window.innerWidth >= 768) return;
-
-      const currentScrollY = window.scrollY;
-
-      // Если скроллим вниз больше чем на 50px и фильтры открыты - скрываем
-      if (
-        currentScrollY > lastScrollY.current &&
-        currentScrollY > 100 &&
-        showFilters
-      ) {
-        setShowFilters(false);
-      }
-
-      lastScrollY.current = currentScrollY;
-    };
-
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, [showFilters]);
 
   // Закрытие модального окна фильтров при изменении размера на десктоп
   useEffect(() => {
@@ -770,7 +816,7 @@ export function AutopartsTable({
   );
 
   return (
-    <div className="w-full max-w-full px-4">
+    <div className="w-full max-w-full px-4 pb-24 md:pb-0">
       {!onlyView && (
         <div className="md:sticky md:top-0 z-20 bg-background flex items-center justify-between py-2 md:py-0">
           <h2 className="text-2xl font-semibold tracking-tight"></h2>
@@ -817,13 +863,13 @@ export function AutopartsTable({
         </div>
       )}
 
-      {/* Панель фильтров */}
+      {/* Панель фильтров (только десктоп/планшет) */}
       <div
-        className={`md:sticky z-10 bg-[#FFD966] border-b mb-4 transition-all duration-300 ${!onlyView ? 'mt-4 md:mt-0 md:top-[40px]' : 'md:top-0'} ${showFilters ? 'p-4' : 'p-0 h-0 overflow-hidden border-0'}`}
+        className={`hidden md:block md:sticky z-10 bg-[#FFD966] border-b mb-4 p-4 transition-all duration-300 ${!onlyView ? 'md:top-[40px]' : 'md:top-0'}`}
       >
-        <div className="flex items-center justify-between mb-3 pb-2 border-b md:border-0">
-          <h3 className="text-base md:text-sm font-semibold flex items-center gap-2 text-foreground">
-            <Filter className="w-5 h-5 md:w-4 md:h-4 text-primary" />
+        <div className="flex items-center justify-between mb-3 pb-2 md:border-0">
+          <h3 className="text-sm font-semibold flex items-center gap-2 text-foreground">
+            <Filter className="w-4 h-4 text-primary" />
             Фильтры
             {getActiveFiltersCount() > 0 && (
               <span className="inline-flex items-center justify-center h-5 min-w-[20px] px-1.5 text-xs font-bold rounded-full bg-primary text-primary-foreground">
@@ -831,15 +877,6 @@ export function AutopartsTable({
               </span>
             )}
           </h3>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setShowFilters(false)}
-            className="h-8 w-8 p-0 md:hidden hover:bg-destructive/10"
-            title="Скрыть фильтры"
-          >
-            <X className="w-5 h-5" />
-          </Button>
         </div>
         <div className="flex flex-wrap gap-3 items-end">
           <Input
@@ -1306,26 +1343,25 @@ export function AutopartsTable({
       </div>
 
       {/* Плавающая кнопка фильтров (только мобильные) */}
-      {!showFilters && (
-        <div className="md:hidden fixed bottom-6 right-6 z-30 animate-in fade-in slide-in-from-bottom-4 duration-300">
-          <Button
-            size="lg"
-            onClick={() => setShowFiltersModal(true)}
-            className="h-14 w-14 rounded-full shadow-lg hover:shadow-xl transition-all hover:scale-110 active:scale-95"
-          >
-            <div className="relative">
-              <Filter className="w-6 h-6" />
-              {getActiveFiltersCount() > 0 && (
-                <span className="absolute -top-2 -right-2 text-xs font-bold">
-                  {getActiveFiltersCount()}
-                </span>
-              )}
-            </div>
-          </Button>
-        </div>
-      )}
+      <div className="md:hidden fixed bottom-6 right-6 z-30 animate-in fade-in slide-in-from-bottom-4 duration-300">
+        <Button
+          size="lg"
+          onClick={() => setShowFiltersModal(true)}
+          className="h-14 w-14 rounded-full shadow-lg hover:shadow-xl transition-all hover:scale-110 active:scale-95"
+        >
+          <div className="relative">
+            <Filter className="w-6 h-6" />
+            {getActiveFiltersCount() > 0 && (
+              <span className="absolute -top-2 -right-2 text-xs font-bold">
+                {getActiveFiltersCount()}
+              </span>
+            )}
+          </div>
+        </Button>
+      </div>
 
       {/* Десктопная и планшетная таблица */}
+      {isDesktop !== false && (
       <div className="hidden md:block rounded-lg border shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full border-collapse text-sm">
@@ -1541,53 +1577,49 @@ export function AutopartsTable({
                             <span className="font-medium truncate">
                               {price.priceType.name}:
                             </span>
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <span className="font-semibold whitespace-nowrap text-green-600 dark:text-green-500 cursor-default">
-                                    {price.price.toFixed(2)}
-                                  </span>
-                                </TooltipTrigger>
-                                {usdRate !== null && (
-                                  <TooltipContent side="top">
-                                    <p>
-                                      {(price.price * usdRate).toFixed(2)} BYN
-                                    </p>
-                                  </TooltipContent>
-                                )}
-                              </Tooltip>
-                            </TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span className="font-semibold whitespace-nowrap text-green-600 dark:text-green-500 cursor-default">
+                                  {price.price.toFixed(2)}
+                                </span>
+                              </TooltipTrigger>
+                              {usdRate !== null && (
+                                <TooltipContent side="top">
+                                  <p>
+                                    {(price.price * usdRate).toFixed(2)} BYN
+                                  </p>
+                                </TooltipContent>
+                              )}
+                            </Tooltip>
                           </li>
                         ))}
                       </ul>
                     ) : (
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <span className="inline-flex items-center justify-center px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 cursor-default">
-                              {p.prices
-                                .find(
-                                  (price) =>
-                                    price.priceType.id === priceAccessId,
-                                )
-                                ?.price.toFixed(2) ?? '-'}
-                            </span>
-                          </TooltipTrigger>
-                          {usdRate !== null &&
-                            (() => {
-                              const found = p.prices.find(
-                                (price) => price.priceType.id === priceAccessId,
-                              );
-                              return found ? (
-                                <TooltipContent side="top">
-                                  <p>
-                                    {(found.price * usdRate).toFixed(2)} BYN
-                                  </p>
-                                </TooltipContent>
-                              ) : null;
-                            })()}
-                        </Tooltip>
-                      </TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className="inline-flex items-center justify-center px-2.5 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 cursor-default">
+                            {p.prices
+                              .find(
+                                (price) =>
+                                  price.priceType.id === priceAccessId,
+                              )
+                              ?.price.toFixed(2) ?? '-'}
+                          </span>
+                        </TooltipTrigger>
+                        {usdRate !== null &&
+                          (() => {
+                            const found = p.prices.find(
+                              (price) => price.priceType.id === priceAccessId,
+                            );
+                            return found ? (
+                              <TooltipContent side="top">
+                                <p>
+                                  {(found.price * usdRate).toFixed(2)} BYN
+                                </p>
+                              </TooltipContent>
+                            ) : null;
+                          })()}
+                      </Tooltip>
                     )}
                   </td>
                   {!onlyView && (
@@ -1602,88 +1634,86 @@ export function AutopartsTable({
                   {!onlyView && (
                     <td className="px-2 py-3 text-center">
                       <div className="grid grid-cols-2 gap-0.5">
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-7 w-7"
-                                onClick={() => setSelected(p)}
-                              >
-                                <Pencil className="w-3.5 h-3.5" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent side="bottom">
-                              <p>Редактировать</p>
-                            </TooltipContent>
-                          </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7"
+                              onClick={() => setSelected(p)}
+                            >
+                              <Pencil className="w-3.5 h-3.5" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent side="bottom">
+                            <p>Редактировать</p>
+                          </TooltipContent>
+                        </Tooltip>
 
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-7 w-7"
-                                disabled={duplicatingId === p.id}
-                                onClick={() => handleDuplicate(p)}
-                              >
-                                <Copy className="w-3.5 h-3.5 text-violet-500" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent side="bottom">
-                              <p>Дублировать</p>
-                            </TooltipContent>
-                          </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7"
+                              disabled={duplicatingId === p.id}
+                              onClick={() => handleDuplicate(p)}
+                            >
+                              <Copy className="w-3.5 h-3.5 text-violet-500" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent side="bottom">
+                            <p>Дублировать</p>
+                          </TooltipContent>
+                        </Tooltip>
 
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-7 w-7"
-                                onClick={() => setMovePart(p)}
-                              >
-                                <ArrowRightLeft className="w-3.5 h-3.5 text-blue-500" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent side="bottom">
-                              <p>Переместить</p>
-                            </TooltipContent>
-                          </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7"
+                              onClick={() => setMovePart(p)}
+                            >
+                              <ArrowRightLeft className="w-3.5 h-3.5 text-blue-500" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent side="bottom">
+                            <p>Переместить</p>
+                          </TooltipContent>
+                        </Tooltip>
 
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-7 w-7"
-                                onClick={() => setPricePartId(p.id)}
-                              >
-                                <Tags className="w-3.5 h-3.5 text-green-600" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent side="bottom">
-                              <p>Редактировать цены</p>
-                            </TooltipContent>
-                          </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7"
+                              onClick={() => setPricePartId(p.id)}
+                            >
+                              <Tags className="w-3.5 h-3.5 text-green-600" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent side="bottom">
+                            <p>Редактировать цены</p>
+                          </TooltipContent>
+                        </Tooltip>
 
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-7 w-7"
-                                onClick={() => setDeletingId(p.id)}
-                              >
-                                <Trash className="w-3.5 h-3.5 text-destructive" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent side="bottom">
-                              <p>Удалить</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7"
+                              onClick={() => setDeletingId(p.id)}
+                            >
+                              <Trash className="w-3.5 h-3.5 text-destructive" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent side="bottom">
+                            <p>Удалить</p>
+                          </TooltipContent>
+                        </Tooltip>
                       </div>
                     </td>
                   )}
@@ -1693,37 +1723,35 @@ export function AutopartsTable({
                         (() => {
                           const inCart = cart.some((c) => c.part.id === p.id);
                           return (
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className={`h-7 w-7 ${inCart ? 'text-amber-600' : ''}`}
-                                    onClick={() => {
-                                      if (inCart) {
-                                        setCart((prev) => prev.filter((c) => c.part.id !== p.id));
-                                        logEvent('cart_remove', { article: p.article, description: p.description });
-                                      } else {
-                                        setAddingToCartPart(p);
-                                        setAddingQty('1');
-                                      }
-                                    }}
-                                  >
-                                    {inCart ? (
-                                      <BookmarkCheck className="w-3.5 h-3.5 text-amber-600" />
-                                    ) : (
-                                      <BookMarked className="w-3.5 h-3.5 text-amber-600" />
-                                    )}
-                                  </Button>
-                                </TooltipTrigger>
-                                <TooltipContent side="left">
-                                  <p>
-                                    {inCart ? 'Убрать из корзины' : 'В корзину'}
-                                  </p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className={`h-7 w-7 ${inCart ? 'text-amber-600' : ''}`}
+                                  onClick={() => {
+                                    if (inCart) {
+                                      setCart((prev) => prev.filter((c) => c.part.id !== p.id));
+                                      logEvent('cart_remove', { article: p.article, description: p.description });
+                                    } else {
+                                      setAddingToCartPart(p);
+                                      setAddingQty('1');
+                                    }
+                                  }}
+                                >
+                                  {inCart ? (
+                                    <BookmarkCheck className="w-3.5 h-3.5 text-amber-600" />
+                                  ) : (
+                                    <BookMarked className="w-3.5 h-3.5 text-amber-600" />
+                                  )}
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent side="left">
+                                <p>
+                                  {inCart ? 'Убрать из корзины' : 'В корзину'}
+                                </p>
+                              </TooltipContent>
+                            </Tooltip>
                           );
                         })()
                       ) : (
@@ -1737,9 +1765,11 @@ export function AutopartsTable({
           </table>
         </div>
       </div>
+      )}
 
       {/* Мобильная версия таблицы */}
-      <div className="md:hidden space-y-3">
+      {isDesktop !== true && (
+      <div className="md:hidden space-y-3 pt-2">
         {filteredParts.map((p, index) => (
           <div
             key={p.id}
@@ -1827,18 +1857,16 @@ export function AutopartsTable({
                       const price = p.prices.find((pr) => pr.priceType.id === priceAccessId);
                       if (!price) return null;
                       return (
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <div className="inline-flex items-center justify-center px-2.5 py-1 rounded-full text-sm font-semibold bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 cursor-default mt-0.5">
-                                {price.price.toFixed(2)}
-                              </div>
-                            </TooltipTrigger>
-                            {usdRate !== null && (
-                              <TooltipContent side="top"><p>{(price.price * usdRate).toFixed(2)} BYN</p></TooltipContent>
-                            )}
-                          </Tooltip>
-                        </TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div className="inline-flex items-center justify-center px-2.5 py-1 rounded-full text-sm font-semibold bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 cursor-default mt-0.5">
+                              {price.price.toFixed(2)}
+                            </div>
+                          </TooltipTrigger>
+                          {usdRate !== null && (
+                            <TooltipContent side="top"><p>{(price.price * usdRate).toFixed(2)} BYN</p></TooltipContent>
+                          )}
+                        </Tooltip>
                       );
                     })()}
                   </div>
@@ -1854,52 +1882,48 @@ export function AutopartsTable({
                   {!priceAccessId ? (
                     <div className="flex flex-wrap gap-2">
                       {p.prices.map((price) => (
-                        <TooltipProvider key={price.priceType.id}>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <div className="inline-flex items-center gap-1.5 bg-green-50 dark:bg-green-900/20 rounded-md px-2.5 py-1.5 text-xs cursor-default">
-                                <span className="font-medium text-muted-foreground">
-                                  {price.priceType.name}:
-                                </span>
-                                <span className="font-semibold text-green-700 dark:text-green-400">
-                                  {price.price.toFixed(2)}
-                                </span>
-                              </div>
-                            </TooltipTrigger>
-                            {usdRate !== null && (
-                              <TooltipContent side="top">
-                                <p>{(price.price * usdRate).toFixed(2)} BYN</p>
-                              </TooltipContent>
-                            )}
-                          </Tooltip>
-                        </TooltipProvider>
+                        <Tooltip key={price.priceType.id}>
+                          <TooltipTrigger asChild>
+                            <div className="inline-flex items-center gap-1.5 bg-green-50 dark:bg-green-900/20 rounded-md px-2.5 py-1.5 text-xs cursor-default">
+                              <span className="font-medium text-muted-foreground">
+                                {price.priceType.name}:
+                              </span>
+                              <span className="font-semibold text-green-700 dark:text-green-400">
+                                {price.price.toFixed(2)}
+                              </span>
+                            </div>
+                          </TooltipTrigger>
+                          {usdRate !== null && (
+                            <TooltipContent side="top">
+                              <p>{(price.price * usdRate).toFixed(2)} BYN</p>
+                            </TooltipContent>
+                          )}
+                        </Tooltip>
                       ))}
                     </div>
                   ) : (
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <div className="inline-flex items-center justify-center px-3 py-1.5 rounded-full text-sm font-semibold bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 cursor-default">
-                            {p.prices
-                              .find(
-                                (price) => price.priceType.id === priceAccessId,
-                              )
-                              ?.price.toFixed(2) ?? '-'}
-                          </div>
-                        </TooltipTrigger>
-                        {usdRate !== null &&
-                          (() => {
-                            const found = p.prices.find(
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="inline-flex items-center justify-center px-3 py-1.5 rounded-full text-sm font-semibold bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 cursor-default">
+                          {p.prices
+                            .find(
                               (price) => price.priceType.id === priceAccessId,
-                            );
-                            return found ? (
-                              <TooltipContent side="top">
-                                <p>{(found.price * usdRate).toFixed(2)} BYN</p>
-                              </TooltipContent>
-                            ) : null;
-                          })()}
-                      </Tooltip>
-                    </TooltipProvider>
+                            )
+                            ?.price.toFixed(2) ?? '-'}
+                        </div>
+                      </TooltipTrigger>
+                      {usdRate !== null &&
+                        (() => {
+                          const found = p.prices.find(
+                            (price) => price.priceType.id === priceAccessId,
+                          );
+                          return found ? (
+                            <TooltipContent side="top">
+                              <p>{(found.price * usdRate).toFixed(2)} BYN</p>
+                            </TooltipContent>
+                          ) : null;
+                        })()}
+                    </Tooltip>
                   )}
                 </div>
               )}
@@ -1980,94 +2004,93 @@ export function AutopartsTable({
                   )}
                 </div>
                 <div className="flex items-center gap-1">
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-9 w-9"
-                          onClick={() => setSelected(p)}
-                        >
-                          <Pencil className="w-4 h-4" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent side="bottom">
-                        <p>Редактировать</p>
-                      </TooltipContent>
-                    </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-9 w-9"
+                        onClick={() => setSelected(p)}
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom">
+                      <p>Редактировать</p>
+                    </TooltipContent>
+                  </Tooltip>
 
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-9 w-9"
-                          disabled={duplicatingId === p.id}
-                          onClick={() => handleDuplicate(p)}
-                        >
-                          <Copy className="w-4 h-4 text-violet-500" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent side="bottom">
-                        <p>Дублировать</p>
-                      </TooltipContent>
-                    </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-9 w-9"
+                        disabled={duplicatingId === p.id}
+                        onClick={() => handleDuplicate(p)}
+                      >
+                        <Copy className="w-4 h-4 text-violet-500" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom">
+                      <p>Дублировать</p>
+                    </TooltipContent>
+                  </Tooltip>
 
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-9 w-9"
-                          onClick={() => setMovePart(p)}
-                        >
-                          <ArrowRightLeft className="w-4 h-4 text-blue-500" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent side="bottom">
-                        <p>Переместить</p>
-                      </TooltipContent>
-                    </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-9 w-9"
+                        onClick={() => setMovePart(p)}
+                      >
+                        <ArrowRightLeft className="w-4 h-4 text-blue-500" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom">
+                      <p>Переместить</p>
+                    </TooltipContent>
+                  </Tooltip>
 
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-9 w-9"
-                          onClick={() => setPricePartId(p.id)}
-                        >
-                          <Tags className="w-4 h-4 text-green-600" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent side="bottom">
-                        <p>Цены</p>
-                      </TooltipContent>
-                    </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-9 w-9"
+                        onClick={() => setPricePartId(p.id)}
+                      >
+                        <Tags className="w-4 h-4 text-green-600" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom">
+                      <p>Цены</p>
+                    </TooltipContent>
+                  </Tooltip>
 
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-9 w-9"
-                          onClick={() => setDeletingId(p.id)}
-                        >
-                          <Trash className="w-4 h-4 text-destructive" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent side="bottom">
-                        <p>Удалить</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-9 w-9"
+                        onClick={() => setDeletingId(p.id)}
+                      >
+                        <Trash className="w-4 h-4 text-destructive" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent side="bottom">
+                      <p>Удалить</p>
+                    </TooltipContent>
+                  </Tooltip>
                 </div>
               </div>
             )}
           </div>
         ))}
       </div>
+      )}
 
       {/* Пагинация */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 p-4 bg-muted/30 rounded-lg border">
@@ -2525,16 +2548,32 @@ export function AutopartsTable({
                 />
               </div>
 
+              {/* Только в наличии */}
+              <Label className="flex items-center gap-3 rounded-lg border px-4 py-3 cursor-pointer hover:bg-accent/50 has-[[aria-checked=true]]:border-blue-600 has-[[aria-checked=true]]:bg-blue-50 dark:has-[[aria-checked=true]]:border-blue-900 dark:has-[[aria-checked=true]]:bg-blue-950">
+                <Checkbox
+                  id="modal-inStock"
+                  checked={onlyInStock}
+                  onCheckedChange={handleOnlyInStockChange}
+                  className="data-[state=checked]:border-blue-600 data-[state=checked]:bg-blue-600 data-[state=checked]:text-white dark:data-[state=checked]:border-blue-700 dark:data-[state=checked]:bg-blue-700"
+                />
+                <div className="flex-1">
+                  <p className="text-sm font-medium leading-none">В наличии</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Показывать только товары в наличии
+                  </p>
+                </div>
+              </Label>
+
               {/* Авто */}
               <div className="space-y-2">
                 <Label className="text-sm font-semibold">Авто</Label>
 
                 {/* Марки авто */}
-                <div className="space-y-2">
-                  <Label className="text-xs text-muted-foreground">
-                    Марки авто
-                  </Label>
-                  <Command className="border rounded-md">
+                <MobileFilterSection
+                  title="Марки авто"
+                  count={selectedAutos.length}
+                >
+                  <Command className="rounded-md">
                     <CommandInput placeholder="Поиск марки..." />
                     <CommandList className="max-h-[150px]">
                       <CommandEmpty>Марка не найдена</CommandEmpty>
@@ -2587,14 +2626,14 @@ export function AutopartsTable({
                       ))}
                     </div>
                   )}
-                </div>
+                </MobileFilterSection>
 
                 {/* Объемы двигателя */}
-                <div className="space-y-2">
-                  <Label className="text-xs text-muted-foreground">
-                    Объемы двигателя
-                  </Label>
-                  <Command className="border rounded-md">
+                <MobileFilterSection
+                  title="Объемы двигателя"
+                  count={selectedEngineVolumes.length}
+                >
+                  <Command className="rounded-md">
                     <CommandInput placeholder="Поиск объема..." />
                     <CommandList className="max-h-[150px]">
                       <CommandEmpty>Объем не найден</CommandEmpty>
@@ -2649,15 +2688,15 @@ export function AutopartsTable({
                       ))}
                     </div>
                   )}
-                </div>
+                </MobileFilterSection>
 
                 {/* Виды топлива */}
                 {fuelTypes.length > 0 && (
-                  <div className="space-y-2">
-                    <Label className="text-xs text-muted-foreground">
-                      Виды топлива
-                    </Label>
-                    <Command className="border rounded-md">
+                  <MobileFilterSection
+                    title="Виды топлива"
+                    count={selectedFuelTypes.length}
+                  >
+                    <Command className="rounded-md">
                       <CommandInput placeholder="Поиск вида топлива..." />
                       <CommandList className="max-h-[150px]">
                         <CommandEmpty>Вид топлива не найден</CommandEmpty>
@@ -2714,7 +2753,7 @@ export function AutopartsTable({
                         ))}
                       </div>
                     )}
-                  </div>
+                  </MobileFilterSection>
                 )}
 
                 {/* Год */}
@@ -2742,9 +2781,11 @@ export function AutopartsTable({
               </div>
 
               {/* Группы */}
-              <div className="space-y-2">
-                <Label className="text-sm font-semibold">Группы</Label>
-                <Command className="border rounded-md">
+              <MobileFilterSection
+                title="Группы"
+                count={selectedCategories.length}
+              >
+                <Command className="rounded-md">
                   <CommandInput placeholder="Поиск группы..." />
                   <CommandList className="max-h-[150px]">
                     <CommandEmpty>Группа не найдена</CommandEmpty>
@@ -2797,12 +2838,14 @@ export function AutopartsTable({
                     ))}
                   </div>
                 )}
-              </div>
+              </MobileFilterSection>
 
               {/* Бренды */}
-              <div className="space-y-2">
-                <Label className="text-sm font-semibold">Бренды</Label>
-                <Command className="border rounded-md">
+              <MobileFilterSection
+                title="Бренды"
+                count={selectedBrands.length}
+              >
+                <Command className="rounded-md">
                   <CommandInput placeholder="Поиск бренда..." />
                   <CommandList className="max-h-[150px]">
                     <CommandEmpty>Бренд не найден</CommandEmpty>
@@ -2853,13 +2896,15 @@ export function AutopartsTable({
                     ))}
                   </div>
                 )}
-              </div>
+              </MobileFilterSection>
 
               {/* Базы */}
               {!onlyView && (
-                <div className="space-y-2">
-                  <Label className="text-sm font-semibold">Базы</Label>
-                  <Command className="border rounded-md">
+                <MobileFilterSection
+                  title="Базы"
+                  count={selectedWarehouses.length}
+                >
+                  <Command className="rounded-md">
                     <CommandInput placeholder="Поиск базы..." />
                     <CommandList className="max-h-[150px]">
                       <CommandEmpty>База не найдена</CommandEmpty>
@@ -2912,16 +2957,16 @@ export function AutopartsTable({
                       ))}
                     </div>
                   )}
-                </div>
+                </MobileFilterSection>
               )}
 
               {/* Текст для поиска */}
               {!onlyView && (
-                <div className="space-y-2">
-                  <Label className="text-sm font-semibold">
-                    Текст для поиска
-                  </Label>
-                  <Command className="border rounded-md">
+                <MobileFilterSection
+                  title="Текст для поиска"
+                  count={selectedTextsForSearch.length}
+                >
+                  <Command className="rounded-md">
                     <CommandInput placeholder="Поиск текста..." />
                     <CommandList className="max-h-[150px]">
                       <CommandEmpty>Текст не найден</CommandEmpty>
@@ -2975,28 +3020,9 @@ export function AutopartsTable({
                       ))}
                     </div>
                   )}
-                </div>
+                </MobileFilterSection>
               )}
 
-              {/* Только в наличии */}
-              <div className="pt-2">
-                <Label className="flex items-center gap-3 rounded-lg border px-4 py-3 cursor-pointer hover:bg-accent/50 has-[[aria-checked=true]]:border-blue-600 has-[[aria-checked=true]]:bg-blue-50 dark:has-[[aria-checked=true]]:border-blue-900 dark:has-[[aria-checked=true]]:bg-blue-950">
-                  <Checkbox
-                    id="modal-inStock"
-                    checked={onlyInStock}
-                    onCheckedChange={handleOnlyInStockChange}
-                    className="data-[state=checked]:border-blue-600 data-[state=checked]:bg-blue-600 data-[state=checked]:text-white dark:data-[state=checked]:border-blue-700 dark:data-[state=checked]:bg-blue-700"
-                  />
-                  <div className="flex-1">
-                    <p className="text-sm font-medium leading-none">
-                      В наличии
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Показывать только товары в наличии
-                    </p>
-                  </div>
-                </Label>
-              </div>
             </div>
           </div>
 
