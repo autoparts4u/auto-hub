@@ -25,7 +25,7 @@ self.addEventListener('push', (event) => {
     tag: payload.tag || undefined,
     renotify: Boolean(payload.tag),
     requireInteraction: payload.requireInteraction !== false,
-    data: { url: payload.url || '/dashboard', ...(payload.data || {}) },
+    data: { url: payload.url || '/dashboard/tasks', ...(payload.data || {}) },
     timestamp: payload.timestamp || Date.now(),
   };
   if (Array.isArray(payload.actions)) options.actions = payload.actions;
@@ -37,7 +37,7 @@ self.addEventListener('push', (event) => {
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
 
-  const targetUrl = (event.notification.data && event.notification.data.url) || '/dashboard';
+  const targetUrl = (event.notification.data && event.notification.data.url) || '/dashboard/tasks';
 
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {

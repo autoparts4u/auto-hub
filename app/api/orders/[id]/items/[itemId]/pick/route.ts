@@ -44,7 +44,7 @@ export async function POST(
       },
     });
 
-    revalidatePath('/dashboard');
+    revalidatePath('/dashboard/tasks');
     revalidatePath('/dashboard/orders');
 
     return NextResponse.json(updated);

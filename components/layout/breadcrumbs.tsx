@@ -12,7 +12,7 @@ export function Breadcrumbs() {
     <nav className="text-sm text-muted-foreground mb-6">
       <ol className="flex items-center space-x-2">
         <li>
-          <Link href="/dashboard" className="hover:underline">
+          <Link href="/dashboard/autoparts" className="hover:underline">
             Dashboard
           </Link>
         </li>

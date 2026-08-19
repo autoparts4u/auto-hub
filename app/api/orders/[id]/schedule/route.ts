@@ -51,7 +51,7 @@ export async function PATCH(
       },
     });
 
-    revalidatePath('/dashboard');
+    revalidatePath('/dashboard/tasks');
     revalidatePath('/dashboard/orders');
 
     return NextResponse.json(order);

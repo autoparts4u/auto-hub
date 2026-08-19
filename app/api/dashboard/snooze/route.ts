@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    revalidatePath('/dashboard');
+    revalidatePath('/dashboard/tasks');
     return NextResponse.json(result);
   } catch (error) {
     console.error('Error creating snooze:', error);
@@ -77,7 +77,7 @@ export async function DELETE(request: NextRequest) {
 
     await prisma.dashboardSnooze.deleteMany({ where: { entityType, entityId } });
 
-    revalidatePath('/dashboard');
+    revalidatePath('/dashboard/tasks');
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Error deleting snooze:', error);

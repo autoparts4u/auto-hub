@@ -40,7 +40,7 @@ function timeOnly(d: Date | string | null | undefined) {
 }
 
 function dashboardUrl() {
-  return APP_PUBLIC_URL ? `${APP_PUBLIC_URL.replace(/\/$/, '')}/dashboard` : '/dashboard';
+  return APP_PUBLIC_URL ? `${APP_PUBLIC_URL.replace(/\/$/, '')}/dashboard/tasks` : '/dashboard/tasks';
 }
 
 export async function GET(request: NextRequest) {

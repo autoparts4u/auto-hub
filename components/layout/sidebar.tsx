@@ -31,7 +31,7 @@ import {
 import { useReservationBadge } from "@/lib/hooks/useReservationBadge";
 
 const navItems = [
-  { label: "Главная", href: "/dashboard", icon: House },
+  { label: "Главная", href: "/dashboard/tasks", icon: House },
   { label: "Заказы", href: "/dashboard/orders", icon: Inbox },
   { label: "Детали", href: "/dashboard/autoparts", icon: Cog },
   { label: "Бронирования", href: "/dashboard/reservations", icon: BookMarked },
