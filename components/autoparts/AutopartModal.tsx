@@ -218,6 +218,13 @@ export const AutopartModal = forwardRef<AutopartModalRef, AutopartModalProps>(
     setAnalogueResults((prev) => prev.filter((p) => p.id !== analogue.id));
   };
 
+  // Отцепить текст для поиска от текущей позиции (сам текст в справочнике остаётся)
+  const clearTextForSearch = () => {
+    setTextForSearchId("");
+    setTouched((prev) => ({ ...prev, textForSearchId: true }));
+    setTextForSearchOpen(false);
+  };
+
   const getFormData = (): AutopartFormData => {
     const stock = Object.entries(stockByWarehouse)
       .filter(([, qty]) => qty > 0)
@@ -612,9 +619,26 @@ export const AutopartModal = forwardRef<AutopartModalRef, AutopartModalProps>(
               variant="outline"
               className="w-full justify-between min-h-20 whitespace-normal"
             >
-              {textForSearchId
-                ? textsForSearch.find((t) => t.id.toString() === textForSearchId)?.text
-                : "Выберите текст"}
+              <span className="flex-1 text-left">
+                {textForSearchId
+                  ? textsForSearch.find((t) => t.id.toString() === textForSearchId)?.text
+                  : "Выберите текст"}
+              </span>
+              {textForSearchId && (
+                <span
+                  role="button"
+                  aria-label="Отцепить текст для поиска"
+                  title="Отцепить текст для поиска"
+                  className="shrink-0 rounded-sm p-1 hover:bg-muted"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    clearTextForSearch();
+                  }}
+                >
+                  <X className="w-4 h-4" />
+                </span>
+              )}
             </Button>
           </PopoverTrigger>
           <PopoverContent className="w-[400px] max-h-[300px] overflow-auto p-0">
@@ -623,6 +647,9 @@ export const AutopartModal = forwardRef<AutopartModalRef, AutopartModalProps>(
               <CommandList>
                 <CommandEmpty>Ничего не найдено</CommandEmpty>
                 <CommandGroup>
+                  <CommandItem onSelect={clearTextForSearch}>
+                    Не выбрано
+                  </CommandItem>
                   {textsForSearch.map((t) => (
                     <CommandItem
                       key={t.id}
