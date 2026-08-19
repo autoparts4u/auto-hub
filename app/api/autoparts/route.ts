@@ -1,10 +1,14 @@
 import db from "@/lib/db/db";
+import { auth } from "@/lib/auth";
 import { NextResponse } from "next/server";
 import { revalidatePath, revalidateTag } from "next/cache";
 
 export async function GET() {
   try {
+    const session = await auth();
     const autoparts = await db.autoparts.findMany({
+      // скрытые детали доступны только администратору
+      where: session?.user?.role === 'admin' ? undefined : { invisible: false },
       include: {
         brand: true,
         category: true,
@@ -40,6 +44,7 @@ export async function POST(req: Request) {
       article,
       description,
       maxNumberShown,
+      invisible,
       brandId,
       categoryId,
       autoIds,
@@ -57,6 +62,7 @@ export async function POST(req: Request) {
         article,
         description,
         maxNumberShown,
+        invisible: Boolean(invisible),
         brand_id: brandId,
         category_id: categoryId,
         year_from: yearFrom || null,

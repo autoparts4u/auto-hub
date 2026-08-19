@@ -4,7 +4,7 @@ import db from "@/lib/db/db";
 import { AutopartsTable } from "@/components/autoparts/AutopartsTable";
 import { SignOut } from "@/components/sign-out";
 import { Ticker } from "@/components/general/Ticker";
-import { getFullCatalog } from "@/lib/services/catalog";
+import { getFullCatalog, filterCatalogForClient } from "@/lib/services/catalog";
 import { redirect } from "next/navigation";
 
 const ShopPage = async () => {
@@ -41,10 +41,14 @@ const ShopPage = async () => {
   }
 
   // Каталог кэшируется (тег "autoparts"); грузим его параллельно с настройками.
-  const [catalog, settings] = await Promise.all([
+  const [fullCatalog, settings] = await Promise.all([
     getFullCatalog(),
     db.appSettings.findUnique({ where: { id: 1 } }),
   ]);
+
+  // Скрытые детали (invisible) видны только администратору
+  const catalog =
+    session.user.role === "admin" ? fullCatalog : filterCatalogForClient(fullCatalog);
 
   return (
     <div>

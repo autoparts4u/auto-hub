@@ -311,6 +311,8 @@ model Autoparts {
   maxNumberShown     Int    @default(5)
   year_from          Int?
   year_to            Int?
+  // Скрыта от клиентов: видна только администратору (витрина/поиск её не отдают)
+  invisible          Boolean @default(false)
 
   brand              Brands?                  @relation(fields: [brand_id], references: [id])
   category           Categories?              @relation(fields: [category_id], references: [id])

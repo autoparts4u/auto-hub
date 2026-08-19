@@ -40,6 +40,7 @@ export async function POST(
         article: `Копия ${original.article}`,
         description: original.description,
         maxNumberShown: original.maxNumberShown,
+        invisible: original.invisible,
         brand_id: original.brand_id,
         category_id: original.category_id,
         year_from: original.year_from,

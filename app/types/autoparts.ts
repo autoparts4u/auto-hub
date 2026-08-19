@@ -8,7 +8,7 @@ export type WarehouseStock = {
 
 export type AutopartWithStock = Pick<
   Autoparts,
-  "id" | "article" | "description" | "maxNumberShown" | "year_from" | "year_to"
+  "id" | "article" | "description" | "maxNumberShown" | "year_from" | "year_to" | "invisible"
 > & {
   category: Categories | null;
   brand: Brands | null;
@@ -29,6 +29,7 @@ export type AutopartWithStock = Pick<
     id: string;
     article: string;
     description: string;
+    invisible: boolean;
     brand: Brands | null;
     category: Categories | null;
   }[];
@@ -38,6 +39,7 @@ export type AutopartFormData = {
   article: string;
   description: string;
   maxNumberShown: number;
+  invisible: boolean;
   brandId: number;
   categoryId: number;
   autoIds: number[];

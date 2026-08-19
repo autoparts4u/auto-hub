@@ -426,6 +426,7 @@ function AutopartsTableContent({
         article: formData.article,
         description: formData.description,
         maxNumberShown: formData.maxNumberShown,
+        invisible: formData.invisible,
         year_from: formData.yearFrom ?? null,
         year_to: formData.yearTo ?? null,
         brand:
@@ -490,6 +491,7 @@ function AutopartsTableContent({
         article: raw.article,
         description: raw.description,
         maxNumberShown: raw.maxNumberShown,
+        invisible: raw.invisible ?? false,
         year_from: raw.year_from ?? null,
         year_to: raw.year_to ?? null,
         brand: raw.brand ?? null,

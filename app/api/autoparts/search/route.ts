@@ -21,6 +21,8 @@ export async function GET(req: Request) {
 
   const parts = await db.autoparts.findMany({
     where: {
+      // скрытые детали доступны только администратору
+      ...(session.user.role === "admin" ? {} : { invisible: false }),
       OR: [
         { article: { contains: query, mode: "insensitive" } },
         { description: { contains: query, mode: "insensitive" } },

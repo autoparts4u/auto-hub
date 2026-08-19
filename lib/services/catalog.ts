@@ -50,6 +50,7 @@ export const getFullCatalog = unstable_cache(
         article: part.article,
         description: part.description,
         maxNumberShown: part.maxNumberShown,
+        invisible: part.invisible,
         year_from: part.year_from,
         year_to: part.year_to,
         category: part.category,
@@ -69,6 +70,7 @@ export const getFullCatalog = unstable_cache(
           id: a.id,
           article: a.article,
           description: a.description,
+          invisible: a.invisible,
           brand: a.brand,
           category: a.category,
         })),
@@ -80,3 +82,21 @@ export const getFullCatalog = unstable_cache(
   ['autoparts-full-data'],
   { tags: ['autoparts'] }
 );
+
+type CatalogPart = { invisible: boolean; analogues: { invisible: boolean }[] };
+
+// Детали с invisible=true видит только администратор. Вырезаем их из каталога
+// и из списков аналогов у оставшихся деталей (кэш общий — фильтруем на выдаче).
+export function filterCatalogForClient<P extends CatalogPart, C extends { parts: P[] }>(
+  catalog: C
+): C {
+  return {
+    ...catalog,
+    parts: catalog.parts
+      .filter((part) => !part.invisible)
+      .map((part) => ({
+        ...part,
+        analogues: part.analogues.filter((a) => !a.invisible),
+      })),
+  };
+}

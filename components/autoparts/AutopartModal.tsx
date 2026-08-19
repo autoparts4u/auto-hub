@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, forwardRef, useImperativeHandle } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import {
   Popover,
   PopoverContent,
@@ -49,6 +50,10 @@ export const AutopartModal = forwardRef<AutopartModalRef, AutopartModalProps>(
   const [description, setDescription] = useState(part?.description ?? "");
   const [maxNumberShown, setMaxNumberShown] = useState<string>(
     part?.maxNumberShown?.toString() ?? "5"
+  );
+  // Переключатель показывает обратное значение поля invisible: по умолчанию деталь видна
+  const [visibleToClients, setVisibleToClients] = useState<boolean>(
+    !(part?.invisible ?? false)
   );
   const [yearFrom, setYearFrom] = useState<string>(
     part?.year_from?.toString() ?? ""
@@ -229,6 +234,7 @@ export const AutopartModal = forwardRef<AutopartModalRef, AutopartModalProps>(
       article,
       description,
       maxNumberShown: Number(maxNumberShown),
+      invisible: !visibleToClients,
       brandId: Number(brandId),
       categoryId: Number(categoryId),
       autoIds,
@@ -321,6 +327,28 @@ export const AutopartModal = forwardRef<AutopartModalRef, AutopartModalProps>(
             value={maxNumberShown}
             onChange={(e) => setMaxNumberShown(e.target.value)}
           />
+        </div>
+      </div>
+      <div className="flex flex-col gap-1">
+        <div className="flex items-center gap-2">
+          <label
+            htmlFor="autopart-visibility"
+            className="w-1/6 text-sm font-medium text-right"
+          >
+            Видимость
+          </label>
+          <div className="flex items-center gap-2">
+            <Switch
+              id="autopart-visibility"
+              checked={visibleToClients}
+              onCheckedChange={setVisibleToClients}
+            />
+            <span className="text-sm text-muted-foreground">
+              {visibleToClients
+                ? "Показывать клиентам"
+                : "Скрыта — видна только администратору"}
+            </span>
+          </div>
         </div>
       </div>
       <div className="flex flex-col gap-1">
