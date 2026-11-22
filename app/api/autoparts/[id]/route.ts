@@ -51,6 +51,7 @@ export async function PATCH(
     const {
       article,
       description,
+      shortDescription,
       maxNumberShown,
       invisible,
       brandId,
@@ -82,6 +83,8 @@ export async function PATCH(
       data: {
         article,
         description,
+        // пустая строка = короткого описания нет
+        shortDescription: shortDescription?.trim() ? shortDescription.trim() : null,
         maxNumberShown,
         invisible: Boolean(invisible),
         brand_id: brandId,

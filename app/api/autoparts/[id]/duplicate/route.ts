@@ -39,6 +39,7 @@ export async function POST(
       data: {
         article: `Копия ${original.article}`,
         description: original.description,
+        shortDescription: original.shortDescription,
         maxNumberShown: original.maxNumberShown,
         invisible: original.invisible,
         brand_id: original.brand_id,

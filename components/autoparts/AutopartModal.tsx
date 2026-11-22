@@ -4,6 +4,8 @@ import { useEffect, useRef, useState, forwardRef, useImperativeHandle } from "re
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Popover,
   PopoverContent,
@@ -48,6 +50,14 @@ export const AutopartModal = forwardRef<AutopartModalRef, AutopartModalProps>(
   ({ part, onSubmit }, ref) => {
   const [article, setArticle] = useState(part?.article ?? "");
   const [description, setDescription] = useState(part?.description ?? "");
+  // Короткое описание: включается галочкой, в поле по умолчанию подставляется
+  // полное описание — админ удаляет лишнее
+  const [useShortDescription, setUseShortDescription] = useState<boolean>(
+    Boolean(part?.shortDescription)
+  );
+  const [shortDescription, setShortDescription] = useState<string>(
+    part?.shortDescription ?? ""
+  );
   const [maxNumberShown, setMaxNumberShown] = useState<string>(
     part?.maxNumberShown?.toString() ?? "5"
   );
@@ -240,6 +250,10 @@ export const AutopartModal = forwardRef<AutopartModalRef, AutopartModalProps>(
     return {
       article,
       description,
+      shortDescription:
+        useShortDescription && shortDescription.trim()
+          ? shortDescription.trim()
+          : null,
       maxNumberShown: Number(maxNumberShown),
       invisible: !visibleToClients,
       brandId: Number(brandId),
@@ -323,6 +337,63 @@ export const AutopartModal = forwardRef<AutopartModalRef, AutopartModalProps>(
           <p className="text-sm text-red-500 ml-[16.66%]">Поле обязательно</p>
         )}
       </div>
+
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center gap-2">
+          <div className="w-1/6" />
+          <div className="flex items-center gap-2">
+            <Checkbox
+              id="autopart-use-short-description"
+              checked={useShortDescription}
+              onCheckedChange={(checked) => {
+                const next = checked === true;
+                setUseShortDescription(next);
+                // При включении подставляем полное описание как заготовку
+                if (next && !shortDescription.trim()) {
+                  setShortDescription(description);
+                }
+              }}
+            />
+            <label
+              htmlFor="autopart-use-short-description"
+              className="text-sm font-medium cursor-pointer"
+            >
+              Добавить короткое описание
+            </label>
+          </div>
+        </div>
+        {useShortDescription && (
+          <>
+            <div className="flex items-start gap-2">
+              <label
+                htmlFor="autopart-short-description"
+                className="w-1/6 text-sm font-medium text-right pt-2"
+              >
+                Короткое описание
+              </label>
+              <Textarea
+                id="autopart-short-description"
+                rows={2}
+                value={shortDescription}
+                onChange={(e) => setShortDescription(e.target.value)}
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-1/6" />
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2 text-xs text-muted-foreground"
+                onClick={() => setShortDescription(description)}
+              >
+                Подставить полное описание
+              </Button>
+            </div>
+          </>
+        )}
+      </div>
+
       <div className="flex flex-col gap-1">
         <div className="flex items-center gap-2">
           <label className="w-1/6 text-sm font-medium text-right">

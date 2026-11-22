@@ -22,10 +22,13 @@ Must not contain: business logic, route handlers, UI.
 - Explicit `include` for relations (no global `select *` shortcut). Example: orders fetch always includes `client`, `deliveryMethod`, `orderStatus`, `orderItems.autopart.brand`, `orderItems.warehouse`.
 - `cuid()` for string PKs (`Orders.id`, `Clients.id`, `Autoparts.id`); `autoincrement()` for lookup tables (`OrderStatuses.id`, `Warehouses.id`).
 - Migration workflow: edit `lib/db/schema.prisma` → `npm run db:migrate` (creates a timestamped migration, applies it to local DB, regenerates the client). Migration folder name format: `YYYYMMDDHHMMSS_<snake_description>`.
+- History was baselined on 2026-11-22: `lib/db/migrations/0_init` is a single baseline generated from the live DB, and it is the only migration Prisma replays on the shadow database. The seven pre-baseline folders plus a backup of `_prisma_migrations` live in [lib/db/migrations_archive/](lib/db/migrations_archive) — read its `README.md` before touching migration history. Never edit `0_init`; new changes get their own migration.
 
 ## § LEGACY PATTERNS ✗ (DO NOT REPLICATE)
 - Large commented-out `prismaClientSingleton` block at top of [lib/db/db.ts](lib/db/db.ts) — leftover from the pre-Neon setup. Don't restore.
 - `prisma/migrations/data-migration.sql` — stray file outside the active migrations dir. Don't add things here.
+- Marking a migration applied with `prisma migrate resolve` instead of letting `migrate dev` run it — this is how the history drifted away from the DB before the baseline (all 8 old rows had `applied_steps_count = 0`). Use `resolve` only when baselining, and say so in the archive README.
+- Creating tables with `npm run db:push` on the shared DB — it applies schema changes without a migration file, so the history stops describing reality. Use `db:migrate`.
 - Inline `new PrismaClient()` (seen in [lib/services/authService.ts](lib/services/authService.ts)) — defeats Neon pooling. Always use the singleton.
 
 ## § SUBAGENT CONTEXT

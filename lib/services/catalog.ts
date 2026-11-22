@@ -49,6 +49,7 @@ export const getFullCatalog = unstable_cache(
         id: part.id,
         article: part.article,
         description: part.description,
+        shortDescription: part.shortDescription,
         maxNumberShown: part.maxNumberShown,
         invisible: part.invisible,
         year_from: part.year_from,

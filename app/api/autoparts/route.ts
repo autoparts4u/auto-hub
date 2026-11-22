@@ -43,6 +43,7 @@ export async function POST(req: Request) {
     const {
       article,
       description,
+      shortDescription,
       maxNumberShown,
       invisible,
       brandId,
@@ -61,6 +62,8 @@ export async function POST(req: Request) {
       data: {
         article,
         description,
+        // пустая строка = короткого описания нет
+        shortDescription: shortDescription?.trim() ? shortDescription.trim() : null,
         maxNumberShown,
         invisible: Boolean(invisible),
         brand_id: brandId,
