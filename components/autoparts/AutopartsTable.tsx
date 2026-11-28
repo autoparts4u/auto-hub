@@ -68,6 +68,7 @@ import {
   BookmarkCheck,
   ClipboardList,
   Search,
+  ScanSearch,
 } from 'lucide-react';
 import { PriceEditModal } from './PriceEditModal';
 import {
@@ -78,6 +79,9 @@ import {
   FuelType,
 } from '@prisma/client';
 import ImportAutopartsButton from './ImportAutopartsButton';
+import VinSearchPanel from './VinSearchPanel';
+import { normalizeVin, isValidVin } from '@/lib/utils/vin';
+import type { VinFilterMatch } from '@/lib/utils/vinFilterMatch';
 
 interface Props {
   parts: AutopartWithStock[];
@@ -103,6 +107,83 @@ type SortKey =
   | 'auto';
 
 const RE_NORM = /[/,.\-\s]/g;
+
+type IndexedPart = AutopartWithStock & {
+  _searchStr: string;
+  _analogueStr: string;
+};
+
+interface FilterCriteria {
+  query: string;
+  brands: string[];
+  warehouses: string[];
+  categories: string[];
+  autos: string[];
+  engineVolumes: string[];
+  fuelTypes: string[];
+  year: string;
+  textsForSearch: string[];
+  onlyInStock: boolean;
+}
+
+/**
+ * Предикат фильтрации вынесен из компонента, чтобы одним и тем же кодом
+ * строить таблицу и заранее считать, сколько деталей останется при
+ * подстановке данных из VIN (до того, как пользователь нажмёт «Применить»).
+ */
+function partMatchesFilters(p: IndexedPart, c: FilterCriteria): boolean {
+  const matchesSelf = !c.query || p._searchStr.includes(c.query);
+  const matchesAnalogue = !c.query || p._analogueStr.includes(c.query);
+
+  const matchesBrand =
+    !p.brand || c.brands.length === 0 || c.brands.includes(p.brand.name);
+
+  const matchesWarehouse =
+    c.warehouses.length === 0 ||
+    p.warehouses.some((w) => c.warehouses.includes(w.warehouseName));
+
+  const matchesCategory =
+    !p.category ||
+    c.categories.length === 0 ||
+    c.categories.includes(p.category.name);
+
+  const matchesAuto =
+    c.autos.length === 0 || p.autos.some((auto) => c.autos.includes(auto.name));
+
+  const matchesEngineVolume =
+    c.engineVolumes.length === 0 ||
+    p.engineVolumes.some((ev) => c.engineVolumes.includes(ev.name));
+
+  const matchesFuelType =
+    c.fuelTypes.length === 0 ||
+    Boolean(p.fuelType && c.fuelTypes.includes(p.fuelType.name));
+
+  const matchesYear =
+    !c.year ||
+    ((p.year_from == null ||
+      (typeof p.year_from === 'number' && p.year_from <= Number(c.year))) &&
+      (p.year_to == null ||
+        (typeof p.year_to === 'number' && p.year_to >= Number(c.year))));
+
+  const matchesTextsForSearch =
+    c.textsForSearch.length === 0 ||
+    Boolean(p.textForSearch && c.textsForSearch.includes(p.textForSearch.text));
+
+  const isInStock = c.onlyInStock ? p.totalQuantity > 0 : true;
+
+  return (
+    (matchesSelf || matchesAnalogue) &&
+    matchesBrand &&
+    matchesWarehouse &&
+    matchesCategory &&
+    matchesAuto &&
+    matchesEngineVolume &&
+    matchesFuelType &&
+    matchesYear &&
+    matchesTextsForSearch &&
+    isInStock
+  );
+}
 
 function AdminCardExpander({
   article,
@@ -318,6 +399,8 @@ function AutopartsTableContent({
   const [pageSize, setPageSize] = useState(50);
   const [submitting, setSubmitting] = useState(false);
   const [showFiltersModal, setShowFiltersModal] = useState(false);
+  const [vinValue, setVinValue] = useState('');
+  const [vinPopoverOpen, setVinPopoverOpen] = useState(false);
   const [usdRate, setUsdRate] = useState<number | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const searchModalInputRef = useRef<HTMLInputElement>(null);
@@ -552,69 +635,20 @@ function AutopartsTableContent({
 
   // Фильтрация и сортировка данных
   const filteredAndSortedParts = useMemo(() => {
-    const query = searchFilter.toLowerCase().replace(RE_NORM, '');
+    const criteria: FilterCriteria = {
+      query: searchFilter.toLowerCase().replace(RE_NORM, ''),
+      brands: selectedBrands,
+      warehouses: selectedWarehouses,
+      categories: selectedCategories,
+      autos: selectedAutos,
+      engineVolumes: selectedEngineVolumes,
+      fuelTypes: selectedFuelTypes,
+      year: filterYear,
+      textsForSearch: selectedTextsForSearch,
+      onlyInStock: Boolean(onlyInStock),
+    };
     return indexedParts
-      .filter((p) => {
-        const matchesSelf = !query || p._searchStr.includes(query);
-        const matchesAnalogue = !query || p._analogueStr.includes(query);
-
-        const matchesBrand =
-          !p.brand ||
-          selectedBrands.length === 0 ||
-          selectedBrands.includes(p.brand.name);
-
-        const matchesWarehouse =
-          selectedWarehouses.length === 0 ||
-          p.warehouses.some((w) =>
-            selectedWarehouses.includes(w.warehouseName),
-          );
-
-        const matchesCategory =
-          !p.category ||
-          selectedCategories.length === 0 ||
-          selectedCategories.includes(p.category.name);
-
-        const matchesAuto =
-          selectedAutos.length === 0 ||
-          p.autos.some((auto) => selectedAutos.includes(auto.name));
-
-        const matchesEngineVolume =
-          selectedEngineVolumes.length === 0 ||
-          p.engineVolumes.some((ev) => selectedEngineVolumes.includes(ev.name));
-
-        const matchesFuelType =
-          selectedFuelTypes.length === 0 ||
-          (p.fuelType && selectedFuelTypes.includes(p.fuelType.name));
-
-        const matchesYear =
-          !filterYear ||
-          ((p.year_from == null ||
-            (typeof p.year_from === 'number' &&
-              p.year_from <= Number(filterYear))) &&
-            (p.year_to == null ||
-              (typeof p.year_to === 'number' &&
-                p.year_to >= Number(filterYear))));
-
-        const matchesTextsForSearch =
-          selectedTextsForSearch.length === 0 ||
-          (p.textForSearch &&
-            selectedTextsForSearch.includes(p.textForSearch.text));
-
-        const isInStock = onlyInStock ? p.totalQuantity > 0 : true;
-
-        return (
-          (matchesSelf || matchesAnalogue) &&
-          matchesBrand &&
-          matchesWarehouse &&
-          matchesCategory &&
-          matchesAuto &&
-          matchesEngineVolume &&
-          matchesFuelType &&
-          matchesYear &&
-          matchesTextsForSearch &&
-          isInStock
-        );
-      })
+      .filter((p) => partMatchesFilters(p, criteria))
       .sort((a, b) => {
         const getValue = (part: AutopartWithStock) => {
           switch (sortKey) {
@@ -681,6 +715,7 @@ function AutopartsTableContent({
     setSelectedFuelTypes([]);
     setFilterYear('');
     setSelectedTextsForSearch([]);
+    setVinValue('');
     setCurrentPage(1);
   };
 
@@ -716,6 +751,50 @@ function AutopartsTableContent({
       setCurrentPage(1);
       if (value) logEvent('search', { query: value });
     }, 300);
+  };
+
+  // Подстановка расшифрованного VIN в фильтры «Авто»: заменяет текущий выбор
+  const applyVinMatch = (match: VinFilterMatch) => {
+    if (match.autos.length > 0) setSelectedAutos(match.autos);
+    if (match.engineVolumes.length > 0) setSelectedEngineVolumes(match.engineVolumes);
+    if (match.fuelTypes.length > 0) setSelectedFuelTypes(match.fuelTypes);
+    if (match.year) setFilterYear(match.year);
+    setCurrentPage(1);
+    logEvent('filter', {
+      type: 'vin',
+      autos: match.autos,
+      engineVolumes: match.engineVolumes,
+      fuelTypes: match.fuelTypes,
+      year: match.year,
+    });
+  };
+
+  // Сколько деталей останется, если подставить этот набор значений из VIN.
+  // Остальные активные фильтры учитываются — иначе число вводило бы в заблуждение.
+  const countPartsForVin = (candidate: VinFilterMatch) =>
+    indexedParts.filter((p) =>
+      partMatchesFilters(p, {
+        query: searchFilter.toLowerCase().replace(RE_NORM, ''),
+        brands: selectedBrands,
+        warehouses: selectedWarehouses,
+        categories: selectedCategories,
+        autos: candidate.autos,
+        engineVolumes: candidate.engineVolumes,
+        fuelTypes: candidate.fuelTypes,
+        year: candidate.year,
+        textsForSearch: selectedTextsForSearch,
+        onlyInStock: Boolean(onlyInStock),
+      }),
+    ).length;
+
+  // Пользователь вставил VIN в обычный поиск — предлагаем расшифровать его
+  const searchLooksLikeVin = isValidVin(normalizeVin(searchFilter));
+
+  // Переносит VIN из строки поиска в поле VIN (иначе поиск по описанию ничего не найдёт)
+  const prefillVinFromSearch = () => {
+    if (!searchLooksLikeVin) return;
+    setVinValue(normalizeVin(searchFilter));
+    handleSearchChange('');
   };
 
   const handleBrandChange = (brands: string[]) => {
@@ -897,6 +976,40 @@ function AutopartsTableContent({
             onChange={(e) => handleSearchChange(e.target.value)}
             className="w-full sm:max-w-xs bg-background"
           />
+          <Popover open={vinPopoverOpen} onOpenChange={setVinPopoverOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  if (!vinPopoverOpen) prefillVinFromSearch();
+                }}
+                className={`w-full sm:w-auto justify-start ${getFilterHighlightClass(searchLooksLikeVin || Boolean(vinValue))}`}
+                title="Заполнить фильтры по VIN-коду автомобиля"
+              >
+                <ScanSearch className="w-4 h-4 mr-2" />
+                {searchLooksLikeVin ? 'Это VIN — расшифровать' : 'По VIN'}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent
+              className="w-[380px] p-4"
+              align="start"
+              side="bottom"
+              sideOffset={8}
+              collisionPadding={20}
+              style={{ maxWidth: 'calc(100vw - 40px)' }}
+            >
+              <VinSearchPanel
+                autos={autos}
+                engineVolumes={engineVolumes}
+                fuelTypes={fuelTypes ?? []}
+                vin={vinValue}
+                onVinChange={setVinValue}
+                onApply={applyVinMatch}
+                countParts={countPartsForVin}
+                onApplied={() => setVinPopoverOpen(false)}
+              />
+            </PopoverContent>
+          </Popover>
           <div className="space-y-1 w-full sm:w-auto">
             <Label>Авто</Label>
             <Popover>
@@ -1365,6 +1478,20 @@ function AutopartsTableContent({
             className="w-full pl-9 bg-muted/40 shadow-sm"
           />
         </div>
+        {searchLooksLikeVin && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full mt-2 bg-green-200"
+            onClick={() => {
+              prefillVinFromSearch();
+              setShowFiltersModal(true);
+            }}
+          >
+            <ScanSearch className="w-4 h-4 mr-2" />
+            Похоже на VIN — расшифровать
+          </Button>
+        )}
       </div>
 
       {/* Плавающая кнопка фильтров (только мобильные) */}
@@ -2571,6 +2698,20 @@ function AutopartsTableContent({
                   onChange={(e) => handleSearchChange(e.target.value)}
                   className="w-full"
                   autoFocus={false}
+                />
+              </div>
+
+              {/* Поиск по VIN */}
+              <div className="space-y-2 rounded-lg border p-3">
+                <Label className="text-sm font-semibold">Подбор по VIN</Label>
+                <VinSearchPanel
+                  autos={autos}
+                  engineVolumes={engineVolumes}
+                  fuelTypes={fuelTypes ?? []}
+                  vin={vinValue}
+                  onVinChange={setVinValue}
+                  onApply={applyVinMatch}
+                  countParts={countPartsForVin}
                 />
               </div>
 
